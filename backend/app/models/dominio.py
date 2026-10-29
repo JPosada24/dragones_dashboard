@@ -8,6 +8,11 @@ ESTADOS_INSCRIPCION = ("pendiente_pago", "activo", "a_expulsar", "expulsado", "r
 # Una inscripción "vigente" ocupa el cupo del alumno en ese año (solo puede haber una).
 ESTADOS_VIGENTES = ("pendiente_pago", "activo", "a_expulsar")
 
+ESTADOS_ASISTENCIA = ("presente", "ausente", "justificado")
+ORIGENES_ASISTENCIA = ("propia", "grupo", "cierre", "correccion", "justificacion")
+ESTADOS_JUSTIFICACION = ("pendiente", "aprobada", "rechazada")
+ESTADOS_MULTA = ("pendiente", "pagada", "anulada")
+
 
 def en(columna: str, valores: tuple[str, ...]) -> str:
     """Expresión SQL "columna IN ('a', 'b')" para restricciones CHECK."""

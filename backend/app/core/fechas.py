@@ -1,12 +1,21 @@
 """Fechas de negocio: siempre en la zona horaria del club."""
-from datetime import date, datetime
+from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
 ZONA_CLUB = ZoneInfo("America/Bogota")
 
 
+def ahora() -> datetime:
+    """Hora actual del club. Todo el código la pide por aquí (las pruebas la reemplazan para simular el reloj)."""
+    return datetime.now(ZONA_CLUB)
+
+
 def hoy() -> date:
-    return datetime.now(ZONA_CLUB).date()
+    return ahora().date()
+
+
+def en_zona(fecha: date, hora: time) -> datetime:
+    return datetime.combine(fecha, hora, tzinfo=ZONA_CLUB)
 
 
 def edad(nacimiento: date, en: date) -> int:

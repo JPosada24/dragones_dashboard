@@ -18,6 +18,8 @@ DEFAULTS: dict[str, tuple[Any, str]] = {
     "meses_mora_expulsion": (3, "Meses de mora antes de marcar 'A expulsar'"),
     "expulsion_automatica": (False, "Expulsar automáticamente (false = requiere confirmación)"),
     "hora_cierre_asistencia": ("23:59", "Hora de cierre diario de la asistencia (HH:MM)"),
+    "minutos_marcar_antes": (30, "Minutos antes del inicio desde los que el alumno puede marcar su asistencia"),
+    "dias_para_justificar": (3, "Días después de la sesión para enviar una justificación"),
     "inasistencias_consecutivas_aviso": (4, "Inasistencias seguidas que avisan al staff"),
     "recordatorios_dias_antes": ([7, 1], "Días antes del vencimiento en que se envía recordatorio"),
     "rifas_por_anio": (4, "Cantidad de rifas por año"),

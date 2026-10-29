@@ -98,7 +98,7 @@ def _resumen_acudiente(a: Acudiente) -> dict[str, Any]:
 
 
 # ---------- Visibilidad ----------
-def _filtro_propios(usuario: Usuario) -> ColumnElement[bool]:
+def filtro_propios(usuario: Usuario) -> ColumnElement[bool]:
     """El propio alumno (mayor de edad con cuenta) o los alumnos de los que el usuario es acudiente."""
     hijos = select(AlumnoAcudiente.alumno_id).join(Acudiente).where(Acudiente.usuario_id == usuario.id)
     return or_(Alumno.usuario_id == usuario.id, Alumno.id.in_(hijos))
@@ -112,7 +112,7 @@ def filtro_visibles(usuario: Usuario) -> ColumnElement[bool]:
     if "alumnos.ver_rama" in permisos and usuario.rama:
         condiciones.append(Alumno.rama == usuario.rama)
     if "alumnos.ver_propios" in permisos:
-        condiciones.append(_filtro_propios(usuario))
+        condiciones.append(filtro_propios(usuario))
     return or_(*condiciones) if condiciones else false()
 
 
@@ -125,7 +125,7 @@ def obtener_visible(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> Alum
 
 
 def es_propio(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> bool:
-    return db.scalar(select(Alumno.id).where(Alumno.id == alumno_id, _filtro_propios(usuario))) is not None
+    return db.scalar(select(Alumno.id).where(Alumno.id == alumno_id, filtro_propios(usuario))) is not None
 
 
 def listar(

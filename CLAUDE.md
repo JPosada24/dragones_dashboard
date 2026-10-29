@@ -65,8 +65,25 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
     mover alumnos a otra rama; inscribe solo con fecha de hoy); Miembro solo él mismo o sus hijos
     (vía `acudientes.usuario_id`). Errores de negocio: `services/errores.py` → HTTP en `main.py`.
   - Parámetros nuevos en `configuracion`: `valor_inscripcion`, `edad_mayoria`, `documento_max_mb`.
-- SIGUIENTE: asistencia y multas (Fase 2). Pendiente de 1B para el frontend/worker: llamar a `vencer` a diario.
-- Después: asistencia y multas → rifas/pagos/eventos → notificaciones y mora → frontend Angular, club público, IA, producción.
+- HECHO (Fase 2, 2026-10-29): migración 0005 (sesiones, asistencias, justificaciones, multas). **115 pruebas**.
+  - Sesiones por rama (`POST /sesiones` o `/sesiones/programar` por días de la semana, máx. ~6 meses; no en el
+    pasado). Esperados = alumnos activos de la rama con inscripción vigente desde antes de la sesión.
+  - Marcación: grupo (`asistencia.marcar_grupo`, Entrenador solo su rama; presente/ausente; no sesiones futuras)
+    o propia (Miembro, solo el día y entre `minutos_marcar_antes` antes del inicio y el fin; no pisa lo del staff).
+  - Cierre (`POST /sesiones/cerrar`, `asistencia.corregir`; lo llamará el worker): tras `hora_cierre_asistencia`,
+    quien no marcó ni justificó → ausente + multa (`multa_inasistencia`, copiada; 0 = no multar). Justificación
+    pendiente deja la decisión a la revisión. `with_for_update(skip_locked)` evita cierres duplicados.
+  - Justificación: Miembro hasta `dias_para_justificar` tras la sesión; staff sin plazo. Revisión
+    (`justificaciones.revisar`, Admin/SA): aprobar → justificado y anula multa pendiente; rechazar tras el cierre →
+    ausente + multa. El motivo (posibles datos de salud) NO va a la auditoría.
+  - Corrección tras el cierre (`asistencia.corregir`, con motivo) ajusta la multa. Cancelar sesión anula sus multas
+    pendientes. Multas: pago con `pagos.registrar` (Admin/SA; el Entrenador no cobra), anular pendiente con
+    `multas.anular` + motivo; una pagada no se anula (devolución manual, fuera de alcance).
+  - Alertas `GET /sesiones/alertas`: racha de ausencias (justificada rompe la racha) ≥ `inasistencias_consecutivas_aviso`.
+  - Reloj: todo el código usa `fechas.ahora()`/`fechas.hoy()` (las pruebas lo simulan con monkeypatch).
+- SIGUIENTE: rifas, pagos y eventos (Fase 3). Pendiente para el worker: llamar a diario `inscripciones/vencer` y
+  `sesiones/cerrar`; las alertas se notificarán en la fase de notificaciones.
+- Después: rifas/pagos/eventos → notificaciones y mora → frontend Angular, club público, IA, producción.
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);
