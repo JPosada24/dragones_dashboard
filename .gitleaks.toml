@@ -1,0 +1,13 @@
+# Configuración de gitleaks: reglas por defecto + excepciones acotadas.
+# Solo se permiten valores públicos a propósito (plantillas y datos de prueba). Nunca agregar aquí un secreto real.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Marcadores de .env.example y contraseña de los usuarios de prueba"
+# Se compara contra el valor detectado (no la línea): solo esos valores exactos quedan permitidos.
+regexes = [
+  '''^CAMBIA_[A-Z0-9_]+$''',
+  '''^CambiaEstaClave123$''',
+  '''^ClaveSegura123$''',
+]

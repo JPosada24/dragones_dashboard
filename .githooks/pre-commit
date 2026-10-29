@@ -1,0 +1,37 @@
+#!/bin/sh
+# Frena commits que traigan secretos. Se activa una vez por clon con:
+#   git config core.hooksPath .githooks
+# Es la primera barrera; la segunda es el job "secretos" del CI (gitleaks) y la "push protection" de GitHub.
+
+fallo=0
+
+# 1) Archivos que nunca deben versionarse
+for f in $(git diff --cached --name-only --diff-filter=ACMR); do
+  case "$f" in
+    .env.example|*/.env.example) ;;
+    .env|*/.env|.env.*|*/.env.*|*.pem|*.key|*.p12|*.pfx|id_rsa*|*/id_rsa*)
+      echo "BLOQUEADO: archivo sensible en el commit -> $f"
+      fallo=1 ;;
+  esac
+done
+
+# 2) Contenido que parece un secreto (solo en las líneas agregadas; la plantilla .env.example se excluye)
+patrones='(SECRET_KEY|DATA_ENCRYPTION_KEY|POSTGRES_PASSWORD|SUPERADMIN_PASSWORD)[[:space:]]*=[[:space:]]*[^[:space:]$"{]{8,}'
+patrones="$patrones|-----BEGIN [A-Z ]*PRIVATE KEY-----"
+patrones="$patrones|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}"
+
+hallazgos=$(git diff --cached -U0 --no-color -- . ':(exclude).env.example' ':(exclude)*/.env.example' \
+  | grep '^+' | grep -v '^+++' | grep -iv 'cambia' | grep -E "$patrones")
+if [ -n "$hallazgos" ]; then
+  echo "BLOQUEADO: estas líneas parecen contener secretos:"
+  echo "$hallazgos" | cut -c1-60 | sed 's/^/   /'
+  fallo=1
+fi
+
+if [ "$fallo" -ne 0 ]; then
+  echo ""
+  echo "Saca el secreto del commit (los valores reales van solo en .env)."
+  echo "Si es un falso positivo y estás seguro: git commit --no-verify"
+  exit 1
+fi
+exit 0

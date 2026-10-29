@@ -1,105 +1,131 @@
-# Dragones — Plataforma de gestión del Club de Voleibol
+# Dragones — Plataforma de gestión para un club de voleibol
 
-Backend **FastAPI + PostgreSQL**, frontend **Angular** (próxima fase), todo con **Docker**.
-La explicación completa del diseño está en el documento *"Dragones – Documento de diseño y desarrollo"*.
+[![CI](https://github.com/JPosada24/dragones_dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/JPosada24/dragones_dashboard/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
+![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
-## Estado actual: Fase 1 (parte A) — cimientos
+Sistema para administrar un club deportivo real: alumnos y acudientes, inscripciones con plazos de pago,
+abonos, documentos y, en las próximas fases, asistencia, multas, rifas y torneos. Reemplaza las hojas de
+cálculo y los mensajes sueltos por un registro único, auditable y con permisos por rol.
 
-Ya incluye:
+> Proyecto en desarrollo activo. Hoy está terminado el **backend de la Fase 1**; el frontend en Angular
+> viene después. Los datos de las pruebas son inventados.
 
-- Entorno Docker (PostgreSQL 16 + API) que arranca con un comando.
-- Autenticación segura: contraseñas con Argon2id, access token JWT de 15 minutos y refresh token
-  rotativo en cookie `HttpOnly` / `SameSite=Strict`, con detección de reutilización y bloqueo temporal
-  tras 5 intentos fallidos.
-- Roles y permisos (SuperAdmin, Admin, Entrenador, Miembro) verificados siempre en el servidor.
-- Gestión de usuarios (solo SuperAdmin) y parámetros del club (multa $2.000, plazo 30 días,
-  mora 3 meses, talonario de 20 puestos a $2.000, etc.).
-- Bitácora de auditoría **de solo agregar** (un trigger de PostgreSQL impide editarla o borrarla).
-- Migración inicial con Alembic y pruebas automatizadas.
+## Qué resuelve
 
-## Fase 1 (parte B) — alumnos e inscripciones
+| Necesidad del club | Cómo lo resuelve |
+|---|---|
+| Saber quién está inscrito y quién debe | Inscripción con valor y plazo configurables, **abonos parciales**, saldo y estados (pendiente → activo → a expulsar → expulsado) |
+| Que nadie "acomode" los pagos | Abonos, prórrogas y bitácora **de solo agregar** (un trigger de PostgreSQL impide editarlos o borrarlos). Un error se corrige con una anulación que deja rastro |
+| Proteger datos de menores | Documento de identidad y archivos **cifrados en reposo**; los menores exigen acudiente |
+| Varios entrenadores, dos ramas | Permisos por rol verificados en el servidor; un entrenador asistente solo ve su rama |
+| Reglas que cambian | Montos, plazos, edades y límites viven en la tabla `configuracion`, editable por el dueño |
 
-- El Entrenador registra alumnos, acudientes, documentos e inscripciones de su rama; los menores requieren acudiente.
-- Documento de identidad **cifrado en reposo** (Fernet) y enmascarado en las respuestas.
-- Documentos del alumno (PDF/JPG/PNG, validados por contenido, cifrados en el volumen `documentos`).
-- Inscripciones: valor y plazo de pago tomados de `configuracion` (por defecto $90.000 y 30 días),
-  abonos parciales, prórrogas con motivo (solo Admin/SuperAdmin) y estados pendiente de pago → activo → a expulsar → expulsado / rechazado.
+## Arquitectura
 
-Siguiente: asistencia y multas (Fase 2), y luego el frontend Angular.
+```mermaid
+flowchart LR
+    C[Cliente<br/>Angular · próximamente] -->|HTTPS + JWT| API
+    subgraph Docker Compose
+      API[FastAPI<br/>rutas → servicios → modelos] --> DB[(PostgreSQL 16)]
+      API --> V[(Volumen de documentos<br/>cifrados)]
+    end
+```
 
-## Cómo arrancar (Windows / PowerShell)
+- **Capas:** `api/v1` (rutas y permisos) → `services` (reglas de negocio) → `models` (SQLAlchemy 2).
+  La validación de entrada y salida está en `schemas` (Pydantic v2).
+- **Migraciones:** Alembic; las pruebas construyen el esquema con las migraciones reales, así que cada
+  migración y cada trigger quedan probados.
+- **Errores de negocio:** excepciones propias (`services/errores.py`) que se traducen a HTTP con mensajes
+  pensados para el usuario final ("La fecha de pago supera el plazo de 30 días…").
 
-Requisito: **Docker Desktop** abierto.
+## Seguridad
+
+La seguridad está en el diseño y en las pruebas, no en ocultar el código:
+
+- **Autenticación:** contraseñas con Argon2id; access token JWT de 15 min con algoritmo fijo; refresh token
+  opaco y rotativo en cookie `HttpOnly` + `SameSite=Strict`, con **detección de reutilización** (si se usa un
+  token ya rotado se revoca toda la cadena). Bloqueo por cuenta tras 5 fallos y límite de fallos por IP.
+- **Autorización:** cada ruta declara su permiso y el servicio aplica el alcance (todos / su rama / los
+  propios). Un recurso ajeno responde 404, para no revelar que existe.
+- **Datos sensibles:** el número de documento se guarda cifrado (Fernet) con un **índice ciego** (HMAC) para
+  buscar y evitar duplicados sin descifrar. En las respuestas sale enmascarado; verlo completo queda auditado.
+- **Archivos:** solo PDF/JPG/PNG validados por su contenido real, con tamaño máximo, cifrados y servidos como
+  descarga (`attachment`, `nosniff`, `no-store`).
+- **Abuso:** tope de tamaño por petición (413) que también corta envíos *chunked*.
+- **Secretos:** solo en `.env` (fuera de git). Un hook de pre-commit y el job de **gitleaks** en el CI frenan
+  cualquier clave que intente colarse.
+- **Producción:** la app se niega a arrancar con cookies no seguras o claves de ejemplo, y apaga la
+  documentación interactiva.
+
+## Pruebas
+
+**89 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
+hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
+el Admin no confirma expulsiones).
+
+## Cómo correrlo
+
+Requisito: Docker Desktop.
 
 ```powershell
-cd C:\Users\Julian Posada\Desktop\Personal\Proyectos\Dashboard_DVC
-
-# 1) Crear tu archivo de secretos
-copy .env.example .env
-notepad .env        # cambia POSTGRES_PASSWORD, SECRET_KEY, DATA_ENCRYPTION_KEY y SUPERADMIN_PASSWORD
-
-# 2) Levantar todo (la primera vez construye la imagen)
+copy .env.example .env      # luego edita los valores marcados "CAMBIA"
 docker compose up --build
 ```
 
-Al arrancar, el contenedor `api` aplica las migraciones y crea los catálogos y el primer SuperAdmin
-con lo que pusiste en `.env`. Luego abre:
-
-- Documentación interactiva: <http://localhost:8000/api/docs>
-- Salud: <http://localhost:8000/api/v1/salud>
-
-Para generar una `SECRET_KEY` y una `DATA_ENCRYPTION_KEY` sin instalar Python:
+Genera las claves sin instalar Python:
 
 ```powershell
 docker compose run --rm --no-deps api python -c "import secrets; print(secrets.token_urlsafe(48))"
 docker compose run --rm --no-deps api python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-> **Guarda `DATA_ENCRYPTION_KEY` en un lugar seguro** (gestor de contraseñas). Si se pierde, los documentos de
-> identidad y archivos cifrados no se pueden recuperar.
+> **Guarda `DATA_ENCRYPTION_KEY` en un lugar seguro.** Si se pierde, los datos cifrados no se recuperan.
+> En `POSTGRES_PASSWORD` usa solo letras y números (va dentro de una URL).
 
-> Usa solo letras y números en `POSTGRES_PASSWORD` (va dentro de una URL).
+Al arrancar se aplican las migraciones y se crea el primer SuperAdmin con los datos de `.env`. Luego:
 
-## Pruebas
+- Documentación interactiva: <http://localhost:8000/api/docs> (o el puerto de `API_PORT`)
+- Salud: <http://localhost:8000/api/v1/salud>
 
-Se ejecutan dentro del contenedor, contra PostgreSQL real (crea una base `dragones_test` aparte;
-no toca tus datos):
+Pruebas (crean una base `<nombre>_test` aparte; no tocan tus datos):
 
 ```powershell
 docker compose run --rm --user root api sh -c "pip install -q -r requirements-dev.txt && pytest"
 ```
 
-## Probar el login a mano
+Activa el hook que bloquea secretos (una vez por clon):
 
-En <http://localhost:8000/api/docs>: `POST /api/v1/auth/login` con tu `SUPERADMIN_EMAIL` y su clave.
-Copia el `access_token`, pulsa **Authorize** y pégalo. Con eso ya puedes probar `GET /api/v1/auth/me`,
-`POST /api/v1/usuarios` y `GET /api/v1/configuracion`.
+```powershell
+git config core.hooksPath .githooks
+```
 
 ## Estructura
 
 ```
 backend/
   app/
-    core/        configuración, seguridad (Argon2, JWT) y catálogo de permisos
-    db/          motor y sesión de base de datos
-    models/      tablas (acceso, configuración, auditoría)
-    schemas/     validación de entradas y salidas (Pydantic)
+    core/        configuración, seguridad, cifrado, límites, almacenamiento de archivos, permisos
+    models/      tablas (acceso, alumnos, inscripciones, abonos, auditoría)
+    schemas/     validación de entradas y salidas
     services/    reglas de negocio
-    api/v1/      rutas (auth, usuarios, configuración, salud)
-    scripts/     siembra inicial (python -m app.scripts.seed)
-  alembic/       migraciones
+    api/v1/      rutas (auth, usuarios, configuración, alumnos, acudientes, inscripciones)
+  alembic/       migraciones 0001–0004
   tests/         pruebas automatizadas
-docker-compose.yml   entorno de desarrollo
-.env.example         plantilla de variables (copiar a .env)
+.githooks/       pre-commit que bloquea secretos
+.github/         CI: pruebas + gitleaks
 ```
 
-## Seguridad: notas importantes
+## Hoja de ruta
 
-- **Nunca subas `.env` a git** (ya está en `.gitignore`).
-- En producción: `ENTORNO=produccion`, `COOKIE_SECURE=true`, HTTPS delante (Caddy) y
-  `FORWARDED_ALLOW_IPS` ajustado al proxy. Con `ENTORNO=produccion` la app se niega a arrancar con
-  `COOKIE_SECURE=false` o con la `SECRET_KEY` de ejemplo, y la documentación interactiva se apaga.
-- Las migraciones y la siembra del compose de desarrollo corren al arrancar; en producción se ejecutarán
-  como un paso aparte del despliegue.
-- Pendiente en próximas fases: límite de peticiones con Redis, cifrado del documento de identidad,
-  CSRF adicional para el frontend, revisión de seguridad independiente antes de salir a producción.
+- [x] Fase 1A — autenticación, roles, configuración y auditoría
+- [x] Fase 1B — alumnos, acudientes, documentos, inscripciones, abonos y prórrogas
+- [ ] Fase 2 — asistencia y multas
+- [ ] Rifas, pagos y eventos · notificaciones (WhatsApp y correo) · mora
+- [ ] Frontend Angular · sitio público del club · asistente con IA · despliegue
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Julian Posada
