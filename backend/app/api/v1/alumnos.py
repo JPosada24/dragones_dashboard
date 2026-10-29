@@ -13,8 +13,9 @@ from app.schemas.alumnos import (
     AcudienteVinculadoOut, AlumnoActualizar, AlumnoCrear, AlumnoOut, DocumentoIdentidadOut, DocumentoOut,
     TipoArchivo, VinculoIn,
 )
+from app.schemas.rifas import DeudaRifaOut, EstadoCuentaOut
 from app.schemas.comunes import Rama
-from app.services import alumnos as servicio, configuracion, documentos
+from app.services import alumnos as servicio, configuracion, documentos, estado_cuenta
 from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/alumnos", tags=["alumnos"])
@@ -103,6 +104,19 @@ def actualizar(
     )
     db.commit()
     return _out(db, alumno)
+
+
+@router.get("/{alumno_id}/estado-cuenta", response_model=EstadoCuentaOut)
+def ver_estado_cuenta(
+    alumno_id: uuid.UUID, usuario: Usuario = Depends(VER_ALUMNOS), db: Session = Depends(get_db)
+) -> EstadoCuentaOut:
+    """Lo que el alumno debe al club (inscripción, multas, rifas). Paz y salvo = "al_dia"."""
+    e = estado_cuenta.calcular(db, servicio.obtener_visible(db, usuario, alumno_id))
+    return EstadoCuentaOut(
+        alumno_id=alumno_id, anio=e.anio, inscripcion_estado=e.inscripcion_estado,
+        inscripcion_saldo=e.inscripcion_saldo, multas_pendientes=e.multas_pendientes, multas_saldo=e.multas_saldo,
+        rifas=[DeudaRifaOut(rifa=r.rifa, saldo=r.saldo) for r in e.rifas], total=e.total, al_dia=e.al_dia,
+    )
 
 
 @router.get("/{alumno_id}/documento-identidad", response_model=DocumentoIdentidadOut)

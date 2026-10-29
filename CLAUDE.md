@@ -86,7 +86,18 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   (`WORKER_*_SEGUNDOS`). `pg_try_advisory_xact_lock` evita dos workers en la misma tarea; un fallo no lo tumba;
   latido en /tmp/worker_latido para el healthcheck. No recarga solo: `docker compose restart worker` tras cambios.
   Toda tarea nueva debe ser idempotente y registrarse en `worker.tareas()`. **119 pruebas**.
-- SIGUIENTE: rifas, pagos y eventos (Fase 3). Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (Fase 3A rifas, 2026-10-29): migración 0006 (rifas, talonarios, puestos, pagos_puesto, actas_sorteo). **133 pruebas**.
+  - Crear rifa (`rifas.gestionar`): máx. `rifas_por_anio` no canceladas; copia `puestos_por_talonario` y
+    `precio_puesto`; asigna talonario a cada alumno con inscripción vigente del año (puestos indice*N … +N-1).
+    `POST /rifas/{id}/talonarios` asigna a los inscritos después.
+  - Pagos por puesto o por talonario completo (se reparte en orden) con `pagos.registrar`; `pagos_puesto` append-only,
+    anulación con motivo (`pagos.anular`, SA). Comprador (nombre/teléfono) con `rifas.gestionar`.
+  - Sorteo (`sorteo.jugar`, desde `fecha_sorteo`): solo puestos de talonarios pagados al 100 %, `secrets.choice`,
+    fila bloqueada (`refresh(with_for_update)`) antes de revisar el estado. Acta append-only con la lista de
+    participantes y su SHA-256 (`services/rifas.huella`).
+  - `GET /alumnos/{id}/estado-cuenta`: saldo de inscripción + multas pendientes + talonarios con saldo → `al_dia`
+    (paz y salvo).
+- SIGUIENTE: Fase 3B eventos/torneos (pendiente definir con Julian el flujo de inscripción de equipos). Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: rifas/pagos/eventos → notificaciones y mora → frontend Angular, club público, IA, producción.
 

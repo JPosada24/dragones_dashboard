@@ -21,6 +21,8 @@ cálculo y los mensajes sueltos por un registro único, auditable y con permisos
 | Que nadie "acomode" los pagos | Abonos, prórrogas y bitácora **de solo agregar** (un trigger de PostgreSQL impide editarlos o borrarlos). Un error se corrige con una anulación que deja rastro |
 | Proteger datos de menores | Documento de identidad y archivos **cifrados en reposo**; los menores exigen acudiente |
 | Controlar la asistencia | Sesiones por rama, marcación del entrenador o del propio alumno (solo en el horario), justificaciones con revisión y **cierre diario** que genera ausencias y multas automáticamente |
+| Rifas sin enredos | Un talonario por alumno, pagos por puesto o completos, **sorteo automático** solo entre talonarios pagados, con acta inmutable verificable por su huella SHA-256 |
+| ¿Quién está a paz y salvo? | Estado de cuenta por alumno: inscripción, multas y rifas en un solo número |
 | Varios entrenadores, dos ramas | Permisos por rol verificados en el servidor; un entrenador asistente solo ve su rama |
 | Reglas que cambian | Montos, plazos, edades y límites viven en la tabla `configuracion`, editable por el dueño |
 
@@ -66,7 +68,7 @@ La seguridad está en el diseño y en las pruebas, no en ocultar el código:
 
 ## Pruebas
 
-**119 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
+**133 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
 hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
 el Admin no confirma expulsiones). Las reglas con hora (cierre de las 11:59 pm, ventana para marcar
 asistencia) se prueban con un reloj simulado.
@@ -113,12 +115,12 @@ git config core.hooksPath .githooks
 backend/
   app/
     core/        configuración, seguridad, cifrado, límites, almacenamiento de archivos, permisos
-    models/      tablas (acceso, alumnos, inscripciones, abonos, asistencia, multas, auditoría)
+    models/      tablas (acceso, alumnos, inscripciones, abonos, asistencia, multas, rifas, auditoría)
     schemas/     validación de entradas y salidas
     services/    reglas de negocio
     api/v1/      rutas (auth, usuarios, configuración, alumnos, acudientes, inscripciones, sesiones,
-                 justificaciones, multas)
-  alembic/       migraciones 0001–0005
+                 justificaciones, multas, rifas)
+  alembic/       migraciones 0001–0006
   tests/         pruebas automatizadas
 .githooks/       pre-commit que bloquea secretos
 .github/         CI: pruebas + gitleaks
@@ -129,7 +131,9 @@ backend/
 - [x] Fase 1A — autenticación, roles, configuración y auditoría
 - [x] Fase 1B — alumnos, acudientes, documentos, inscripciones, abonos y prórrogas
 - [x] Fase 2 — sesiones, asistencia, justificaciones, cierre diario y multas
-- [ ] Rifas, pagos y eventos · notificaciones (WhatsApp y correo) · mora
+- [x] Worker de tareas programadas (cierre diario, vencimientos)
+- [x] Fase 3A — rifas, sorteo con acta y estado de cuenta (paz y salvo)
+- [ ] Fase 3B — eventos y torneos · notificaciones (WhatsApp y correo) · mora
 - [ ] Frontend Angular · sitio público del club · asistente con IA · despliegue
 
 ## Licencia

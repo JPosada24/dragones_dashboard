@@ -124,6 +124,14 @@ def obtener_visible(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> Alum
     return alumno
 
 
+def obtener_por_id(db: Session, alumno_id: uuid.UUID) -> Alumno:
+    """Sin filtro de visibilidad: solo para datos que ya son públicos dentro del club (p. ej. el ganador de una rifa)."""
+    alumno = db.get(Alumno, alumno_id)
+    if alumno is None:
+        raise NoEncontrado("Alumno no encontrado.")
+    return alumno
+
+
 def es_propio(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> bool:
     return db.scalar(select(Alumno.id).where(Alumno.id == alumno_id, filtro_propios(usuario))) is not None
 
