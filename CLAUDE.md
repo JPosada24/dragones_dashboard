@@ -81,8 +81,13 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
     `multas.anular` + motivo; una pagada no se anula (devolución manual, fuera de alcance).
   - Alertas `GET /sesiones/alertas`: racha de ausencias (justificada rompe la racha) ≥ `inasistencias_consecutivas_aviso`.
   - Reloj: todo el código usa `fechas.ahora()`/`fechas.hoy()` (las pruebas lo simulan con monkeypatch).
-- SIGUIENTE: rifas, pagos y eventos (Fase 3). Pendiente para el worker: llamar a diario `inscripciones/vencer` y
-  `sesiones/cerrar`; las alertas se notificarán en la fase de notificaciones.
+- HECHO (worker, 2026-10-29): servicio `worker` en docker-compose (`python -m app.worker`, `app/worker.py`). Corre
+  tareas idempotentes por intervalo: cierre de asistencia cada 300 s y vencimiento de inscripciones cada 3600 s
+  (`WORKER_*_SEGUNDOS`). `pg_try_advisory_xact_lock` evita dos workers en la misma tarea; un fallo no lo tumba;
+  latido en /tmp/worker_latido para el healthcheck. No recarga solo: `docker compose restart worker` tras cambios.
+  Toda tarea nueva debe ser idempotente y registrarse en `worker.tareas()`. **119 pruebas**.
+- SIGUIENTE: rifas, pagos y eventos (Fase 3). Las alertas se notificarán en la fase de notificaciones (Redis
+  llegará ahí para colas y para el limitador de logins).
 - Después: rifas/pagos/eventos → notificaciones y mora → frontend Angular, club público, IA, producción.
 
 ## Seguridad (obligatorio en todo código nuevo)

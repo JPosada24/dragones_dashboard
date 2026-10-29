@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # Tope duro del tamaño de cualquier petición (MB). Gana sobre "documento_max_mb" de la configuración.
     max_cuerpo_mb: int = 25
 
+    # Worker (python -m app.worker): cada cuánto corre cada tarea programada.
+    worker_cierre_segundos: int = 300  # el cierre de las 23:59 ocurre, a más tardar, 5 min después
+    worker_vencer_segundos: int = 3600
+
     superadmin_email: str | None = None
     superadmin_password: str | None = None
     superadmin_nombre: str = "Administrador"

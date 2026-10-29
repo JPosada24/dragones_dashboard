@@ -32,6 +32,7 @@ flowchart LR
     subgraph Docker Compose
       API[FastAPI<br/>rutas → servicios → modelos] --> DB[(PostgreSQL 16)]
       API --> V[(Volumen de documentos<br/>cifrados)]
+      W[Worker<br/>tareas programadas] --> DB
     end
 ```
 
@@ -39,6 +40,8 @@ flowchart LR
   La validación de entrada y salida está en `schemas` (Pydantic v2).
 - **Migraciones:** Alembic; las pruebas construyen el esquema con las migraciones reales, así que cada
   migración y cada trigger quedan probados.
+- **Worker:** un contenedor aparte corre las tareas programadas (cierre diario de asistencia, vencimiento de
+  inscripciones). Son idempotentes y un *advisory lock* de PostgreSQL evita ejecutarlas dos veces a la vez.
 - **Errores de negocio:** excepciones propias (`services/errores.py`) que se traducen a HTTP con mensajes
   pensados para el usuario final ("La fecha de pago supera el plazo de 30 días…").
 
@@ -63,7 +66,7 @@ La seguridad está en el diseño y en las pruebas, no en ocultar el código:
 
 ## Pruebas
 
-**115 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
+**119 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
 hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
 el Admin no confirma expulsiones). Las reglas con hora (cierre de las 11:59 pm, ventana para marcar
 asistencia) se prueban con un reloj simulado.
