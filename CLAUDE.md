@@ -88,7 +88,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Cambios de esquema = nueva migración Alembic (no editar la 0001 ya aplicada).
 - Secretos solo en `.env` (no se sube a git).
 - Repositorio git local (rama `main`, desde 2026-10-29). Un commit al cerrar cada fase o cambio relevante;
-  antes de cada commit verificar que no se cuelen secretos (`.env`, claves). Aún sin remoto (GitHub privado pendiente).
+  antes de cada commit verificar que no se cuelen secretos (`.env`, claves).
+- Remoto **público** (portafolio): https://github.com/JPosada24/dragones_dashboard. Todo lo que se commitea es
+  público: nunca datos reales del club. Barreras: hook `.githooks/pre-commit` (activar con
+  `git config core.hooksPath .githooks`), job gitleaks en `.github/workflows/ci.yml` (+ `.gitleaks.toml`, solo
+  excepciones para marcadores de ejemplo) y push protection de GitHub. El push lo hace Julian (sin permiso aquí).
 - Julian prefiere recibir los cambios como archivos concretos, no como .zip.
 
 ## Comandos (PowerShell, en la raíz del proyecto)
