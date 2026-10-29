@@ -2,7 +2,7 @@
 
 Uso:  python -m app.worker
 
-Tareas: cierre diario de asistencia, vencimiento de inscripciones, avisos programados y envío de correos.
+Tareas: cierre diario de asistencia, vencimiento de inscripciones, mora, avisos programados y envío de correos.
 
 Cada tarea es idempotente (repetirla no duplica nada), así que el worker solo la ejecuta cada cierto
 intervalo: si estuvo apagado, al volver se pone al día. Un "advisory lock" de PostgreSQL impide que dos
@@ -23,7 +23,7 @@ from app.core import fechas
 from app.core.config import get_settings
 from app.core.correo import get_correo
 from app.db.session import SessionLocal
-from app.services import asistencia, inscripciones, notificaciones
+from app.services import asistencia, inscripciones, mora, notificaciones
 
 log = logging.getLogger("dragones.worker")
 LATIDO = Path("/tmp/worker_latido")  # lo revisa el healthcheck de Docker
@@ -66,11 +66,19 @@ def _enviar_correos(db: Session) -> str | None:
     return f"{enviados} correos enviados, {fallidos} fallidos definitivamente"
 
 
+def _revisar_mora(db: Session) -> str | None:
+    r = mora.revisar(db)
+    if not (r.a_expulsar or r.expulsados or r.al_dia or r.avisos):
+        return None
+    return f"{r.a_expulsar} a expulsar, {r.expulsados} expulsados, {r.al_dia} al día, {r.avisos} avisos de mora"
+
+
 def tareas() -> list[Tarea]:
     s = get_settings()
     return [
         Tarea("cierre_asistencia", 7301, s.worker_cierre_segundos, _cerrar_sesiones),
         Tarea("vencer_inscripciones", 7302, s.worker_vencer_segundos, _vencer_inscripciones),
+        Tarea("mora", 7305, s.worker_mora_segundos, _revisar_mora),
         Tarea("avisos_programados", 7303, s.worker_notificaciones_segundos, _avisos_programados),
         Tarea("enviar_correos", 7304, s.worker_correos_segundos, _enviar_correos),
     ]

@@ -1,4 +1,5 @@
 """Fechas de negocio: siempre en la zona horaria del club."""
+import calendar
 from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
@@ -16,6 +17,13 @@ def hoy() -> date:
 
 def en_zona(fecha: date, hora: time) -> datetime:
     return datetime.combine(fecha, hora, tzinfo=ZONA_CLUB)
+
+
+def sumar_meses(d: date, meses: int) -> date:
+    """31/01 + 1 mes = 28/02 (o 29): si el día no existe en el mes destino, se usa el último."""
+    total = d.month - 1 + meses
+    anio, mes = d.year + total // 12, total % 12 + 1
+    return date(anio, mes, min(d.day, calendar.monthrange(anio, mes)[1]))
 
 
 def edad(nacimiento: date, en: date) -> int:

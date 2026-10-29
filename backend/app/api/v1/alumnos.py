@@ -116,6 +116,7 @@ def ver_estado_cuenta(
         alumno_id=alumno_id, anio=e.anio, inscripcion_estado=e.inscripcion_estado,
         inscripcion_saldo=e.inscripcion_saldo, multas_pendientes=e.multas_pendientes, multas_saldo=e.multas_saldo,
         rifas=[DeudaRifaOut(rifa=r.rifa, saldo=r.saldo) for r in e.rifas], total=e.total, al_dia=e.al_dia,
+        en_mora=e.en_mora, entra_en_mora=e.entra_en_mora,
     )
 
 

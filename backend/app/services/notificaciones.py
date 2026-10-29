@@ -26,7 +26,7 @@ from app.services.errores import Conflicto, NoEncontrado
 
 MAX_INTENTOS_CORREO = 5
 # Tipos que además se ofrecen para enviar por WhatsApp (lo más importante; el resto va por correo y bandeja).
-TIPOS_WHATSAPP = {"recordatorio_inscripcion", "inscripcion_vencida", "multa"}
+TIPOS_WHATSAPP = {"recordatorio_inscripcion", "inscripcion_vencida", "multa", "aviso_mora", "mora"}
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,6 @@
 """Estado de cuenta de un alumno: lo que debe al club en un solo lugar (inscripción, multas, rifas)."""
 from dataclasses import dataclass, field
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,6 +10,7 @@ from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import Multa
 from app.models.dominio import ESTADOS_VIGENTES
 from app.models.rifas import Rifa, Talonario
+from app.services import mora
 
 
 @dataclass
@@ -25,6 +27,8 @@ class EstadoCuenta:
     multas_pendientes: int
     multas_saldo: int
     rifas: list[DeudaRifa] = field(default_factory=list)
+    en_mora: bool = False
+    entra_en_mora: date | None = None  # cuándo entra (o entró) en mora si no paga
 
     @property
     def total(self) -> int:
@@ -44,6 +48,7 @@ def calcular(db: Session, alumno: Alumno) -> EstadoCuenta:
     talonarios = db.scalars(
         select(Talonario).join(Talonario.rifa).where(Talonario.alumno_id == alumno.id, Rifa.estado != "cancelada")
     ).unique()
+    situacion = mora.situacion(db, alumno)
     return EstadoCuenta(
         anio=anio,
         inscripcion_estado=inscripcion.estado if inscripcion else None,
@@ -51,4 +56,6 @@ def calcular(db: Session, alumno: Alumno) -> EstadoCuenta:
         multas_pendientes=len(multas),
         multas_saldo=sum(m.valor for m in multas),
         rifas=[DeudaRifa(t.rifa.nombre, t.saldo) for t in talonarios if t.saldo > 0],
+        en_mora=situacion.en_mora,
+        entra_en_mora=situacion.entra_en_mora,
     )

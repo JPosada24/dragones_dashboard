@@ -97,6 +97,9 @@ class Inscripcion(UUIDMixin, TiempoMixin, Base):
             "causa_rechazo IS NULL OR causa_rechazo IN ('vencimiento', 'manual')", name="ck_inscripciones_causa"
         ),
         CheckConstraint("fecha_limite_pago >= fecha_inscripcion", name="ck_inscripciones_limite"),
+        CheckConstraint(
+            "causa_expulsion IS NULL OR causa_expulsion IN ('mora', 'manual')", name="ck_inscripciones_causa_expulsion"
+        ),
         # Un alumno solo puede tener una inscripción vigente por año.
         Index(
             "ux_inscripciones_vigente", "alumno_id", "anio", unique=True,
@@ -115,6 +118,8 @@ class Inscripcion(UUIDMixin, TiempoMixin, Base):
     monto_pagado: Mapped[int | None] = mapped_column(Integer)  # suma de los abonos
     estado: Mapped[str] = mapped_column(String(20), index=True, default="pendiente_pago")
     causa_rechazo: Mapped[str | None] = mapped_column(String(20))
+    # Por qué está "a expulsar"/"expulsado": "mora" (lo marcó el sistema; sale solo al pagar) o "manual".
+    causa_expulsion: Mapped[str | None] = mapped_column(String(10))
     motivo: Mapped[str | None] = mapped_column(String(255))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
 

@@ -73,6 +73,7 @@ class InscripcionOut(BaseModel):
     saldo: int
     estado: str
     causa_rechazo: str | None
+    causa_expulsion: str | None  # mora (la marcó el sistema) | manual
     motivo: str | None
     prorrogas: list[ProrrogaOut]
     pagos: list[PagoOut]

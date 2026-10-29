@@ -46,6 +46,7 @@ def inscripcion_a_out(i: Inscripcion) -> InscripcionOut:
         saldo=i.saldo,
         estado=i.estado,
         causa_rechazo=i.causa_rechazo,
+        causa_expulsion=i.causa_expulsion,
         motivo=i.motivo,
         prorrogas=[ProrrogaOut.model_validate(p) for p in i.prorrogas],
         pagos=_pagos_out(i),

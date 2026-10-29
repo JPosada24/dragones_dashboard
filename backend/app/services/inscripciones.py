@@ -38,6 +38,7 @@ def _resumen(i: Inscripcion) -> dict[str, Any]:
         "fecha_pago": i.fecha_pago.isoformat() if i.fecha_pago else None,
         "monto_pagado": i.monto_pagado,
         "causa_rechazo": i.causa_rechazo,
+        "causa_expulsion": i.causa_expulsion,
         "motivo": i.motivo,
     }
 
@@ -247,6 +248,10 @@ def cambiar_estado(
     antes = _resumen(i)
     i.estado, i.motivo = nuevo, motivo
     i.causa_rechazo = "manual" if nuevo == "rechazado" else None
+    if nuevo == "a_expulsar":
+        i.causa_expulsion = "manual"
+    elif nuevo == "activo":
+        i.causa_expulsion = None  # "expulsado" conserva la causa con la que llegó a "a expulsar"
     db.flush()
     _auditar(db, "inscripcion.estado", i, actor.id, ip, antes=antes, despues=_resumen(i))
     return i

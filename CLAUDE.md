@@ -18,7 +18,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   SuperAdmin lo **anula** con motivo (movimiento negativo que lo revierte).
 - **La inscripción la hace el Entrenador** (alumno, acudiente, documentos e inscripción, solo de su rama).
   Ningún alumno/acudiente (Miembro) se inscribe ni sube documentos por su cuenta: solo consulta lo suyo.
-- Mora: **3 meses** → "A expulsar"; confirmación del SuperAdmin por defecto (configurable).
+- **No hay mensualidad.** Mora = **cualquier deuda sin pagar** (multas, talonarios) con **3 meses** → "A expulsar";
+  confirmación del SuperAdmin por defecto (`expulsion_automatica` la hace directa). La inscripción no cuenta
+  (tiene su propio plazo y vencimiento).
 - Rifas: 4 por año; **1 talonario por alumno por rifa, 20 puestos × $2.000 = $40.000**. Cada puesto guarda comprador,
   teléfono y monto. Paz y salvo = talonario pagado al 100 %. El sorteo solo incluye talonarios pagados; guarda acta inmutable.
 - Torneos: los organiza el club y se inscriben **clubes externos** (no jugadores); cada equipo paga inscripción
@@ -118,9 +120,16 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   - Correo: `core/correo.py` (SMTP o modo registro, `EMAIL_MODO`); el worker envía cada 60 s en lotes de 50,
     reintentos con espera 2^n min, 5 intentos → fallido. `POST /notificaciones/correo-prueba` (SA) para probar Gmail.
   - Rutas: `/notificaciones/mias` (cualquiera, solo las propias), `/whatsapp` y `/correos` (`notificaciones.gestionar`).
-- SIGUIENTE: mora (definir con Julian sobre qué deuda aplica: hoy no hay mensualidades) y luego frontend Angular. Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (mora, 2026-10-29): migración 0009 (`inscripciones.causa_expulsion` mora|manual). **168 pruebas**.
+  - `services/mora.py`: multa vence en la fecha de la sesión; talonario, en la fecha del sorteo. Mora cuando la
+    deuda vencida más antigua + `meses_mora_expulsion` (con `fechas.sumar_meses`) ≤ hoy.
+  - Worker (tarea `mora`, cada hora): activo→a_expulsar (o expulsado) con causa "mora"; a_expulsar por mora → activo
+    al pagar; lo marcado a mano nunca lo revierte. Aviso a la familia `dias_aviso_mora` antes, al entrar en mora y al
+    salir; aviso al staff cuando hay expulsión por confirmar. Usa la inscripción activa más reciente (cruza años).
+  - `GET /mora` (staff; Entrenador su rama) y `en_mora`/`entra_en_mora` en el estado de cuenta.
+- SIGUIENTE: frontend Angular (Fase de interfaz). Backend funcional completo hasta aquí. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
-- Después: mora → frontend Angular, club público, IA, producción.
+- Después: frontend Angular, club público, IA, producción.
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);

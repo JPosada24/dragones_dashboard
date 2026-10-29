@@ -122,3 +122,5 @@ class EstadoCuentaOut(BaseModel):
     rifas: list[DeudaRifaOut]
     total: int
     al_dia: bool
+    en_mora: bool
+    entra_en_mora: date | None

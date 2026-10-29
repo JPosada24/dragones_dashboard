@@ -24,6 +24,7 @@ cálculo y los mensajes sueltos por un registro único, auditable y con permisos
 | Rifas sin enredos | Un talonario por alumno, pagos por puesto o completos, **sorteo automático** solo entre talonarios pagados, con acta inmutable verificable por su huella SHA-256 |
 | Organizar torneos | Inscripción de clubes externos con cupo, **lista de espera automática** y abonos hasta confirmar |
 | Avisar sin pagar mensajería | Correo automático, avisos en la plataforma y **WhatsApp con un clic** (enlace con el mensaje listo desde el número del club): recordatorios de pago, multas, justificaciones y alertas de inasistencia |
+| Deudas que se eternizan | **Mora automática**: una deuda con 3 meses (configurable) deja la inscripción «a expulsar» para que el dueño confirme; aviso previo a la familia y vuelta a activo al pagar |
 | ¿Quién está a paz y salvo? | Estado de cuenta por alumno: inscripción, multas y rifas en un solo número |
 | Varios entrenadores, dos ramas | Permisos por rol verificados en el servidor; un entrenador asistente solo ve su rama |
 | Reglas que cambian | Montos, plazos, edades y límites viven en la tabla `configuracion`, editable por el dueño |
@@ -45,7 +46,7 @@ flowchart LR
 - **Migraciones:** Alembic; las pruebas construyen el esquema con las migraciones reales, así que cada
   migración y cada trigger quedan probados.
 - **Worker:** un contenedor aparte corre las tareas programadas (cierre diario de asistencia, vencimiento de
-  inscripciones, recordatorios y envío de correos con reintentos). Son idempotentes y un *advisory lock* de PostgreSQL evita ejecutarlas dos veces a la vez.
+  inscripciones, mora, recordatorios y envío de correos con reintentos). Son idempotentes y un *advisory lock* de PostgreSQL evita ejecutarlas dos veces a la vez.
 - **Errores de negocio:** excepciones propias (`services/errores.py`) que se traducen a HTTP con mensajes
   pensados para el usuario final ("La fecha de pago supera el plazo de 30 días…").
 
@@ -70,7 +71,7 @@ La seguridad está en el diseño y en las pruebas, no en ocultar el código:
 
 ## Pruebas
 
-**160 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
+**168 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
 hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
 el Admin no confirma expulsiones). Las reglas con hora (cierre de las 11:59 pm, ventana para marcar
 asistencia) se prueban con un reloj simulado.
@@ -122,8 +123,8 @@ backend/
     schemas/     validación de entradas y salidas
     services/    reglas de negocio
     api/v1/      rutas (auth, usuarios, configuración, alumnos, acudientes, inscripciones, sesiones,
-                 justificaciones, multas, rifas, torneos, notificaciones)
-  alembic/       migraciones 0001–0008
+                 justificaciones, multas, rifas, torneos, notificaciones, mora)
+  alembic/       migraciones 0001–0009
   tests/         pruebas automatizadas
 .githooks/       pre-commit que bloquea secretos
 .github/         CI: pruebas + gitleaks
@@ -138,7 +139,7 @@ backend/
 - [x] Fase 3A — rifas, sorteo con acta y estado de cuenta (paz y salvo)
 - [x] Fase 3B — torneos con clubes externos, cupo y lista de espera
 - [x] Notificaciones: correo, bandeja y WhatsApp con enlace
-- [ ] Mora
+- [x] Mora automática por deudas sin pagar
 - [ ] Frontend Angular · sitio público del club · asistente con IA · despliegue
 
 ## Licencia
