@@ -22,6 +22,7 @@ cálculo y los mensajes sueltos por un registro único, auditable y con permisos
 | Proteger datos de menores | Documento de identidad y archivos **cifrados en reposo**; los menores exigen acudiente |
 | Controlar la asistencia | Sesiones por rama, marcación del entrenador o del propio alumno (solo en el horario), justificaciones con revisión y **cierre diario** que genera ausencias y multas automáticamente |
 | Rifas sin enredos | Un talonario por alumno, pagos por puesto o completos, **sorteo automático** solo entre talonarios pagados, con acta inmutable verificable por su huella SHA-256 |
+| Organizar torneos | Inscripción de clubes externos con cupo, **lista de espera automática** y abonos hasta confirmar |
 | ¿Quién está a paz y salvo? | Estado de cuenta por alumno: inscripción, multas y rifas en un solo número |
 | Varios entrenadores, dos ramas | Permisos por rol verificados en el servidor; un entrenador asistente solo ve su rama |
 | Reglas que cambian | Montos, plazos, edades y límites viven en la tabla `configuracion`, editable por el dueño |
@@ -68,7 +69,7 @@ La seguridad está en el diseño y en las pruebas, no en ocultar el código:
 
 ## Pruebas
 
-**133 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
+**148 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
 hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
 el Admin no confirma expulsiones). Las reglas con hora (cierre de las 11:59 pm, ventana para marcar
 asistencia) se prueban con un reloj simulado.
@@ -115,12 +116,12 @@ git config core.hooksPath .githooks
 backend/
   app/
     core/        configuración, seguridad, cifrado, límites, almacenamiento de archivos, permisos
-    models/      tablas (acceso, alumnos, inscripciones, abonos, asistencia, multas, rifas, auditoría)
+    models/      tablas (acceso, alumnos, inscripciones, abonos, asistencia, multas, rifas, torneos, auditoría)
     schemas/     validación de entradas y salidas
     services/    reglas de negocio
     api/v1/      rutas (auth, usuarios, configuración, alumnos, acudientes, inscripciones, sesiones,
-                 justificaciones, multas, rifas)
-  alembic/       migraciones 0001–0006
+                 justificaciones, multas, rifas, torneos)
+  alembic/       migraciones 0001–0007
   tests/         pruebas automatizadas
 .githooks/       pre-commit que bloquea secretos
 .github/         CI: pruebas + gitleaks
@@ -133,7 +134,8 @@ backend/
 - [x] Fase 2 — sesiones, asistencia, justificaciones, cierre diario y multas
 - [x] Worker de tareas programadas (cierre diario, vencimientos)
 - [x] Fase 3A — rifas, sorteo con acta y estado de cuenta (paz y salvo)
-- [ ] Fase 3B — eventos y torneos · notificaciones (WhatsApp y correo) · mora
+- [x] Fase 3B — torneos con clubes externos, cupo y lista de espera
+- [ ] Notificaciones (WhatsApp y correo) · mora
 - [ ] Frontend Angular · sitio público del club · asistente con IA · despliegue
 
 ## Licencia

@@ -5,9 +5,11 @@ from app.models.alumnos import (
 from app.models.asistencia import Asistencia, Justificacion, Multa, Sesion
 from app.models.rifas import ActaSorteo, PagoPuesto, Puesto, Rifa, Talonario
 from app.models.sistema import Auditoria, Configuracion
+from app.models.torneos import EquipoTorneo, PagoEquipo, Torneo
 
 __all__ = [
     "ActaSorteo", "Acudiente", "Alumno", "AlumnoAcudiente", "Asistencia", "Auditoria", "Configuracion",
-    "DocumentoAlumno", "Inscripcion", "Justificacion", "Multa", "PagoInscripcion", "PagoPuesto", "Permiso",
-    "Prorroga", "Puesto", "Rifa", "Rol", "Sesion", "SesionRefresh", "Talonario", "Usuario", "roles_permisos",
+    "DocumentoAlumno", "EquipoTorneo", "Inscripcion", "Justificacion", "Multa", "PagoEquipo", "PagoInscripcion",
+    "PagoPuesto", "Permiso", "Prorroga", "Puesto", "Rifa", "Rol", "Sesion", "SesionRefresh", "Talonario", "Torneo",
+    "Usuario", "roles_permisos",
 ]

@@ -21,7 +21,8 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Mora: **3 meses** → "A expulsar"; confirmación del SuperAdmin por defecto (configurable).
 - Rifas: 4 por año; **1 talonario por alumno por rifa, 20 puestos × $2.000 = $40.000**. Cada puesto guarda comprador,
   teléfono y monto. Paz y salvo = talonario pagado al 100 %. El sorteo solo incluye talonarios pagados; guarda acta inmutable.
-- Torneos: cupo por rama y por evento (sugerido 18 equipos), configurable.
+- Torneos: los organiza el club y se inscriben **clubes externos** (no jugadores); cada equipo paga inscripción
+  (valor fijado en cada torneo). Cupo por torneo (sugerido 18, `cupo_equipos_sugerido`). No hay otros eventos.
 - Notificaciones: **WhatsApp y correo**, detrás de una interfaz para poder cambiar de proveedor.
 - Roles: SuperAdmin, Admin, Entrenador, Miembro (alumno mayor de edad o acudiente). Permisos en BD, verificados SIEMPRE en el servidor.
 - **El dueño del club es el entrenador principal y responsable de todo**: usa el rol **SuperAdmin** (acceso total,
@@ -97,9 +98,16 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
     participantes y su SHA-256 (`services/rifas.huella`).
   - `GET /alumnos/{id}/estado-cuenta`: saldo de inscripción + multas pendientes + talonarios con saldo → `al_dia`
     (paz y salvo).
-- SIGUIENTE: Fase 3B eventos/torneos (pendiente definir con Julian el flujo de inscripción de equipos). Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (Fase 3B torneos, 2026-10-29): migración 0007 (torneos, equipos_torneo, pagos_equipo). **148 pruebas**.
+  - Todo con `eventos.gestionar` (Admin/SA): guarda contactos de delegados externos. Pagos con `pagos.registrar`,
+    anulación con `pagos.anular` (SA); `pagos_equipo` append-only. Se quitó el permiso `eventos.inscribir`.
+  - Inscripción hasta `fecha_limite_inscripcion`; club único por torneo (sin importar mayúsculas, salvo retirado).
+    Cupo lleno → `en_espera`; al retirarse uno que ocupaba cupo entra el primero en espera. Torneo bloqueado
+    (`refresh(with_for_update)`) al mover el cupo. Abonos → `confirmado` al completar; valor 0 → confirmado directo.
+  - Inscripción pública de clubes: queda para la fase del sitio público.
+- SIGUIENTE: notificaciones (WhatsApp y correo) y mora. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
-- Después: rifas/pagos/eventos → notificaciones y mora → frontend Angular, club público, IA, producción.
+- Después: notificaciones y mora → frontend Angular, club público, IA, producción.
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);
