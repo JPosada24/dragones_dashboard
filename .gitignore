@@ -1,0 +1,28 @@
+# Secretos y entorno (la plantilla .env.example sí se versiona)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# Docker y datos
+pgdata/
+backups/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
