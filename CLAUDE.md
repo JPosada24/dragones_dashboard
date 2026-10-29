@@ -87,6 +87,8 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Cada ruta declara su permiso con `Depends(requiere("..."))`. Nunca confiar en el frontend para autorizar.
 - Cambios de esquema = nueva migración Alembic (no editar la 0001 ya aplicada).
 - Secretos solo en `.env` (no se sube a git).
+- Repositorio git local (rama `main`, desde 2026-10-29). Un commit al cerrar cada fase o cambio relevante;
+  antes de cada commit verificar que no se cuelen secretos (`.env`, claves). Aún sin remoto (GitHub privado pendiente).
 - Julian prefiere recibir los cambios como archivos concretos, no como .zip.
 
 ## Comandos (PowerShell, en la raíz del proyecto)
