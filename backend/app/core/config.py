@@ -29,6 +29,28 @@ class Settings(BaseSettings):
     # Worker (python -m app.worker): cada cuánto corre cada tarea programada.
     worker_cierre_segundos: int = 300  # el cierre de las 23:59 ocurre, a más tardar, 5 min después
     worker_vencer_segundos: int = 3600
+    worker_notificaciones_segundos: int = 3600
+    worker_correos_segundos: int = 60
+
+    # Correo. "registro" = no envía nada (solo lo anota). "smtp" = envía con la cuenta de abajo.
+    club_nombre: str = "Club Dragones"
+    email_modo: str = "registro"  # registro | smtp
+    smtp_host: str = "smtp.gmail.com"
+    smtp_puerto: int = 587
+    smtp_seguridad: str = "starttls"  # starttls | ssl
+    smtp_usuario: str | None = None
+    smtp_password: str | None = None  # en Gmail: "contraseña de aplicación", nunca la clave normal
+    smtp_remitente: str | None = None
+
+    @model_validator(mode="after")
+    def _validar_correo(self) -> "Settings":
+        if self.email_modo not in ("registro", "smtp"):
+            raise ValueError("EMAIL_MODO debe ser 'registro' o 'smtp'.")
+        if self.email_modo == "smtp" and not (self.smtp_usuario and self.smtp_password and self.smtp_remitente):
+            raise ValueError("Con EMAIL_MODO=smtp hay que definir SMTP_USUARIO, SMTP_PASSWORD y SMTP_REMITENTE.")
+        if self.smtp_seguridad not in ("starttls", "ssl"):
+            raise ValueError("SMTP_SEGURIDAD debe ser 'starttls' o 'ssl'.")
+        return self
 
     superadmin_email: str | None = None
     superadmin_password: str | None = None

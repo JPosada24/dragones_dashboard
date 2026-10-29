@@ -23,7 +23,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   teléfono y monto. Paz y salvo = talonario pagado al 100 %. El sorteo solo incluye talonarios pagados; guarda acta inmutable.
 - Torneos: los organiza el club y se inscriben **clubes externos** (no jugadores); cada equipo paga inscripción
   (valor fijado en cada torneo). Cupo por torneo (sugerido 18, `cupo_equipos_sugerido`). No hay otros eventos.
-- Notificaciones: **WhatsApp y correo**, detrás de una interfaz para poder cambiar de proveedor.
+- Notificaciones: **sin costo**. Correo automático (Gmail con contraseña de aplicación) + bandeja en la plataforma;
+  WhatsApp **manual** con enlaces wa.me que el staff envía desde el número del club (no se paga la API de Meta;
+  NUNCA usar bots no oficiales de WhatsApp Web: arriesgan el bloqueo del número). Interfaz lista para otro proveedor.
 - Roles: SuperAdmin, Admin, Entrenador, Miembro (alumno mayor de edad o acudiente). Permisos en BD, verificados SIEMPRE en el servidor.
 - **El dueño del club es el entrenador principal y responsable de todo**: usa el rol **SuperAdmin** (acceso total,
   incluidas las tareas de entrenador). El rol Entrenador queda para entrenadores asistentes, limitado a su rama.
@@ -105,9 +107,20 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
     Cupo lleno → `en_espera`; al retirarse uno que ocupaba cupo entra el primero en espera. Torneo bloqueado
     (`refresh(with_for_update)`) al mover el cupo. Abonos → `confirmado` al completar; valor 0 → confirmado directo.
   - Inscripción pública de clubes: queda para la fase del sitio público.
-- SIGUIENTE: notificaciones (WhatsApp y correo) y mora. Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (notificaciones, 2026-10-29): migración 0008 (`notificaciones`). **160 pruebas**.
+  - `services/notificaciones.avisar`: una fila por destinatario con bandeja/correo/WhatsApp; `clave` única +
+    `ON CONFLICT DO NOTHING ... RETURNING` = idempotente. Sin canal posible → no se crea.
+  - Destinatarios: acudientes + el alumno si es mayor (correo propio o el de su cuenta). Staff = SA/Admin +
+    entrenadores de la rama (solo bandeja/correo).
+  - Por evento: multa generada, justificación revisada, inscripción vencida. Programados (worker, cada hora):
+    recordatorios de pago (`recordatorios_dias_antes`, el umbral más cercano, clave con fecha límite) y alertas de
+    inasistencia (una por racha). WhatsApp solo para recordatorio/vencida/multa.
+  - Correo: `core/correo.py` (SMTP o modo registro, `EMAIL_MODO`); el worker envía cada 60 s en lotes de 50,
+    reintentos con espera 2^n min, 5 intentos → fallido. `POST /notificaciones/correo-prueba` (SA) para probar Gmail.
+  - Rutas: `/notificaciones/mias` (cualquiera, solo las propias), `/whatsapp` y `/correos` (`notificaciones.gestionar`).
+- SIGUIENTE: mora (definir con Julian sobre qué deuda aplica: hoy no hay mensualidades) y luego frontend Angular. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
-- Después: notificaciones y mora → frontend Angular, club público, IA, producción.
+- Después: mora → frontend Angular, club público, IA, producción.
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);

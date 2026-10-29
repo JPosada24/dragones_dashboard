@@ -9,7 +9,7 @@ from app.core import fechas
 from app.models.acceso import Usuario
 from app.models.alumnos import Alumno
 from app.models.asistencia import Multa, Sesion
-from app.services import alumnos, auditoria, configuracion
+from app.services import alumnos, auditoria, configuracion, notificaciones
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado
 
 
@@ -42,6 +42,7 @@ def generar(
         db, "multa.generar", multa, actor_id, ip,
         despues={"alumno_id": str(alumno_id), "sesion_id": str(sesion.id), "valor": valor},
     )
+    notificaciones.multa_generada(db, multa)
     return multa
 
 

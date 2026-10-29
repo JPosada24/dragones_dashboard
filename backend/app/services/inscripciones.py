@@ -10,7 +10,7 @@ from app.core.fechas import formato_fecha, formato_pesos, hoy
 from app.models.acceso import Usuario
 from app.models.alumnos import Alumno, Inscripcion, PagoInscripcion, Prorroga
 from app.models.dominio import ESTADOS_VIGENTES
-from app.services import alumnos, auditoria, configuracion
+from app.services import alumnos, auditoria, configuracion, notificaciones
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
 
 ETIQUETAS = {
@@ -264,5 +264,6 @@ def vencer(db: Session, *, en: date, actor_id: uuid.UUID | None = None, ip: str 
         i.estado, i.causa_rechazo = "rechazado", "vencimiento"
         i.motivo = f"Venció el plazo de pago ({formato_fecha(i.fecha_limite_pago)}) sin registrar el pago."
         _auditar(db, "inscripcion.vencer", i, actor_id, ip, antes=antes, despues=_resumen(i))
+        notificaciones.inscripcion_vencida(db, i)
     db.flush()
     return len(vencidas)

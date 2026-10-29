@@ -11,7 +11,7 @@ from app.models.acceso import Usuario
 from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import Asistencia, Justificacion, Multa, Sesion
 from app.models.dominio import ESTADOS_VIGENTES
-from app.services import alumnos, auditoria, configuracion, multas
+from app.services import alumnos, auditoria, configuracion, multas, notificaciones
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
 
 MAX_DIAS_PROGRAMACION = 186  # unos 6 meses por llamada
@@ -358,6 +358,7 @@ def revisar(
         db, "justificacion.revisar", "justificacion", j.id, actor.id, ip,
         despues={"estado": j.estado, "comentario": comentario},
     )
+    notificaciones.justificacion_revisada(db, j)
     return j
 
 
@@ -417,32 +418,34 @@ def cerrar(db: Session, *, ahora: datetime, actor_id: uuid.UUID | None = None, i
 class Alerta:
     alumno: Alumno
     inasistencias_seguidas: int
+    desde: date  # fecha de la primera ausencia de la racha (identifica la racha)
 
 
-def alertas(db: Session, usuario: Usuario) -> list[Alerta]:
-    """Alumnos con N o más ausencias seguidas (sin contar justificadas), según "inasistencias_consecutivas_aviso"."""
+def alertas(db: Session, usuario: Usuario | None) -> list[Alerta]:
+    """Alumnos con N o más ausencias seguidas (la justificada rompe la racha), según
+    "inasistencias_consecutivas_aviso". Con usuario=None (el worker) revisa todo el club."""
     minimo = configuracion.obtener(db, "inasistencias_consecutivas_aviso")
     if minimo <= 0:
         return []
     candidatos = db.scalars(
         select(Alumno).join(Inscripcion, Inscripcion.alumno_id == Alumno.id).where(
-            alumnos.filtro_visibles(usuario), Alumno.activo.is_(True),
+            alumnos.filtro_visibles(usuario) if usuario is not None else true(), Alumno.activo.is_(True),
             Inscripcion.anio == fechas.hoy().year, Inscripcion.estado.in_(ESTADOS_VIGENTES),
         ).order_by(Alumno.apellidos, Alumno.nombres)
     ).all()
     resultado = []
     for alumno in candidatos:
-        estados = db.scalars(
-            select(Asistencia.estado).join(Sesion, Sesion.id == Asistencia.sesion_id)
+        filas = db.execute(
+            select(Asistencia.estado, Sesion.fecha).join(Sesion, Sesion.id == Asistencia.sesion_id)
             .where(Asistencia.alumno_id == alumno.id, Sesion.cancelada.is_(False))
             .order_by(Sesion.fecha.desc(), Sesion.hora_inicio.desc())
             .limit(60)
         ).all()
-        racha = 0
-        for estado in estados:
+        racha, desde = 0, None
+        for estado, fecha in filas:
             if estado != "ausente":
                 break
-            racha += 1
+            racha, desde = racha + 1, fecha
         if racha >= minimo:
-            resultado.append(Alerta(alumno, racha))
+            resultado.append(Alerta(alumno, racha, desde))
     return resultado

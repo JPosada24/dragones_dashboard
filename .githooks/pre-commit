@@ -16,7 +16,7 @@ for f in $(git diff --cached --name-only --diff-filter=ACMR); do
 done
 
 # 2) Contenido que parece un secreto (solo en las líneas agregadas; la plantilla .env.example se excluye)
-patrones='(SECRET_KEY|DATA_ENCRYPTION_KEY|POSTGRES_PASSWORD|SUPERADMIN_PASSWORD)[[:space:]]*=[[:space:]]*[^[:space:]$"{]{8,}'
+patrones='(SECRET_KEY|DATA_ENCRYPTION_KEY|POSTGRES_PASSWORD|SUPERADMIN_PASSWORD|SMTP_PASSWORD)[[:space:]]*=[[:space:]]*[^[:space:]$"{]{8,}'
 patrones="$patrones|-----BEGIN [A-Z ]*PRIVATE KEY-----"
 patrones="$patrones|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}"
 

@@ -25,6 +25,7 @@ PERMISOS: dict[str, str] = {
     "rifas.gestionar": "Crear y gestionar rifas y talonarios",
     "sorteo.jugar": "Jugar el sorteo de una rifa",
     "eventos.gestionar": "Crear torneos e inscribir los clubes participantes",
+    "notificaciones.gestionar": "Ver y enviar los avisos por WhatsApp y revisar el estado de los correos",
     "club.editar": "Editar el perfil público del club",
     "agente.usar": "Usar el asistente de IA",
     "anio.cerrar": "Cerrar el año deportivo",
@@ -46,7 +47,7 @@ ROLES_PERMISOS: dict[str, set[str]] = {
         "inscripciones.crear", "inscripciones.gestionar", "inscripciones.abonar", "prorroga.conceder",
         "sesiones.gestionar", "asistencia.marcar_grupo", "asistencia.corregir", "justificaciones.revisar",
         "pagos.registrar", "multas.anular", "rifas.gestionar", "sorteo.jugar",
-        "eventos.gestionar", "club.editar", "agente.usar",
+        "eventos.gestionar", "notificaciones.gestionar", "club.editar", "agente.usar",
     },
     # El Entrenador hace todo el proceso de inscripción de su rama (alumno, acudiente, documentos, inscripción).
     "ENTRENADOR": {
