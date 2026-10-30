@@ -2,57 +2,168 @@
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
 
-<section class="controles">
-  <p class="nota-chica">
+<!-- Una fila de parámetro: textos a la izquierda y el valor en su caja (botón si se puede editar). -->
+<ng-template #filaParametro let-p>
+  <div class="parametro">
+    <div class="parametro-textos">
+      <span class="parametro-titulo">{{ p.titulo }}</span>
+      <span class="parametro-nota">{{ p.nota }}</span>
+    </div>
     @if (puedeEditar()) {
-      Los cambios aplican a lo que se cree desde ese momento: lo ya creado conserva su valor. Cada cambio queda en la auditoría.
+      <button type="button" class="caja-valor editable" [attr.data-tipo]="p.tipo" (click)="abrirEditar(p)"
+        [attr.aria-label]="'Cambiar ' + p.titulo + ' (' + valor(p) + ' ' + unidad(p) + ')'">
+        <span class="valor">{{ valor(p) }}</span><span class="unidad">{{ unidad(p) }}</span>
+      </button>
     } @else {
-      Solo el SuperAdmin puede cambiar estos parámetros.
+      <span class="caja-valor" [attr.data-tipo]="p.tipo">
+        <span class="valor">{{ valor(p) }}</span><span class="unidad">{{ unidad(p) }}</span>
+      </span>
     }
-  </p>
-  @if (puedeEditar()) {
-    <button type="button" class="boton secundario chico" [disabled]="probando()" (click)="probarCorreo()">
-      <span class="icono" aria-hidden="true">mail</span> {{ probando() ? 'Enviando…' : 'Probar correo' }}
-    </button>
-  }
-</section>
+  </div>
+</ng-template>
 
 @if (errorCarga()) {
   <p class="panel vacio" role="alert">No se pudo cargar la configuración. Recarga la página.</p>
 } @else if (valores() === null) {
   <p class="panel vacio">Cargando…</p>
 } @else {
-  <div class="grupos">
-    @for (g of grupos(); track g.titulo) {
-      <section class="panel grupo" [attr.aria-label]="g.titulo">
-        <h2><span class="icono" aria-hidden="true">{{ g.icono }}</span> {{ g.titulo }}</h2>
-        @for (p of g.parametros; track p.clave) {
-          <div class="parametro">
-            <div class="parametro-textos">
-              <span class="parametro-titulo">{{ p.titulo }}</span>
-              @if (p.ayuda) { <span class="nota-chica">{{ p.ayuda }}</span> }
-            </div>
-            <span class="valor mono">{{ mostrar(p) }}</span>
-            @if (puedeEditar()) {
-              <button type="button" class="boton-icono" (click)="abrirEditar(p)" [attr.aria-label]="'Cambiar ' + p.titulo" title="Cambiar">
-                <span class="icono" aria-hidden="true">edit</span></button>
-            }
+  <div class="columnas">
+    <div class="columna">
+      @for (g of izquierda(); track g.titulo) {
+        <section class="panel tarjeta" [attr.aria-label]="g.titulo">
+          <header class="cabecera">
+            <h2>{{ g.titulo }}</h2>
+            @if (g.nota) { <p class="sub">{{ g.nota }}</p> }
+          </header>
+          @for (p of g.parametros; track p.clave) {
+            <ng-container *ngTemplateOutlet="filaParametro; context: { $implicit: p }" />
+          }
+        </section>
+      }
+
+      <section class="panel tarjeta" aria-label="Políticas automáticas">
+        <header class="cabecera">
+          <h2>Políticas automáticas</h2>
+          <p class="sub">El sistema revisa la mora cada hora</p>
+        </header>
+        @for (p of mora().parametros; track p.clave) {
+          <ng-container *ngTemplateOutlet="filaParametro; context: { $implicit: p }" />
+        }
+        <div class="politicas">
+          <button type="button" role="switch" class="politica" [class.encendida]="expulsionAutomatica()"
+            [attr.aria-checked]="expulsionAutomatica()" [disabled]="!puedeEditar() || cambiandoPolitica()" (click)="cambiarExpulsion()">
+            <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+            <span class="politica-textos">
+              <span class="politica-titulo">Expulsión automática por mora</span>
+              <span class="parametro-nota">
+                {{ expulsionAutomatica() ? 'La mora pasa directo a expulsado' : 'La mora queda «A expulsar» y el SuperAdmin confirma' }}
+              </span>
+            </span>
+          </button>
+          <div class="politica fija encendida">
+            <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+            <span class="politica-textos">
+              <span class="politica-titulo">Multa automática por inasistencia</span>
+              <span class="parametro-nota">Al cierre del día, sin intervención del entrenador (valor $0 = no se multa)</span>
+            </span>
+          </div>
+          <div class="politica fija encendida">
+            <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+            <span class="politica-textos">
+              <span class="politica-titulo">Justificar inasistencias</span>
+              <span class="parametro-nota">La familia justifica y el staff aprueba: la multa pendiente se anula</span>
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="columna">
+      <section class="panel tarjeta" aria-label="Recordatorios">
+        <header class="cabecera fila">
+          <h2>Recordatorios</h2>
+          @if (puedeEditar()) {
+            <button type="button" class="boton secundario chico" (click)="abrirEditar(recordatoriosDef)">Cambiar días</button>
+          }
+        </header>
+        @for (r of recordatorios(); track $index) {
+          <div class="recordatorio">
+            <span class="cuando mono" [attr.data-tono]="r.tono">{{ r.cuando }}</span>
+            <span class="parametro-textos">
+              <span class="parametro-titulo">{{ r.canal }}</span>
+              <span class="parametro-nota">{{ r.nota }}</span>
+            </span>
+            <span class="estado mono">ACTIVO</span>
           </div>
         }
+        <div class="recordatorio pie">
+          <span class="cuando mono" data-tono="naranja"><span class="icono" aria-hidden="true">mail</span></span>
+          <span class="parametro-textos">
+            <span class="parametro-titulo">Correo del club</span>
+            <span class="parametro-nota">Los correos salen solos; el WhatsApp se envía a mano desde Avisos</span>
+          </span>
+          @if (puedeEditar()) {
+            <button type="button" class="boton secundario chico" [disabled]="probando()" (click)="probarCorreo()">
+              {{ probando() ? 'Enviando…' : 'Probar correo' }}
+            </button>
+          }
+        </div>
       </section>
-    }
+
+      @if (matriz(); as m) {
+        <section class="panel tarjeta" aria-label="Roles y permisos">
+          <header class="cabecera fila">
+            <div>
+              <h2>Roles y permisos</h2>
+              <p class="sub">Definidos en el sistema y verificados siempre en el servidor</p>
+            </div>
+            <button type="button" class="enlace" [attr.aria-pressed]="todosLosPermisos()" (click)="todosLosPermisos.set(!todosLosPermisos())">
+              {{ todosLosPermisos() ? 'Ver resumen' : 'Ver todos (' + m.permisos.length + ')' }}
+            </button>
+          </header>
+          <table class="matriz">
+            <thead>
+              <tr>
+                <th scope="col">Permiso</th>
+                @for (r of m.roles; track r.codigo) {
+                  <th scope="col" [attr.title]="r.descripcion">{{ nombreCorto[r.codigo] ?? r.nombre }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of filasPermisos(); track f.codigo) {
+                <tr>
+                  <th scope="row">{{ f.etiqueta }}</th>
+                  @for (c of f.celdas; track c.rol) {
+                    <td><span class="celda" [class.si]="c.si" [attr.aria-label]="c.rol + (c.si ? ': sí' : ': no')">{{ c.si ? '✓' : '—' }}</span></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+
+      <section class="panel tarjeta" [attr.aria-label]="otros().titulo">
+        <header class="cabecera"><h2>{{ otros().titulo }}</h2></header>
+        @for (p of otros().parametros; track p.clave) {
+          <ng-container *ngTemplateOutlet="filaParametro; context: { $implicit: p }" />
+        }
+      </section>
+
+      @if (!puedeEditar()) {
+        <p class="sub solo-consulta"><span class="icono" aria-hidden="true">lock</span> Solo el SuperAdmin puede cambiar estos parámetros.</p>
+      }
+    </div>
   </div>
 }
 
 @if (editando(); as d) {
-  <app-dialogo [titulo]="d.titulo" [descripcion]="'Valor actual: ' + mostrar(d)" (cerrar)="editando.set(null)">
+  <app-dialogo [titulo]="d.titulo" [descripcion]="'Valor actual: ' + valor(d) + ' ' + unidad(d)" (cerrar)="editando.set(null)">
     <form class="formulario" [formGroup]="formValor" (ngSubmit)="guardar()">
       @switch (d.tipo) {
-        @case ('booleano') {
-          <label class="casilla"><input type="checkbox" formControlName="activo" /><span>Activada</span></label>
-        }
         @case ('hora') {
-          <label class="campo"><span class="etiqueta">Nueva hora (HH:MM)</span>
+          <label class="campo"><span class="etiqueta">Nueva hora (HH:MM, 24 h)</span>
             <input class="control mono" formControlName="valor" inputmode="numeric" [placeholder]="guia(d)" autocomplete="off" /></label>
         }
         @case ('lista') {
@@ -64,7 +175,7 @@
             <input class="control mono" formControlName="valor" inputmode="numeric" [placeholder]="guia(d)" autocomplete="off" /></label>
         }
       }
-      @if (d.ayuda) { <p class="nota-chica">{{ d.ayuda }}</p> }
+      <p class="nota-campo">{{ d.nota }}</p>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="editando.set(null)">Cancelar</button>

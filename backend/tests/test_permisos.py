@@ -146,3 +146,18 @@ def test_superadmin_restablece_la_contrasena_y_cierra_las_sesiones(client, crear
     assert client.get("/api/v1/auth/me", headers=h_coach).status_code == 401
     assert login("coach@club.com").status_code == 401
     assert login("coach@club.com", nueva).status_code == 200
+
+
+def test_matriz_de_roles_solo_lectura_para_quien_ve_la_configuracion(client, crear_usuario, auth_header):
+    crear_usuario("adm@club.com", "ADMIN")
+    crear_usuario("ent@club.com", "ENTRENADOR")
+    r = client.get("/api/v1/configuracion/roles", headers=auth_header("adm@club.com"))
+    assert r.status_code == 200
+    datos = r.json()
+    assert [x["codigo"] for x in datos["roles"]] == ["SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO"]
+    por_rol = {x["codigo"]: set(x["permisos"]) for x in datos["roles"]}
+    assert "config.editar" in por_rol["SUPERADMIN"] and "config.editar" not in por_rol["ADMIN"]
+    assert "pagos.registrar" not in por_rol["ENTRENADOR"]
+    assert {p["codigo"] for p in datos["permisos"]} >= por_rol["SUPERADMIN"]
+    # Quien no ve la configuración tampoco ve la matriz.
+    assert client.get("/api/v1/configuracion/roles", headers=auth_header("ent@club.com")).status_code == 403

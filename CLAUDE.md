@@ -270,7 +270,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   popup que empieza vacío con el valor actual como placeholder; solo con `config.editar`; «Probar correo»).
   `paginas/avisos/` (`notificaciones.gestionar`): cola de WhatsApp (abrir enlace wa.me —solo si coincide con
   `https://wa.me/<número>?text=`—, luego «Sí, enviado» o «Descartar»; el mensaje se pinta como texto) y estado de
-  correos (pendiente/enviado/fallido con intentos y error). **Frontend del panel completo.** 196 pruebas backend, 88 frontend.
+  correos (pendiente/enviado/fallido con intentos y error). **Frontend del panel completo.** 
+  Configuración rehecha como el prototipo (2 columnas: parámetros con caja de valor/unidad que abre el popup,
+  «Políticas automáticas» con interruptor `role=switch` de `expulsion_automatica`, «Recordatorios» derivados de la
+  configuración, matriz «Roles y permisos» de solo lectura desde `GET /configuracion/roles` (`config.ver`; los
+  permisos se cambian con migración). Sin «Zona crítica» hasta que existan cierre de año y respaldo. 197 pruebas backend, 89 frontend.
 - SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), agente de IA, endurecer
   para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 

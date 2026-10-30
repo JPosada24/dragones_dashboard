@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -18,59 +19,90 @@ interface Parametro {
   descripcion: string | null;
 }
 
-/** Cómo se presenta cada parámetro: título, unidad y tipo de campo. */
+/** Cómo se presenta cada parámetro: título, nota, unidad y tipo de campo. */
 interface Definicion {
   clave: string;
   titulo: string;
+  nota: string;
   tipo: Tipo;
   unidad?: string; // "días", "meses"…
-  ayuda?: string;
 }
 
-const GRUPOS: { titulo: string; icono: string; parametros: Definicion[] }[] = [
-  {
-    titulo: 'Inscripciones', icono: 'assignment', parametros: [
-      { clave: 'valor_inscripcion', titulo: 'Valor de la inscripción', tipo: 'pesos' },
-      { clave: 'plazo_pago_dias', titulo: 'Plazo para pagar', tipo: 'numero', unidad: 'días' },
-      { clave: 'recordatorios_dias_antes', titulo: 'Recordatorios de pago', tipo: 'lista', unidad: 'días antes', ayuda: 'Separa los días con comas (ej.: 7, 1).' },
-      { clave: 'edad_mayoria', titulo: 'Mayoría de edad', tipo: 'numero', unidad: 'años', ayuda: 'Desde esta edad el alumno no necesita acudiente.' },
-    ],
-  },
-  {
-    titulo: 'Asistencia y multas', icono: 'fact_check', parametros: [
-      { clave: 'multa_inasistencia', titulo: 'Multa por inasistencia', tipo: 'pesos', ayuda: '0 = no se multa.' },
-      { clave: 'hora_cierre_asistencia', titulo: 'Cierre diario', tipo: 'hora' },
-      { clave: 'minutos_marcar_antes', titulo: 'La familia marca desde', tipo: 'numero', unidad: 'minutos antes' },
-      { clave: 'dias_para_justificar', titulo: 'Plazo para justificar', tipo: 'numero', unidad: 'días' },
-      { clave: 'inasistencias_consecutivas_aviso', titulo: 'Aviso por inasistencias seguidas', tipo: 'numero', unidad: 'faltas' },
-      { clave: 'dias_programacion_anticipada', titulo: 'Programar entrenamientos con', tipo: 'numero', unidad: 'días de anticipación' },
-    ],
-  },
-  {
-    titulo: 'Mora', icono: 'gavel', parametros: [
-      { clave: 'meses_mora_expulsion', titulo: 'Mora tras', tipo: 'numero', unidad: 'meses sin pagar' },
-      { clave: 'dias_aviso_mora', titulo: 'Aviso antes de la mora', tipo: 'numero', unidad: 'días' },
-      { clave: 'expulsion_automatica', titulo: 'Expulsión automática', tipo: 'booleano', ayuda: 'Si está apagada, el SuperAdmin confirma cada expulsión.' },
-    ],
-  },
-  {
-    titulo: 'Rifas y torneos', icono: 'confirmation_number', parametros: [
-      { clave: 'rifas_por_anio', titulo: 'Rifas por año', tipo: 'numero', unidad: 'rifas' },
-      { clave: 'puestos_por_talonario', titulo: 'Boletas por talonario', tipo: 'numero', unidad: 'boletas' },
-      { clave: 'precio_puesto', titulo: 'Precio de cada boleta', tipo: 'pesos' },
-      { clave: 'cupo_equipos_sugerido', titulo: 'Cupo sugerido por torneo', tipo: 'numero', unidad: 'equipos' },
-    ],
-  },
-  {
-    titulo: 'Documentos', icono: 'description', parametros: [
-      { clave: 'documento_max_mb', titulo: 'Tamaño máximo por archivo', tipo: 'numero', unidad: 'MB' },
-    ],
-  },
+interface Grupo {
+  titulo: string;
+  nota?: string;
+  parametros: Definicion[];
+}
+
+interface RolesOut {
+  permisos: { codigo: string; descripcion: string }[];
+  roles: { codigo: string; nombre: string; descripcion: string | null; permisos: string[] }[];
+}
+
+const MULTAS: Grupo = {
+  titulo: 'Multas y plazos', nota: 'Aplica a lo que se cree desde el cambio; lo ya creado conserva su valor', parametros: [
+    { clave: 'multa_inasistencia', titulo: 'Valor de la multa por inasistencia', nota: 'Se cobra al cierre del día si no marcó ni justificó (0 = no se multa)', tipo: 'pesos', unidad: 'COP' },
+    { clave: 'hora_cierre_asistencia', titulo: 'Hora de cierre de asistencia', nota: 'A esta hora se cierra el día y se generan las multas', tipo: 'hora' },
+    { clave: 'valor_inscripcion', titulo: 'Valor de la inscripción', nota: 'Se aceptan abonos parciales', tipo: 'pesos', unidad: 'COP' },
+    { clave: 'plazo_pago_dias', titulo: 'Plazo de pago de inscripción', nota: 'Días desde la inscripción', tipo: 'numero', unidad: 'días' },
+    { clave: 'dias_para_justificar', titulo: 'Plazo para justificar', nota: 'Días después del entrenamiento', tipo: 'numero', unidad: 'días' },
+    { clave: 'minutos_marcar_antes', titulo: 'La familia marca asistencia desde', nota: 'Minutos antes del inicio del entrenamiento', tipo: 'numero', unidad: 'min' },
+  ],
+};
+
+const MORA: Grupo = {
+  titulo: 'Mora y expulsión', parametros: [
+    { clave: 'meses_mora_expulsion', titulo: 'Mora tras', nota: 'Meses con una deuda sin pagar (multas o rifas)', tipo: 'numero', unidad: 'meses' },
+    { clave: 'dias_aviso_mora', titulo: 'Aviso antes de la mora', nota: 'Días antes en que se avisa a la familia', tipo: 'numero', unidad: 'días' },
+    { clave: 'inasistencias_consecutivas_aviso', titulo: 'Alerta por inasistencias seguidas', nota: 'Avisa al staff al llegar a esta racha', tipo: 'numero', unidad: 'faltas' },
+  ],
+};
+
+const RIFAS: Grupo = {
+  titulo: 'Rifas y torneos', nota: 'Base para el paz y salvo y para las rifas nuevas', parametros: [
+    { clave: 'rifas_por_anio', titulo: 'Rifas por año', nota: 'Máximo de rifas activas en un año', tipo: 'numero', unidad: 'rifas' },
+    { clave: 'puestos_por_talonario', titulo: 'Boletas por talonario', nota: 'Un talonario por alumno en cada rifa', tipo: 'numero', unidad: 'boletas' },
+    { clave: 'precio_puesto', titulo: 'Precio de cada boleta', nota: 'El talonario vale boletas × precio', tipo: 'pesos', unidad: 'COP' },
+    { clave: 'cupo_equipos_sugerido', titulo: 'Cupo sugerido por torneo', nota: 'Se propone al crear un torneo', tipo: 'numero', unidad: 'equipos' },
+  ],
+};
+
+const OTROS: Grupo = {
+  titulo: 'Alumnos y entrenamientos', parametros: [
+    { clave: 'edad_mayoria', titulo: 'Mayoría de edad', nota: 'Desde esta edad no necesita acudiente', tipo: 'numero', unidad: 'años' },
+    { clave: 'documento_max_mb', titulo: 'Tamaño máximo por documento', nota: 'PDF, JPG o PNG', tipo: 'numero', unidad: 'MB' },
+    { clave: 'dias_programacion_anticipada', titulo: 'Programar entrenamientos con', nota: 'Días hacia adelante desde el horario semanal', tipo: 'numero', unidad: 'días' },
+  ],
+};
+
+const RECORDATORIOS: Definicion = {
+  clave: 'recordatorios_dias_antes', titulo: 'Recordatorios de pago', nota: 'Separa los días con comas (ej.: 7, 1).', tipo: 'lista', unidad: 'días antes',
+};
+
+const EXPULSION: Definicion = {
+  clave: 'expulsion_automatica', titulo: 'Expulsión automática por mora', nota: '', tipo: 'booleano',
+};
+
+/** Permisos que se muestran en la matriz resumida (el resto con "Ver todos"). */
+const PERMISOS_CLAVE: [string, string][] = [
+  ['asistencia.marcar_grupo', 'Marcar asistencia'],
+  ['inscripciones.crear', 'Inscribir alumnos'],
+  ['inscripciones.abonar', 'Abonos de inscripción'],
+  ['pagos.registrar', 'Cobrar multas y rifas'],
+  ['pagos.anular', 'Anular pagos'],
+  ['prorroga.conceder', 'Conceder prórrogas'],
+  ['rifas.gestionar', 'Crear y gestionar rifas'],
+  ['eventos.gestionar', 'Crear y gestionar torneos'],
+  ['alumnos.eliminar', 'Eliminar alumnos'],
+  ['usuarios.gestionar', 'Crear usuarios'],
+  ['config.editar', 'Cambiar parámetros críticos'],
 ];
+
+const NOMBRE_CORTO: Record<string, string> = { SUPERADMIN: 'Super', ADMIN: 'Admin', ENTRENADOR: 'Entren.', MIEMBRO: 'Miembro' };
 
 @Component({
   selector: 'app-configuracion',
-  imports: [ReactiveFormsModule, Aviso, Dialogo],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, Aviso, Dialogo],
   templateUrl: './configuracion.html',
   styleUrl: './configuracion.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -82,23 +114,62 @@ export class ConfiguracionPage implements OnInit {
   private readonly pesos = new PesosPipe();
 
   protected readonly puedeEditar = computed(() => this.auth.tiene('config.editar'));
+  protected readonly recordatoriosDef = RECORDATORIOS;
+  protected readonly nombreCorto = NOMBRE_CORTO;
 
   protected readonly valores = signal<Record<string, Valor> | null>(null);
+  protected readonly matriz = signal<RolesOut | null>(null);
+  protected readonly todosLosPermisos = signal(false);
   protected readonly errorCarga = signal(false);
   protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
   protected readonly errorDialogo = signal<string | null>(null);
   protected readonly ocupado = signal(false);
+  protected readonly cambiandoPolitica = signal(false);
   protected readonly editando = signal<Definicion | null>(null);
   protected readonly probando = signal(false);
 
   /** Un solo campo de texto: se interpreta según el tipo del parámetro. */
-  protected readonly formValor = this.fb.group({ valor: [''], activo: false });
+  protected readonly formValor = this.fb.group({ valor: [''] });
 
-  protected readonly grupos = computed(() => {
+  private filtrar(g: Grupo): Grupo {
+    const v = this.valores() ?? {};
+    return { ...g, parametros: g.parametros.filter((p) => p.clave in v) };
+  }
+
+  protected readonly izquierda = computed(() => (this.valores() ? [MULTAS, RIFAS].map((g) => this.filtrar(g)) : []));
+  protected readonly mora = computed(() => this.filtrar(MORA));
+  protected readonly otros = computed(() => this.filtrar(OTROS));
+
+  protected readonly expulsionAutomatica = computed(() => this.valores()?.['expulsion_automatica'] === true);
+
+  /** Filas de la tarjeta "Recordatorios": los días configurados, el vencimiento y el aviso de mora. */
+  protected readonly recordatorios = computed(() => {
     const v = this.valores();
     if (!v) return [];
-    return GRUPOS.map((g) => ({ ...g, parametros: g.parametros.filter((p) => p.clave in v) }))
-      .filter((g) => g.parametros.length);
+    const dias = (v['recordatorios_dias_antes'] as number[] | undefined) ?? [];
+    const filas: { cuando: string; canal: string; nota: string; tono: 'oro' | 'rojo' }[] = dias.map((d) => ({
+      cuando: d === 0 ? 'EL DÍA' : `${d} ${d === 1 ? 'DÍA' : 'DÍAS'}`,
+      canal: 'Correo + WhatsApp a la familia',
+      nota: d === 0 ? 'El día que vence la inscripción' : 'Antes de que venza el plazo de la inscripción',
+      tono: d <= 1 ? 'rojo' : 'oro',
+    }));
+    filas.push({ cuando: 'VENCIDO', canal: 'Correo + WhatsApp a la familia', nota: 'Inscripción rechazada por falta de pago', tono: 'rojo' });
+    if (typeof v['dias_aviso_mora'] === 'number') {
+      filas.push({ cuando: `${v['dias_aviso_mora']} DÍAS`, canal: 'Correo + WhatsApp a la familia', nota: 'Antes de entrar en mora por deudas', tono: 'oro' });
+    }
+    return filas;
+  });
+
+  /** Matriz de permisos: resumida o completa. */
+  protected readonly filasPermisos = computed(() => {
+    const m = this.matriz();
+    if (!m) return [];
+    const lista: [string, string][] = this.todosLosPermisos()
+      ? m.permisos.map((p) => [p.codigo, p.descripcion])
+      : PERMISOS_CLAVE.filter(([c]) => m.permisos.some((p) => p.codigo === c));
+    return lista.map(([codigo, etiqueta]) => ({
+      codigo, etiqueta, celdas: m.roles.map((r) => ({ rol: r.nombre, si: r.permisos.includes(codigo) })),
+    }));
   });
 
   ngOnInit(): void {
@@ -106,10 +177,14 @@ export class ConfiguracionPage implements OnInit {
       next: (lista) => this.valores.set(Object.fromEntries(lista.map((p) => [p.clave, p.valor]))),
       error: () => this.errorCarga.set(true),
     });
+    this.http.get<RolesOut>(`${API}/configuracion/roles`).subscribe({
+      next: (m) => this.matriz.set(m),
+      error: () => this.matriz.set(null),
+    });
   }
 
-  /** "$90.000", "30 días", "7 y 1 días antes", "Sí"… */
-  protected mostrar(d: Definicion): string {
+  /** Solo el valor: "$90.000", "30", "23:59", "7, 1"… (la unidad va aparte). */
+  protected valor(d: Definicion): string {
     const v = this.valores()?.[d.clave];
     if (v === undefined) return '—';
     switch (d.tipo) {
@@ -117,20 +192,29 @@ export class ConfiguracionPage implements OnInit {
         return this.pesos.transform(v as number);
       case 'booleano':
         return v ? 'Activada' : 'Apagada';
-      case 'hora':
-        return String(v);
       case 'lista': {
         const l = v as number[];
-        return l.length ? `${l.join(' y ')} ${d.unidad ?? ''}`.trim() : 'Ninguno';
+        return l.length ? l.join(', ') : 'Ninguno';
       }
       default:
-        return `${v} ${d.unidad ?? ''}`.trim();
+        return String(v);
     }
   }
 
+  /** Unidad junto al valor; la hora se muestra en formato de 12 h como ayuda. */
+  protected unidad(d: Definicion): string {
+    if (d.tipo === 'pesos') return 'COP';
+    if (d.tipo === 'hora') {
+      const v = this.valores()?.[d.clave];
+      if (typeof v !== 'string') return '';
+      const [h = 0, m = 0] = v.split(':').map(Number);
+      return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
+    }
+    return d.unidad ?? '';
+  }
+
   protected abrirEditar(d: Definicion): void {
-    const actual = this.valores()?.[d.clave];
-    this.formValor.reset({ valor: '', activo: actual === true });
+    this.formValor.reset({ valor: '' });
     this.errorDialogo.set(null);
     this.mensaje.set(null);
     this.editando.set(d);
@@ -145,9 +229,7 @@ export class ConfiguracionPage implements OnInit {
 
   /** Interpreta lo escrito según el tipo del parámetro. */
   private leerValor(d: Definicion): { valor: Valor } | { error: string } {
-    const f = this.formValor.getRawValue();
-    if (d.tipo === 'booleano') return { valor: f.activo };
-    const texto = f.valor.trim();
+    const texto = this.formValor.getRawValue().valor.trim();
     if (!texto) return { error: 'Escribe el nuevo valor.' };
     if (d.tipo === 'hora') {
       return /^([01]\d|2[0-3]):[0-5]\d$/.test(texto) ? { valor: texto } : { error: 'Escribe la hora como HH:MM (ej.: 23:59).' };
@@ -162,23 +244,40 @@ export class ConfiguracionPage implements OnInit {
     return Number.isInteger(n) && n >= 0 ? { valor: n } : { error: 'Escribe un número entero (sin decimales).' };
   }
 
+  private enviar(d: Definicion, valor: Valor, alTerminar: (error: string | null) => void): void {
+    this.http.patch<Parametro>(`${API}/configuracion/${encodeURIComponent(d.clave)}`, { valor }).subscribe({
+      next: (p) => {
+        this.valores.update((v) => ({ ...(v ?? {}), [p.clave]: p.valor }));
+        alTerminar(null);
+      },
+      error: (e) => alTerminar(mensajeError(e)),
+    });
+  }
+
   protected guardar(): void {
     const d = this.editando();
     if (!d) return;
     const leido = this.leerValor(d);
     if ('error' in leido) return this.errorDialogo.set(leido.error);
     this.ocupado.set(true);
-    this.http.patch<Parametro>(`${API}/configuracion/${encodeURIComponent(d.clave)}`, { valor: leido.valor }).subscribe({
-      next: (p) => {
-        this.ocupado.set(false);
-        this.editando.set(null);
-        this.valores.update((v) => ({ ...(v ?? {}), [p.clave]: p.valor }));
-        this.mensaje.set({ error: false, texto: `${d.titulo}: ${this.mostrar(d)}. Aplica a lo que se cree desde ahora.` });
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
+    this.enviar(d, leido.valor, (error) => {
+      this.ocupado.set(false);
+      if (error) return this.errorDialogo.set(error);
+      this.editando.set(null);
+      this.mensaje.set({ error: false, texto: `${d.titulo}: ${this.valor(d)} ${this.unidad(d)}`.trim() + '. Aplica desde ahora.' });
+    });
+  }
+
+  protected cambiarExpulsion(): void {
+    if (!this.puedeEditar() || this.cambiandoPolitica()) return;
+    const nuevo = !this.expulsionAutomatica();
+    this.cambiandoPolitica.set(true);
+    this.mensaje.set(null);
+    this.enviar(EXPULSION, nuevo, (error) => {
+      this.cambiandoPolitica.set(false);
+      this.mensaje.set(error
+        ? { error: true, texto: error }
+        : { error: false, texto: nuevo ? 'Expulsión automática activada: la mora expulsa sin confirmación.' : 'Expulsión automática apagada: el SuperAdmin confirma cada expulsión.' });
     });
   }
 

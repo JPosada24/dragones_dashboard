@@ -12,7 +12,21 @@ const PARAMETROS = [
   { clave: 'recordatorios_dias_antes', valor: [7, 1], descripcion: '' },
   { clave: 'hora_cierre_asistencia', valor: '23:59', descripcion: '' },
   { clave: 'expulsion_automatica', valor: false, descripcion: '' },
+  { clave: 'dias_aviso_mora', valor: 15, descripcion: '' },
 ];
+
+const ROLES = {
+  permisos: [
+    { codigo: 'asistencia.marcar_grupo', descripcion: 'Marcar la asistencia de la planilla' },
+    { codigo: 'config.editar', descripcion: 'Cambiar parámetros críticos' },
+    { codigo: 'pagos.registrar', descripcion: 'Registrar pagos' },
+  ],
+  roles: [
+    { codigo: 'SUPERADMIN', nombre: 'SuperAdmin', descripcion: null, permisos: ['asistencia.marcar_grupo', 'config.editar', 'pagos.registrar'] },
+    { codigo: 'ADMIN', nombre: 'Admin', descripcion: null, permisos: ['asistencia.marcar_grupo', 'pagos.registrar'] },
+    { codigo: 'ENTRENADOR', nombre: 'Entrenador', descripcion: null, permisos: ['asistencia.marcar_grupo'] },
+  ],
+};
 
 describe('ConfiguracionPage', () => {
   let backend: HttpTestingController;
@@ -26,6 +40,7 @@ describe('ConfiguracionPage', () => {
     fixture = TestBed.createComponent(ConfiguracionPage);
     fixture.detectChanges();
     backend.expectOne(`${API}/configuracion`).flush(PARAMETROS);
+    backend.expectOne(`${API}/configuracion/roles`).flush(ROLES);
     await estable();
   }
 
@@ -45,18 +60,22 @@ describe('ConfiguracionPage', () => {
     c.dispatchEvent(new Event('input'));
   }
 
-  it('muestra los parámetros agrupados y en formato legible', async () => {
+  it('muestra los parámetros con valor y unidad, los recordatorios y la matriz de roles', async () => {
     await cargar(['config.ver', 'config.editar']);
-    const texto = el().textContent ?? '';
-    expect(texto).toContain('$90.000');
-    expect(texto).toContain('30 días');
-    expect(texto).toContain('7 y 1 días antes');
-    expect(texto).toContain('Apagada');
+    const caja = el().querySelector('[aria-label^="Cambiar Valor de la inscripción"]')!;
+    expect(caja.querySelector('.valor')?.textContent).toBe('$90.000');
+    expect(caja.querySelector('.unidad')?.textContent).toBe('COP');
+    expect(el().querySelector('[aria-label^="Cambiar Hora de cierre"] .unidad')?.textContent).toBe('11:59 pm');
+    const cuando = [...el().querySelectorAll('.cuando')].map((c) => c.textContent?.trim());
+    expect(cuando).toEqual(['7 DÍAS', '1 DÍA', 'VENCIDO', '15 DÍAS', 'mail']);
+    const filas = [...el().querySelectorAll('.matriz tbody tr')].map((f) => f.textContent?.replace(/\s+/g, ''));
+    expect(filas).toContain('Cambiarparámetroscríticos✓——');
+    expect(filas).toContain('Cobrarmultasyrifas✓✓—');
   });
 
   it('cambia un valor: el campo empieza vacío y se valida antes de enviar', async () => {
     await cargar(['config.ver', 'config.editar']);
-    el().querySelector<HTMLButtonElement>('[aria-label="Cambiar Valor de la inscripción"]')!.click();
+    el().querySelector<HTMLButtonElement>('[aria-label^="Cambiar Valor de la inscripción"]')!.click();
     await estable();
     const campo = dialogo().querySelector<HTMLInputElement>('[formcontrolname="valor"]')!;
     expect(campo.value).toBe('');
@@ -71,12 +90,12 @@ describe('ConfiguracionPage', () => {
     expect(r.request.body).toEqual({ valor: 100000 });
     r.flush({ clave: 'valor_inscripcion', valor: 100000, descripcion: '' });
     await estable();
-    expect(el().textContent).toContain('$100.000');
+    expect(el().querySelector('[aria-label^="Cambiar Valor de la inscripción"] .valor')?.textContent).toBe('$100.000');
   });
 
-  it('las listas se escriben separadas por comas', async () => {
+  it('los días de recordatorio se escriben separados por comas', async () => {
     await cargar(['config.ver', 'config.editar']);
-    el().querySelector<HTMLButtonElement>('[aria-label="Cambiar Recordatorios de pago"]')!.click();
+    boton('Cambiar días')!.click();
     await estable();
     escribir('1, 15, 7');
     boton('Guardar', dialogo())!.click();
@@ -85,15 +104,31 @@ describe('ConfiguracionPage', () => {
     r.flush({ clave: 'recordatorios_dias_antes', valor: [15, 7, 1], descripcion: '' });
   });
 
+  it('el interruptor activa la expulsión automática', async () => {
+    await cargar(['config.ver', 'config.editar']);
+    const interruptor = el().querySelector<HTMLButtonElement>('[role="switch"]')!;
+    expect(interruptor.getAttribute('aria-checked')).toBe('false');
+    interruptor.click();
+    const r = backend.expectOne(`${API}/configuracion/expulsion_automatica`);
+    expect(r.request.body).toEqual({ valor: true });
+    r.flush({ clave: 'expulsion_automatica', valor: true, descripcion: '' });
+    await estable();
+    expect(interruptor.getAttribute('aria-checked')).toBe('true');
+    expect(el().textContent).toContain('Expulsión automática activada');
+  });
+
   it('el Admin solo consulta', async () => {
     await cargar(['config.ver']);
     expect(el().querySelector('[aria-label^="Cambiar"]')).toBeNull();
-    expect(boton('mail Probar correo')).toBeUndefined();
+    expect(el().querySelector<HTMLButtonElement>('[role="switch"]')!.disabled).toBe(true);
+    expect(boton('Probar correo')).toBeUndefined();
+    expect(boton('Cambiar días')).toBeUndefined();
+    expect(el().querySelector('.caja-valor .valor')?.textContent).toBeTruthy();
   });
 
   it('prueba el correo del club', async () => {
     await cargar(['config.ver', 'config.editar']);
-    boton('mail Probar correo')!.click();
+    boton('Probar correo')!.click();
     backend.expectOne(`${API}/notificaciones/correo-prueba`).flush({ enviado: true, modo: 'smtp', detalle: 'Enviado a d***@club.com.' });
     await estable();
     expect(el().textContent).toContain('Correo de prueba enviado');

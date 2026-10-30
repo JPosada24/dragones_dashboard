@@ -3,80 +3,328 @@
   gap: 16px;
 }
 
-h2 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 13.5px var(--f-titulo);
-  color: var(--texto-blanco);
-
-  .icono {
-    font-size: 18px;
-    color: var(--naranja);
-  }
-}
-
 .vacio {
   margin: 0;
   padding: 18px;
   color: var(--texto-3);
 }
 
-.nota-chica {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--texto-3);
-}
-
-.controles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.grupos {
+// Dos columnas como el prototipo; en pantallas angostas, una.
+.columnas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
   align-items: start;
+
+  @media (max-width: 1080px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.grupo {
+.columna {
   display: grid;
-  gap: 4px;
-  padding: 16px 18px;
+  gap: 18px;
+}
+
+.tarjeta {
+  overflow: hidden;
+}
+
+.cabecera {
+  display: grid;
+  gap: 3px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--borde);
+
+  &.fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.sub {
+  margin: 0;
+  font: 400 11px var(--f-texto);
+  color: var(--texto-3);
 }
 
 .parametro {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 14px;
   align-items: center;
-  padding: 10px 0;
+  padding: 13px 18px;
   border-bottom: 1px solid var(--borde-suave);
 
   &:last-child {
     border-bottom: 0;
   }
+
+  @media (max-width: 480px) {
+    grid-template-columns: minmax(0, 1fr) 120px;
+  }
 }
 
-.parametro-textos {
+.parametro-textos,
+.politica-textos {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
-.parametro-titulo {
-  font: 500 12.5px var(--f-texto);
+.parametro-titulo,
+.politica-titulo {
+  font: 600 12px var(--f-texto);
   color: var(--texto);
 }
 
-.valor {
-  font-size: 12.5px;
+.parametro-nota {
+  font: 400 10.5px/1.45 var(--f-texto);
+  color: var(--texto-3);
+}
+
+// Caja del valor: parece un campo, como en el prototipo.
+.caja-valor {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 7px;
+  background: var(--fondo);
+  font: inherit;
+  text-align: left;
+
+  .valor {
+    font: 600 13px var(--f-mono);
+    color: var(--texto-blanco);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &[data-tipo='pesos'] .valor {
+    color: var(--oro);
+  }
+
+  .unidad {
+    flex: none;
+    font: 400 10px var(--f-mono);
+    color: var(--texto-3);
+  }
+
+  &.editable {
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--naranja);
+    }
+  }
+}
+
+.politicas {
+  display: grid;
+  gap: 11px;
+  padding: 14px 18px 17px;
+  border-top: 1px solid var(--borde-suave);
+}
+
+.politica {
+  --pista: rgba(255, 255, 255, 0.16);
+  --perilla: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--fondo);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+
+  &.encendida {
+    --pista: var(--naranja);
+    --perilla: var(--fondo);
+    border-color: rgba(242, 105, 30, 0.3);
+    background: rgba(242, 105, 30, 0.06);
+  }
+
+  &.fija {
+    opacity: 0.8;
+  }
+
+  &:is(button):not(:disabled) {
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--naranja);
+    }
+  }
+}
+
+.interruptor {
+  flex: none;
+  display: flex;
+  width: 30px;
+  height: 17px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--pista);
+  transition: background 0.15s;
+
+  .encendida & {
+    justify-content: flex-end;
+  }
+}
+
+.perilla {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--perilla);
+}
+
+.recordatorio {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--borde-suave);
+
+  &.pie {
+    border-bottom: 0;
+    background: var(--panel-hundido);
+  }
+}
+
+.cuando {
+  --tono: var(--oro);
+  display: grid;
+  place-items: center;
+  padding: 4px 0;
+  border: 1px solid var(--tono);
+  border-radius: 5px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--oro);
-  text-align: right;
+  color: var(--tono);
+
+  &[data-tono='rojo'] {
+    --tono: var(--rojo);
+  }
+
+  &[data-tono='naranja'] {
+    --tono: var(--naranja);
+  }
+
+  .icono {
+    font-size: 16px;
+  }
+}
+
+.estado {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--naranja);
+}
+
+.enlace {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 600 11px var(--f-texto);
+  color: var(--naranja);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.matriz {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 6px;
+    border-bottom: 1px solid var(--borde-suave);
+  }
+
+  th:first-child {
+    padding-left: 18px;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 18px;
+  }
+
+  thead th {
+    background: var(--panel-hundido);
+    font: 600 9.5px var(--f-mono);
+    color: var(--texto-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  thead th:first-child,
+  tbody th {
+    text-align: left;
+  }
+
+  tbody th {
+    font: 500 12px var(--f-texto);
+    color: var(--texto);
+  }
+
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+
+  td {
+    width: 64px;
+  }
+}
+
+.celda {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  font: 700 10px var(--f-mono);
+  color: rgba(255, 255, 255, 0.28);
+
+  &.si {
+    border-color: rgba(242, 105, 30, 0.38);
+    background: rgba(242, 105, 30, 0.15);
+    color: var(--naranja);
+  }
+}
+
+.solo-consulta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .icono {
+    font-size: 15px;
+  }
 }
