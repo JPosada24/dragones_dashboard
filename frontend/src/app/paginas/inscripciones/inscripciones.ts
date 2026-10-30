@@ -95,6 +95,7 @@ export class InscripcionesPage implements OnInit {
   protected readonly anulando = signal<{ i: Inscripcion; pago: PagoInscripcion } | null>(null);
   protected readonly cambiando = signal<{ i: Inscripcion; t: Transicion } | null>(null);
   protected readonly creando = signal(false);
+  protected readonly ayuda = signal(false);
   protected readonly candidatos = signal<Alumno[] | null>(null);
   protected readonly elegido = signal<Alumno | null>(null);
   private temporizador: ReturnType<typeof setTimeout> | undefined;

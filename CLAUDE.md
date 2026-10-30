@@ -200,7 +200,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   muestra la tarjeta "Inscripción <año>" (pagado, saldo, límite, "Registrar abono", enlace `?id=` al detalle) y
   "Renovar inscripción" si no tiene vigente; en la pestaña de inscripciones "Renovar alumno existente". Pestañas
   móviles: Resumen, Asistencia, Alumnos, Multas. Estilos de formularios de popups (`.formulario`, `.rejilla`,
-  `.campo`, `.casilla`, `.acciones`…) ahora globales. 189 pruebas backend, 45 frontend.
+  `.campo`, `.casilla`, `.acciones`…) ahora globales. La explicación de la regla va en un modal (botón "?" junto al título). 189 pruebas backend, 46 frontend.
 - SIGUIENTE (frontend): Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).

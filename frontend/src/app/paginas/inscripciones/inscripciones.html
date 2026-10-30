@@ -59,78 +59,83 @@
     </section>
   }
 
-  <div class="columnas">
-    <section class="panel tabla" aria-label="Inscripciones">
-      <div class="panel-cabecera">
+  <section class="panel tabla" aria-label="Inscripciones">
+    <div class="panel-cabecera">
+      <div class="titulo-fila">
         <h2>{{ esStaff() ? 'Inscripciones ' + anio() : 'Inscripciones de ' + anio() }}</h2>
-        @if (esStaff()) {
-          <div class="filtros" role="group" aria-label="Filtrar por estado">
-            @for (f of filtros; track f.valor) {
-              <button type="button" class="filtro" [attr.aria-pressed]="filtro() === f.valor" (click)="filtro.set(f.valor)">
-                {{ f.texto }} <span class="mono">{{ conteoFiltro()[f.valor] }}</span>
-              </button>
-            }
-          </div>
-        }
+        <button type="button" class="ayuda" (click)="ayuda.set(true)" aria-label="Cómo funcionan las inscripciones" title="Cómo funciona">
+          <span class="icono" aria-hidden="true">help</span>
+        </button>
       </div>
-
-      @if (filas().length) {
-        <div class="encabezados" aria-hidden="true">
-          <span>Alumno</span><span>Inscrito / límite</span><span>Restan</span><span>Pagado</span><span>Estado</span><span></span>
+      @if (esStaff()) {
+        <div class="filtros" role="group" aria-label="Filtrar por estado">
+          @for (f of filtros; track f.valor) {
+            <button type="button" class="filtro" [attr.aria-pressed]="filtro() === f.valor" (click)="filtro.set(f.valor)">
+              {{ f.texto }} <span class="mono">{{ conteoFiltro()[f.valor] }}</span>
+            </button>
+          }
         </div>
       }
-      <ul class="filas">
-        @for (i of filas(); track i.id) {
-          <li class="fila" [attr.data-estado]="i.estado">
-            <button type="button" class="alumno" (click)="detalle.set(i)" [attr.aria-label]="'Ver la inscripción de ' + i.alumno_nombre">
-              <span class="alumno-nombre">{{ i.alumno_nombre }}</span>
-              <span class="alumno-nota capital">{{ i.rama }}</span>
-            </button>
-            <span class="mono chico fechas">
-              {{ i.fecha_inscripcion | date: 'd MMM' }} → <b>{{ i.fecha_limite_pago | date: 'd MMM' }}</b>
-              @if (i.prorrogas.length) { <span class="chip-prorroga" title="Con prórroga">prórroga</span> }
-            </span>
-            <span class="mono chico restan" [class.alerta]="i.estado === 'pendiente_pago' && restan(i) <= 7">
-              {{ i.estado === 'pendiente_pago' ? textoRestan(i) : '—' }}
-            </span>
-            <span class="pagado">
-              <span class="mono chico">{{ (i.monto_pagado ?? 0) | pesos }} / {{ i.valor | pesos }}</span>
-              <span class="barra" role="img" [attr.aria-label]="'Pagado ' + pct(i)"><span [style.width]="pct(i)"></span></span>
-            </span>
-            <span class="estado">{{ estadoTexto[i.estado] }}</span>
-            <span class="acciones-fila">
-              @if (abonable(i)) {
-                <button type="button" class="boton-icono" (click)="abrirAbono(i)" [attr.aria-label]="'Registrar abono de ' + i.alumno_nombre" title="Registrar abono">
-                  <span class="icono" aria-hidden="true">payments</span>
-                </button>
-              }
-              @if (prorrogable(i)) {
-                <button type="button" class="boton-icono" (click)="abrirProrroga(i)" [attr.aria-label]="'Conceder prórroga a ' + i.alumno_nombre" title="Conceder prórroga">
-                  <span class="icono" aria-hidden="true">event_repeat</span>
-                </button>
-              }
-            </span>
-          </li>
-        } @empty {
-          <li class="vacio">
-            @if (esStaff()) {
-              Nada en «{{ textoFiltro() }}» para {{ anio() }}.
-            } @else {
-              No hay inscripciones registradas en {{ anio() }}.
-            }
-          </li>
-        }
-      </ul>
-      @if ((inscripciones()?.length ?? 0) >= limite) {
-        <p class="nota">Se muestran las primeras {{ limite }} inscripciones del año.</p>
-      }
-    </section>
+    </div>
 
-    <aside class="panel relleno regla">
-      <div class="fila-base">
-        <h2>Cómo funciona</h2>
-        <span class="mono chico apagado">configurable</span>
+    @if (filas().length) {
+      <div class="encabezados" aria-hidden="true">
+        <span>Alumno</span><span>Inscrito / límite</span><span>Restan</span><span>Pagado</span><span>Estado</span><span></span>
       </div>
+    }
+    <ul class="filas">
+      @for (i of filas(); track i.id) {
+        <li class="fila" [attr.data-estado]="i.estado">
+          <button type="button" class="alumno" (click)="detalle.set(i)" [attr.aria-label]="'Ver la inscripción de ' + i.alumno_nombre">
+            <span class="alumno-nombre">{{ i.alumno_nombre }}</span>
+            <span class="alumno-nota capital">{{ i.rama }}</span>
+          </button>
+          <span class="mono chico fechas">
+            {{ i.fecha_inscripcion | date: 'd MMM' }} → <b>{{ i.fecha_limite_pago | date: 'd MMM' }}</b>
+            @if (i.prorrogas.length) { <span class="chip-prorroga" title="Con prórroga">prórroga</span> }
+          </span>
+          <span class="mono chico restan" [class.alerta]="i.estado === 'pendiente_pago' && restan(i) <= 7">
+            {{ i.estado === 'pendiente_pago' ? textoRestan(i) : '—' }}
+          </span>
+          <span class="pagado">
+            <span class="mono chico">{{ (i.monto_pagado ?? 0) | pesos }} / {{ i.valor | pesos }}</span>
+            <span class="barra" role="img" [attr.aria-label]="'Pagado ' + pct(i)"><span [style.width]="pct(i)"></span></span>
+          </span>
+          <span class="estado">{{ estadoTexto[i.estado] }}</span>
+          <span class="acciones-fila">
+            @if (abonable(i)) {
+              <button type="button" class="boton-icono" (click)="abrirAbono(i)" [attr.aria-label]="'Registrar abono de ' + i.alumno_nombre" title="Registrar abono">
+                <span class="icono" aria-hidden="true">payments</span>
+              </button>
+            }
+            @if (prorrogable(i)) {
+              <button type="button" class="boton-icono" (click)="abrirProrroga(i)" [attr.aria-label]="'Conceder prórroga a ' + i.alumno_nombre" title="Conceder prórroga">
+                <span class="icono" aria-hidden="true">event_repeat</span>
+              </button>
+            }
+          </span>
+        </li>
+      } @empty {
+        <li class="vacio">
+          @if (esStaff()) {
+            Nada en «{{ textoFiltro() }}» para {{ anio() }}.
+          } @else {
+            No hay inscripciones registradas en {{ anio() }}.
+          }
+        </li>
+      }
+    </ul>
+    @if ((inscripciones()?.length ?? 0) >= limite) {
+      <p class="nota">Se muestran las primeras {{ limite }} inscripciones del año.</p>
+    }
+  </section>
+}
+
+<!-- ---------- Ayuda ---------- -->
+@if (ayuda()) {
+  <app-dialogo titulo="Cómo funcionan las inscripciones" descripcion="El valor, el plazo y los avisos se ajustan en Configuración."
+               (cerrar)="ayuda.set(false)">
+    <div class="formulario">
       <ol class="pasos">
         <li><b>Inscripción.</b> La hace el entrenador al registrar al alumno (o al renovarlo cada año); el valor y el plazo (30 días) salen de la configuración del club.</li>
         <li><b>Abonos.</b> Se aceptan pagos parciales dentro del plazo. Al completar el valor, la inscripción queda <b>activa</b>.</li>
@@ -138,11 +143,14 @@
         <li><b>Vencimiento.</b> Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.</li>
       </ol>
       <p class="nota-chica">Un abono errado no se borra: el SuperAdmin lo anula con motivo y queda en el historial.</p>
-      @if (esStaff()) {
-        <a class="enlace" routerLink="/alumnos">Alumno nuevo: «Inscribir alumno nuevo» en Fichas →</a>
-      }
-    </aside>
-  </div>
+      <div class="acciones">
+        @if (esStaff()) {
+          <a class="boton secundario chico" routerLink="/alumnos" (click)="ayuda.set(false)">Inscribir alumno nuevo en Fichas</a>
+        }
+        <button type="button" class="boton chico" (click)="ayuda.set(false)">Entendido</button>
+      </div>
+    </div>
+  </app-dialogo>
 }
 
 <!-- ---------- Detalle ---------- -->

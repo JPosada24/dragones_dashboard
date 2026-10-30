@@ -156,12 +156,33 @@ h3 {
   }
 }
 
-/* ---------- Columnas ---------- */
-.columnas {
+/* ---------- Ayuda ---------- */
+.titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ayuda {
+  width: 24px;
+  height: 24px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-  gap: 18px;
-  align-items: start;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--texto-3);
+  cursor: pointer;
+
+  .icono {
+    font-size: 16px;
+  }
+
+  &:hover {
+    border-color: var(--oro);
+    color: var(--oro);
+  }
 }
 
 /* ---------- Tabla ---------- */
@@ -478,12 +499,6 @@ h3 {
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 1099px) {
-  .columnas {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 799px) {
   .encabezados {
     display: none;

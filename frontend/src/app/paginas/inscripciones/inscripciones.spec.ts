@@ -206,4 +206,15 @@ describe('InscripcionesPage', () => {
     await estable();
     expect(texto()).toContain('quedó inscrito. La inscripción quedó paga y activa.');
   });
+
+  it('la explicación está detrás del botón de ayuda', async () => {
+    await cargar(ADMIN);
+    expect(texto()).not.toContain('Cómo funcionan');
+    el().querySelector<HTMLButtonElement>('[aria-label="Cómo funcionan las inscripciones"]')!.click();
+    await estable();
+    expect(ultimoDialogo().textContent).toContain('Se aceptan pagos parciales');
+    boton('Entendido', ultimoDialogo())!.click();
+    await estable();
+    expect(dialogos().length).toBe(0);
+  });
 });
