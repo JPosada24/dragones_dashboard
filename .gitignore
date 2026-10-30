@@ -26,3 +26,6 @@ backups/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Prototipo de diseño (trae datos de ejemplo con nombres; solo de referencia local)
+Dashboard Dragones (standalone).html

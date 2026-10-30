@@ -5,7 +5,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 
 ## Stack (fijo)
 - Backend: **FastAPI + SQLAlchemy 2 (síncrono) + Alembic + Pydantic v2**, PostgreSQL 16.
-- Frontend: **Angular** (componentes standalone) — aún no creado.
+- Frontend: **Angular 22** (standalone, signals, OnPush, sin zone.js, Vitest) en `frontend/`. Diseño del prototipo
+  `Dashboard Dragones (standalone).html` (oscuro, naranja #f2691e / oro #f5b731, Sora + Public Sans + IBM Plex Mono,
+  Material Symbols; fuentes servidas localmente). Adaptaciones: Categoría→Rama, 20 puestos, Eventos→Torneos.
 - Todo en **Docker Compose**. El PC de desarrollo es **Windows** (comandos en PowerShell).
 - Agente de IA (API de Claude) y Redis/worker llegan en fases posteriores.
 
@@ -127,7 +129,13 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
     al pagar; lo marcado a mano nunca lo revierte. Aviso a la familia `dias_aviso_mora` antes, al entrar en mora y al
     salir; aviso al staff cuando hay expulsión por confirmar. Usa la inscripción activa más reciente (cruza años).
   - `GET /mora` (staff; Entrenador su rama) y `en_mora`/`entra_en_mora` en el estado de cuenta.
-- SIGUIENTE: frontend Angular (Fase de interfaz). Backend funcional completo hasta aquí. Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (frontend F1, 2026-10-29): servicio `frontend` (node:22, `http://localhost:4300`; el 4200 lo usa otro
+  proyecto en este PC), proxy `/api`→api. Login, marco (lateral/superior/pestañas móviles + "Más"), menú filtrado
+  por permisos desde `core/secciones.ts` (también genera las rutas), bandeja de avisos real, demás secciones
+  "en construcción". 9 pruebas de frontend (token en memoria, renovación única ante 401, sin token a otros
+  dominios, logout, menú por permisos, sin redirección abierta). CI: npm audit + build + tests.
+- SIGUIENTE (frontend F2+): una pantalla por sección, empezando por Resumen (necesita endpoint agregado),
+  Asistencia, Alumnos e Inscripciones. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.
 
@@ -158,11 +166,19 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   excepciones para marcadores de ejemplo) y push protection de GitHub. El push lo hace Julian (sin permiso aquí).
 - Julian prefiere recibir los cambios como archivos concretos, no como .zip.
 
+## Frontend (convenciones)
+- Pantallas en `src/app/paginas/<seccion>/`, perezosas (`loadComponent`); al construir una, reemplazar
+  `enConstruccion` en `app.routes.ts`. Nuevas secciones = una entrada en `core/secciones.ts`.
+- Usar los tokens de `styles.scss` (nunca colores sueltos) y textos en español. Accesible: `<button>`/`<a>`
+  reales, `aria-*`, foco visible. Nunca `innerHTML` con datos de la API.
+- Token solo en memoria (nunca localStorage). La autorización real es del servidor.
+
 ## Comandos (PowerShell, en la raíz del proyecto)
 ```
 copy .env.example .env          # una vez; luego editar valores
 docker compose up --build
 docker compose run --rm --user root api sh -c "pip install -q -r requirements-dev.txt && pytest"
+docker compose exec frontend npx ng test --watch=false      # pruebas del frontend
 ```
 Si el puerto 8000 está ocupado: `API_PORT=8001` en `.env`.
 

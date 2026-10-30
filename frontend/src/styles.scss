@@ -1,0 +1,203 @@
+/* Sistema visual de Dragones (tomado del prototipo): fondo oscuro, acentos naranja y oro. */
+
+/* ---------- Fuentes (servidas por el propio sitio: sin llamadas a terceros) ---------- */
+$latin: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+  U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+$latin-ext: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+  U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+
+@mixin fuente($familia, $peso, $archivo, $rango) {
+  @font-face {
+    font-family: $familia;
+    font-style: normal;
+    font-weight: $peso;
+    font-display: swap;
+    src: url('/fuentes/#{$archivo}.woff2') format('woff2');
+    unicode-range: $rango;
+  }
+}
+
+@include fuente('Public Sans', 300 800, 'public-sans-latin', $latin);
+@include fuente('Public Sans', 300 800, 'public-sans-latin-ext', $latin-ext);
+@include fuente('Sora', 300 700, 'sora-latin', $latin);
+@include fuente('Sora', 300 700, 'sora-latin-ext', $latin-ext);
+@include fuente('IBM Plex Mono', 400, 'ibm-plex-mono-400-latin', $latin);
+@include fuente('IBM Plex Mono', 400, 'ibm-plex-mono-400-latin-ext', $latin-ext);
+@include fuente('IBM Plex Mono', 500 600, 'ibm-plex-mono-500-latin', $latin);
+@include fuente('IBM Plex Mono', 500 600, 'ibm-plex-mono-500-latin-ext', $latin-ext);
+
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/fuentes/material-symbols-rounded.woff2') format('woff2');
+}
+
+/* ---------- Tokens ---------- */
+:root {
+  --fondo: #0b0e13;
+  --fondo-lateral: #080a0e;
+  --panel: #11151d;
+  --panel-hundido: #0d1117;
+  --panel-elevado: #171c25;
+  --borde: rgba(255, 255, 255, 0.08);
+  --borde-suave: rgba(255, 255, 255, 0.05);
+  --borde-fuerte: rgba(255, 255, 255, 0.15);
+
+  --texto: #e8ecf2;
+  --texto-blanco: #ffffff;
+  --texto-2: rgba(255, 255, 255, 0.62);
+  --texto-3: rgba(255, 255, 255, 0.45);
+
+  --naranja: #f2691e;
+  --naranja-oscuro: #c8401a;
+  --oro: #f5b731;
+  --rojo: #ff7a5c;
+  --rojo-oscuro: #c0341c;
+  --naranja-tenue: rgba(242, 105, 30, 0.13);
+  --oro-tenue: rgba(245, 183, 49, 0.16);
+  --rojo-tenue: rgba(192, 52, 28, 0.18);
+  --degradado: linear-gradient(150deg, var(--naranja), var(--naranja-oscuro));
+
+  --f-titulo: 'Sora', system-ui, sans-serif;
+  --f-texto: 'Public Sans', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --radio: 10px;
+  --radio-sm: 6px;
+  --ancho-lateral: 226px;
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--f-texto);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--f-titulo);
+  margin: 0;
+}
+
+a {
+  color: var(--naranja);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--oro);
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--oro);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+}
+
+/* ---------- Utilidades compartidas ---------- */
+.icono {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  display: inline-block;
+  white-space: nowrap;
+  letter-spacing: normal;
+  text-transform: none;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  user-select: none;
+}
+
+.mono {
+  font-family: var(--f-mono);
+}
+
+.etiqueta {
+  font: 600 9.5px var(--f-mono);
+  color: var(--texto-3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--radio-sm);
+  background: var(--degradado);
+  color: #fff;
+  font: 700 13px var(--f-texto);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &.secundario {
+    background: transparent;
+    border: 1px solid var(--borde-fuerte);
+    color: var(--texto-2);
+  }
+}
+
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

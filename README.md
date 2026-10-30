@@ -10,8 +10,8 @@ Sistema para administrar un club deportivo real: alumnos y acudientes, inscripci
 abonos, documentos y, en las próximas fases, asistencia, multas, rifas y torneos. Reemplaza las hojas de
 cálculo y los mensajes sueltos por un registro único, auditable y con permisos por rol.
 
-> Proyecto en desarrollo activo. Hoy está terminado el **backend de la Fase 1**; el frontend en Angular
-> viene después. Los datos de las pruebas son inventados.
+> Proyecto en desarrollo activo: el **backend está completo** (todas las reglas del club) y el **frontend en
+> Angular** está en construcción, pantalla por pantalla. Los datos de las pruebas son inventados.
 
 ## Qué resuelve
 
@@ -33,7 +33,7 @@ cálculo y los mensajes sueltos por un registro único, auditable y con permisos
 
 ```mermaid
 flowchart LR
-    C[Cliente<br/>Angular · próximamente] -->|HTTPS + JWT| API
+    C[Frontend<br/>Angular 22] -->|/api + JWT| API
     subgraph Docker Compose
       API[FastAPI<br/>rutas → servicios → modelos] --> DB[(PostgreSQL 16)]
       API --> V[(Volumen de documentos<br/>cifrados)]
@@ -97,6 +97,7 @@ docker compose run --rm --no-deps api python -c "from cryptography.fernet import
 
 Al arrancar se aplican las migraciones y se crea el primer SuperAdmin con los datos de `.env`. Luego:
 
+- **Aplicación:** <http://localhost:4300> (ingresa con `SUPERADMIN_EMAIL` y su clave)
 - Documentación interactiva: <http://localhost:8000/api/docs> (o el puerto de `API_PORT`)
 - Salud: <http://localhost:8000/api/v1/salud>
 
@@ -104,6 +105,12 @@ Pruebas (crean una base `<nombre>_test` aparte; no tocan tus datos):
 
 ```powershell
 docker compose run --rm --user root api sh -c "pip install -q -r requirements-dev.txt && pytest"
+```
+
+Pruebas del frontend:
+
+```powershell
+docker compose exec frontend npx ng test --watch=false
 ```
 
 Activa el hook que bloquea secretos (una vez por clon):
@@ -126,6 +133,7 @@ backend/
                  justificaciones, multas, rifas, torneos, notificaciones, mora)
   alembic/       migraciones 0001–0009
   tests/         pruebas automatizadas
+frontend/        Angular 22 (ver frontend/README.md)
 .githooks/       pre-commit que bloquea secretos
 .github/         CI: pruebas + gitleaks
 ```
@@ -140,7 +148,9 @@ backend/
 - [x] Fase 3B — torneos con clubes externos, cupo y lista de espera
 - [x] Notificaciones: correo, bandeja y WhatsApp con enlace
 - [x] Mora automática por deudas sin pagar
-- [ ] Frontend Angular · sitio público del club · asistente con IA · despliegue
+- [x] Frontend F1 — ingreso, marco con menú por permisos, avisos
+- [ ] Frontend: una pantalla por sección (Resumen, Asistencia, Alumnos, Inscripciones, …)
+- [ ] Sitio público del club · asistente con IA · despliegue
 
 ## Licencia
 

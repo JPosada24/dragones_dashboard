@@ -1,0 +1,118 @@
+<div class="app">
+  <!-- Escritorio: barra lateral -->
+  <aside class="lateral">
+    <div class="marca">
+      <img src="escudo.png" alt="Escudo Club Dragones" width="38" height="38" />
+      <div>
+        <div class="marca-nombre">DRAGONES</div>
+        <div class="marca-sub">Club deportivo</div>
+      </div>
+    </div>
+
+    <nav class="grupos" aria-label="Secciones">
+      @for (g of grupos(); track g.titulo) {
+        <div class="grupo">
+          <div class="grupo-titulo">{{ g.titulo }}</div>
+          @for (s of g.secciones; track s.ruta) {
+            <a
+              class="item"
+              [routerLink]="enlace(s)"
+              routerLinkActive="activo"
+              [routerLinkActiveOptions]="{ exact: s.ruta === '' }"
+              ariaCurrentWhenActive="page"
+            >
+              <span class="icono" aria-hidden="true">{{ s.icono }}</span>
+              <span>{{ s.etiqueta }}</span>
+            </a>
+          }
+        </div>
+      }
+    </nav>
+
+    <div class="usuario">
+      <div class="avatar" aria-hidden="true">{{ iniciales() }}</div>
+      <div class="usuario-datos">
+        <div class="usuario-nombre">{{ usuario()?.nombre }}</div>
+        <div class="usuario-rol">{{ rol() }}</div>
+      </div>
+      <button type="button" class="salir" (click)="salir()" aria-label="Cerrar sesión" title="Cerrar sesión">
+        <span class="icono" aria-hidden="true">logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="principal">
+    <!-- Celular: barra superior -->
+    <header class="barra-movil">
+      <img src="escudo.png" alt="" width="34" height="34" />
+      <div class="barra-movil-textos">
+        <div class="barra-movil-titulo">{{ encabezado().titulo }}</div>
+        <div class="barra-movil-sub">{{ encabezado().subtitulo }}</div>
+      </div>
+      <a class="campana" routerLink="/notificaciones" aria-label="Avisos">
+        <span class="icono" aria-hidden="true">notifications</span>
+        @if (avisos.noLeidas() > 0) {
+          <span class="campana-conteo">{{ avisos.noLeidas() }}</span>
+        }
+      </a>
+    </header>
+
+    <!-- Escritorio: barra superior -->
+    <header class="barra">
+      <div>
+        <h1 class="titulo">{{ encabezado().titulo }}</h1>
+        <p class="subtitulo">{{ encabezado().subtitulo }}</p>
+      </div>
+      <a class="avisos" routerLink="/notificaciones">
+        Avisos
+        @if (avisos.noLeidas() > 0) {
+          <span class="mono">{{ avisos.noLeidas() }}</span>
+        }
+      </a>
+    </header>
+
+    <main class="contenido">
+      <router-outlet />
+    </main>
+  </div>
+
+  <!-- Celular: pestañas -->
+  <nav class="pestanas" aria-label="Secciones principales">
+    @for (s of pestanas(); track s.ruta) {
+      <a
+        class="pestana"
+        [routerLink]="enlace(s)"
+        routerLinkActive="activo"
+        [routerLinkActiveOptions]="{ exact: s.ruta === '' }"
+        ariaCurrentWhenActive="page"
+      >
+        <span class="icono" aria-hidden="true">{{ s.icono }}</span>
+        <span>{{ s.etiqueta }}</span>
+      </a>
+    }
+    <button type="button" class="pestana" [class.activo]="menuAbierto()" (click)="alternarMenu()"
+      [attr.aria-expanded]="menuAbierto()" aria-controls="menu-mas">
+      <span class="icono" aria-hidden="true">menu</span>
+      <span>Más</span>
+    </button>
+  </nav>
+
+  @if (menuAbierto()) {
+    <div class="velo" (click)="menuAbierto.set(false)" aria-hidden="true"></div>
+    <div id="menu-mas" class="hoja" role="dialog" aria-modal="true" aria-label="Más secciones">
+      @for (g of grupos(); track g.titulo) {
+        <div class="grupo-titulo">{{ g.titulo }}</div>
+        @for (s of g.secciones; track s.ruta) {
+          <a class="item" [routerLink]="enlace(s)" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: s.ruta === '' }">
+            <span class="icono" aria-hidden="true">{{ s.icono }}</span>
+            <span>{{ s.etiqueta }}</span>
+          </a>
+        }
+      }
+      <div class="hoja-pie">
+        <span>{{ usuario()?.nombre }} · {{ rol() }}</span>
+        <button type="button" class="boton secundario" (click)="salir()">Cerrar sesión</button>
+      </div>
+    </div>
+  }
+</div>
