@@ -137,7 +137,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - HECHO (Resumen, 2026-10-29): `GET /api/v1/resumen` (staff; Entrenador su rama; `services/resumen.py`):
   indicadores, alertas ordenadas por gravedad con `ruta` del frontend, sesiones de hoy, rifas del año, cartera y
   próximo torneo (solo con `eventos.gestionar`). Pantalla Resumen: tablero del staff como el prototipo; las
-  familias ven a sus hijos (estado de cuenta) y próximos entrenamientos. 173 pruebas backend, 13 frontend.
+  familias ven a sus hijos (estado de cuenta) y próximos entrenamientos. 173 pruebas backend, 14 frontend.
   Pipe `pesos` en `compartido/`. Pantallas construidas se registran en `PANTALLAS` de `app.routes.ts`.
 - SIGUIENTE (frontend): Asistencia, Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
