@@ -57,7 +57,7 @@ def requiere(permiso: str) -> Callable[[Usuario], Usuario]:
 
 
 def requiere_alguno(*permisos: str) -> Callable[[Usuario], Usuario]:
-    """Exige al menos uno de los permisos. El servicio decide luego el alcance (todos, su rama, los propios)."""
+    """Exige al menos uno de los permisos. El servicio decide luego el alcance (todos o los propios)."""
 
     def _dependencia(usuario: Usuario = Depends(usuario_actual)) -> Usuario:
         if not set(permisos) & set(usuario.permisos_codigos):
@@ -74,6 +74,5 @@ def usuario_a_out(usuario: Usuario) -> UsuarioOut:
         nombre=usuario.nombre,
         rol=usuario.rol.codigo,
         activo=usuario.activo,
-        rama=usuario.rama,
         permisos=usuario.permisos_codigos,
     )

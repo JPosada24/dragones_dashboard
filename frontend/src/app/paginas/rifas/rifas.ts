@@ -33,7 +33,7 @@ export class RifasPage implements OnInit {
   protected readonly pestanas = PESTANAS_RIFAS;
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
-  protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
+  protected readonly esStaff = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly veTodasLasRamas = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly puedeGestionar = computed(() => this.auth.tiene('rifas.gestionar'));
   protected readonly puedeCobrar = computed(() => this.auth.tiene('pagos.registrar'));

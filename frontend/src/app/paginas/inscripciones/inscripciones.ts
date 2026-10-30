@@ -67,7 +67,7 @@ export class InscripcionesPage implements OnInit {
   private abrirAlCargar = this.ruta.snapshot.queryParamMap.get('id');
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
-  protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
+  protected readonly esStaff = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly veTodasLasRamas = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly puedeInscribir = computed(() => this.auth.tiene('inscripciones.crear'));
   protected readonly puedeAbonar = computed(() => this.auth.tiene('inscripciones.abonar'));

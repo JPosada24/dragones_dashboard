@@ -19,9 +19,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Multa por inasistencia: **$2.000 COP**, se genera al cierre del día (11:59 pm) si no marcó ni justificó.
 - Inscripción: pago máximo a **30 días**; solo Admin/SuperAdmin concede prórroga (con motivo, queda en auditoría).
   Valor $90.000 (configurable). **Se aceptan abonos parciales**; activa al completar el valor dentro del plazo.
-  Abonos los registran Admin, SuperAdmin o Entrenador (solo su rama). Un abono errado no se borra: el
+  Abonos los registran Admin, SuperAdmin o Entrenador. Un abono errado no se borra: el
   SuperAdmin lo **anula** con motivo (movimiento negativo que lo revierte).
-- **La inscripción la hace el Entrenador** (alumno, acudiente, documentos e inscripción, solo de su rama).
+- **La inscripción la hace el Entrenador** (alumno, acudiente, documentos e inscripción).
   Ningún alumno/acudiente (Miembro) se inscribe ni sube documentos por su cuenta: solo consulta lo suyo.
 - **No hay mensualidad.** Mora = **cualquier deuda sin pagar** (multas, talonarios) con **3 meses** → "A expulsar";
   confirmación del SuperAdmin por defecto (`expulsion_automatica` la hace directa). La inscripción no cuenta
@@ -44,8 +44,10 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   NUNCA usar bots no oficiales de WhatsApp Web: arriesgan el bloqueo del número). Interfaz lista para otro proveedor.
 - Roles: SuperAdmin, Admin, Entrenador, Miembro (alumno mayor de edad o acudiente). Permisos en BD, verificados SIEMPRE en el servidor.
 - **El dueño del club es el entrenador principal y responsable de todo**: usa el rol **SuperAdmin** (acceso total,
-  incluidas las tareas de entrenador). El rol Entrenador queda para entrenadores asistentes, limitado a su rama.
-  No ampliar el rol Entrenador para "dar todo": un asistente nuevo heredaría acceso total.
+  incluidas las tareas de entrenador). El rol Entrenador queda para entrenadores asistentes y es **general (ambas
+  ramas; los usuarios no tienen rama)**, pero sin cobrar multas ni rifas, sin ver el documento completo
+  (`alumnos.ver_documento`, solo Admin/SA), sin prórrogas ni horario. No ampliar el rol Entrenador para "dar todo":
+  un asistente nuevo heredaría acceso total.
 - Los datos del prototipo HTML (138 alumnos, nombres, cifras) son solo ejemplo de diseño.
 - Todo valor "configurable" vive en la tabla `configuracion` (lo cambia solo el SuperAdmin).
 
@@ -253,6 +255,10 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   vacía = hoy (`.nota-campo`); montos con el saldo como placeholder y el atajo «Usar el saldo completo»
   (`.enlace-saldo`); el nombre de la rifa vacío usa la sugerencia. WhatsApp del sorteo: «la boleta número 07».
   Las boletas ganadoras solo se excluyen dentro de la misma rifa. 199 pruebas backend, 75 frontend.
+- HECHO (entrenador general, 2026-10-30): migración 0014 (sin `usuarios.rama`; se borra `alumnos.ver_rama`). El
+  Entrenador tiene `alumnos.ver_todos`; el documento completo pasa a `alumnos.ver_documento` (Admin/SA). Se quitaron
+  `_verificar_rama_permitida` y la rama en usuarios (API, esquemas, pantalla). Los avisos al staff van a todos los
+  entrenadores. Las notas anteriores sobre "Entrenador solo su rama" quedan sin efecto. 194 pruebas backend, 75 frontend.
 - SIGUIENTE (frontend): Torneos, Avisos, Configuración. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.

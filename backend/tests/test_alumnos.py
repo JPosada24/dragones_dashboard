@@ -106,7 +106,7 @@ def test_documento_completo_solo_admin_y_queda_auditado(client, h_admin, crear_u
     r = client.get(f"{A}/{alumno['id']}/documento-identidad", headers=h_admin)
     assert r.status_code == 200 and r.json()["documento"] == "1234567890"
 
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     r = client.get(f"{A}/{alumno['id']}/documento-identidad", headers=auth_header("coach@club.com"))
     assert r.status_code == 403
 
@@ -125,28 +125,26 @@ def test_buscar_acudiente_por_documento_sin_descifrar(client, h_admin):
 
 
 # ---------- Permisos y visibilidad ----------
-def test_entrenador_solo_ve_su_rama(client, h_admin, crear_usuario, auth_header):
+def test_entrenador_ve_y_edita_alumnos_de_ambas_ramas(client, h_admin, crear_usuario, auth_header):
     fem = crear_alumno(client, h_admin, documento="1111111111", rama="femenina")
     mas = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="masculina")
-    h = auth_header("coach@club.com")
-    assert [a["id"] for a in client.get(A, headers=h).json()] == [mas["id"]]
-    assert client.get(f"{A}/{fem['id']}", headers=h).status_code == 404
-
-
-def test_entrenador_sin_rama_no_ve_alumnos(client, h_admin, crear_usuario, auth_header):
-    crear_alumno(client, h_admin)
     crear_usuario("coach@club.com", "ENTRENADOR")
-    assert client.get(A, headers=auth_header("coach@club.com")).json() == []
+    h = auth_header("coach@club.com")
+    assert {a["id"] for a in client.get(A, headers=h).json()} == {fem["id"], mas["id"]}
+    assert client.patch(f"{A}/{mas['id']}", json={"eps": "Sura"}, headers=h).status_code == 200
+    # Registra alumnos de cualquier rama…
+    assert client.post(A, json=datos_alumno(documento="3333333333", rama="masculina"), headers=h).status_code == 201
+    # …pero el documento completo sigue siendo solo de Admin y SuperAdmin.
+    assert client.get(f"{A}/{fem['id']}/documento-identidad", headers=h).status_code == 403
+    assert client.get(f"{A}/{fem['id']}/documento-identidad", headers=h_admin).status_code == 200
 
 
-def test_superadmin_asigna_rama_al_entrenador(client, crear_usuario, auth_header):
+def test_los_usuarios_no_tienen_rama(client, crear_usuario, auth_header):
     crear_usuario("root@club.com", "SUPERADMIN")
     coach = crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("root@club.com")
-    r = client.patch(f"/api/v1/usuarios/{coach.id}", json={"rama": "femenina"}, headers=h)
-    assert r.status_code == 200 and r.json()["rama"] == "femenina"
-    assert client.patch(f"/api/v1/usuarios/{coach.id}", json={"rama": "mixta"}, headers=h).status_code == 422
+    assert client.patch(f"/api/v1/usuarios/{coach.id}", json={"rama": "femenina"}, headers=h).status_code == 422
+    assert "rama" not in client.get("/api/v1/auth/me", headers=auth_header("coach@club.com")).json()
 
 
 def test_miembro_solo_ve_a_sus_hijos(client, h_admin, crear_usuario, auth_header):
@@ -173,27 +171,6 @@ def test_miembro_no_crea_ni_edita_alumnos(client, h_admin, crear_usuario, auth_h
     assert client.post(A, json=datos_alumno(documento="7777777777"), headers=h).status_code == 403
     assert client.patch(f"{A}/{alumno['id']}", json={"nombres": "Otra"}, headers=h).status_code == 403
     assert client.post(AC, json={}, headers=h).status_code in (403, 422)
-
-
-def test_entrenador_registra_y_edita_solo_alumnos_de_su_rama(client, h_admin, crear_usuario, auth_header):
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
-    h = auth_header("coach@club.com")
-    acudiente = crear_acudiente(client, h)  # también registra acudientes
-    propia = crear_menor(client, h, acudiente=acudiente)
-    assert propia["rama"] == "femenina"
-
-    r = client.post(A, json=datos_alumno(documento="7777777777", rama="masculina"), headers=h)
-    assert r.status_code == 403 and "tu rama" in r.json()["detail"]
-    # Tampoco puede "sacar" un alumno de su rama.
-    assert client.patch(f"{A}/{propia['id']}", json={"rama": "masculina"}, headers=h).status_code == 403
-    ajeno = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
-    assert client.patch(f"{A}/{ajeno['id']}", json={"nombres": "Otro"}, headers=h).status_code == 404
-
-
-def test_entrenador_sin_rama_no_registra_alumnos(client, crear_usuario, auth_header):
-    crear_usuario("coach@club.com", "ENTRENADOR")
-    r = client.post(A, json=datos_alumno(), headers=auth_header("coach@club.com"))
-    assert r.status_code == 403 and "rama asignada" in r.json()["detail"]
 
 
 def test_editar_alumno_queda_en_auditoria_con_antes_y_despues(client, h_admin, db):

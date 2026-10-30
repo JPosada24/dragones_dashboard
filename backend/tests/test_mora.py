@@ -111,7 +111,7 @@ def test_el_talonario_se_debe_desde_el_sorteo(client, h_admin, reloj):
 
 def test_la_lista_de_mora_respeta_roles(client, h_admin, con_multa, crear_usuario, auth_header, familia):
     assert client.get(MO, headers=familia["h"]).status_code == 403
-    crear_usuario("coach_m@club.com", "ENTRENADOR", rama="masculina")
-    crear_usuario("coach_f@club.com", "ENTRENADOR", rama="femenina")
-    assert client.get(MO, headers=auth_header("coach_m@club.com")).json() == []
-    assert len(client.get(MO, headers=auth_header("coach_f@club.com")).json()) == 1
+    crear_usuario("coach@club.com", "ENTRENADOR")
+    assert len(client.get(MO, headers=auth_header("coach@club.com")).json()) == 1  # el entrenador ve a todos
+
+

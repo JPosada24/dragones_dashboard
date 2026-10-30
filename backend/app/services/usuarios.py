@@ -24,13 +24,13 @@ def obtener_rol(db: Session, codigo: str) -> Rol:
 
 
 def crear_usuario(
-    db: Session, *, email: str, nombre: str, password: str, rol_codigo: str, rama: str | None = None
+    db: Session, *, email: str, nombre: str, password: str, rol_codigo: str
 ) -> Usuario:
     """Crea el usuario. La contraseña ya debe haber pasado la política (el esquema la valida)."""
     if db.scalar(select(Usuario.id).where(Usuario.email == email)) is not None:
         raise EmailDuplicado(email)
     rol = obtener_rol(db, rol_codigo)
-    usuario = Usuario(email=email, nombre=nombre, password_hash=hash_password(password), rol=rol, rama=rama)
+    usuario = Usuario(email=email, nombre=nombre, password_hash=hash_password(password), rol=rol)
     db.add(usuario)
     db.flush()
     return usuario

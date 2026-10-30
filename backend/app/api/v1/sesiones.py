@@ -31,7 +31,7 @@ from app.services import configuracion, programacion
 
 router = APIRouter(prefix="/sesiones", tags=["asistencia"])
 
-VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")
+VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_propios")
 
 
 def sesion_a_out(s: Sesion) -> SesionOut:

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import requiere_alguno
+from app.api.deps import requiere
 from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.services import mora as servicio
@@ -32,7 +32,7 @@ class SituacionOut(BaseModel):
 
 @router.get("", response_model=list[SituacionOut])
 def en_riesgo(
-    usuario: Usuario = Depends(requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama")),
+    usuario: Usuario = Depends(requiere("alumnos.ver_todos")),
     db: Session = Depends(get_db),
 ) -> list[SituacionOut]:
     """Alumnos con deuda vencida (multas, talonarios): cuánto deben, desde cuándo y si ya están en mora."""

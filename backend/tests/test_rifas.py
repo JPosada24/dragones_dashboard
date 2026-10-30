@@ -74,7 +74,7 @@ def test_entrenador_y_miembro_no_crean_rifas_ni_registran_pagos(client, h_admin,
     alumno_inscrito(client, h_admin)
     rifa = crear_rifa(client, h_admin).json()
     t = _talonarios(client, h_admin, rifa["id"])[0]
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     crear_usuario("m@club.com", "MIEMBRO")
     for h in (auth_header("coach@club.com"), auth_header("m@club.com")):
         assert crear_rifa(client, h).status_code == 403

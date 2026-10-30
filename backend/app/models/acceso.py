@@ -1,11 +1,10 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, Uuid, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.dominio import RAMAS, en
 from app.models.mixins import TiempoMixin, UUIDMixin
 
 roles_permisos = Table(
@@ -34,7 +33,6 @@ class Rol(UUIDMixin, TiempoMixin, Base):
 
 class Usuario(UUIDMixin, TiempoMixin, Base):
     __tablename__ = "usuarios"
-    __table_args__ = (CheckConstraint(f"rama IS NULL OR {en('rama', RAMAS)}", name="ck_usuarios_rama"),)
 
     email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
     nombre: Mapped[str] = mapped_column(String(120))
@@ -46,8 +44,6 @@ class Usuario(UUIDMixin, TiempoMixin, Base):
     ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Va dentro del token de acceso; sube al cambiar la contraseña o el rol y los tokens anteriores dejan de valer.
     credenciales_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
-    # Rama del Entrenador: limita qué alumnos ve con "alumnos.ver_rama".
-    rama: Mapped[str | None] = mapped_column(String(10))
 
     rol: Mapped[Rol] = relationship(lazy="joined")
 

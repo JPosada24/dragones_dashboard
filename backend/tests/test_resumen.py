@@ -58,15 +58,15 @@ def test_alertas_que_requieren_decision(client, h_admin, h_root, familia, reloj)
     assert vence["cuando"] == "en 5 d" and vence["ruta"] == "/alumnos/inscripciones"
 
 
-def test_entrenador_ve_solo_su_rama_y_sin_torneos(client, h_admin, crear_usuario, auth_header):
+def test_entrenador_ve_ambas_ramas_pero_sin_torneos(client, h_admin, crear_usuario, auth_header):
     alumno_inscrito(client, h_admin)
     alumno_inscrito(client, h_admin, documento="2000000004", rama="masculina")
     crear_sesion(client, h_admin)
     crear_torneo(client, h_admin)
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     r = client.get(RES, headers=auth_header("coach@club.com")).json()
-    assert r["indicadores"]["alumnos_activos"] == 1
-    assert r["hoy"][0]["esperados"] == 1 and r["proximo_torneo"] is None  # la sesión es general; cuenta su rama
+    assert r["indicadores"]["alumnos_activos"] == 2
+    assert r["hoy"][0]["esperados"] == 2 and r["proximo_torneo"] is None
     assert "Torneos por cobrar" not in {c["concepto"] for c in r["cartera"]}
 
 

@@ -36,7 +36,7 @@ def test_sesion_extra_no_en_el_pasado_ni_con_horario_invalido_ni_duplicada(clien
 def test_entrenador_y_miembro_ven_las_sesiones_pero_no_las_gestionan(client, h_admin, familia, crear_usuario,
                                                                     auth_header):
     sesion = crear_sesion(client, h_admin)
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="masculina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     for h in (auth_header("coach@club.com"), familia["h"]):
         assert [s["id"] for s in client.get(S, headers=h).json()] == [sesion["id"]]  # el entrenamiento es general
         assert client.post(S, json={"fecha": LUNES.isoformat(), "hora_inicio": "08:00", "hora_fin": "09:00"},
@@ -56,22 +56,22 @@ def test_planilla_incluye_a_los_inscritos_vigentes_de_ambas_ramas(client, h_admi
     assert planilla[inscrito["id"]]["rama"] == "masculina"
 
 
-def test_entrenador_ve_y_marca_solo_su_rama_en_la_sesion_general(client, h_admin, crear_usuario, auth_header):
+def test_entrenador_ve_y_marca_ambas_ramas_en_la_sesion_general(client, h_admin, crear_usuario, auth_header):
     alumna = alumno_inscrito(client, h_admin)
     alumno = alumno_inscrito(client, h_admin, documento="2000000002", rama="masculina")
     sesion = crear_sesion(client, h_admin)
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
-    assert list(ver_planilla(client, h, sesion["id"])) == [alumna["id"]]
-    assert marcar_asistencia(client, h, sesion["id"], (alumno["id"], "presente")).status_code == 422
-    assert ver_planilla(client, h_admin, sesion["id"])[alumno["id"]]["asistencia"] is None
+    assert set(ver_planilla(client, h, sesion["id"])) == {alumna["id"], alumno["id"]}
+    assert marcar_asistencia(client, h, sesion["id"], (alumno["id"], "presente")).status_code == 200
+    assert ver_planilla(client, h_admin, sesion["id"])[alumno["id"]]["asistencia"] == "presente"
 
 
 def test_entrenador_marca_su_grupo(client, h_admin, crear_usuario, auth_header):
     alumna = alumno_inscrito(client, h_admin)
     otra = alumno_inscrito(client, h_admin, documento="2000000003")
     sesion = crear_sesion(client, h_admin)
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
     r = marcar_asistencia(client, h, sesion["id"], (alumna["id"], "presente"), (otra["id"], "ausente"))
     assert r.status_code == 200
@@ -227,7 +227,7 @@ def test_solo_el_staff_revisa_y_el_motivo_no_va_a_la_auditoria(
     sesion = crear_sesion(client, h_admin)
     motivo = "Hospitalización por apendicitis"
     j = justificar(client, familia["h"], sesion["id"], familia["hija"]["id"], motivo=motivo).json()
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     for h in (familia["h"], auth_header("coach@club.com")):
         assert client.post(f"{J}/{j['id']}/revisar", json={"aprobar": True}, headers=h).status_code == 403
     assert all(motivo not in json.dumps([a.antes, a.despues]) for a in db.scalars(select(Auditoria)))
@@ -245,7 +245,7 @@ def test_correccion_ajusta_la_multa_y_es_solo_del_admin(client, h_admin, crear_u
 
     reloj(en_hora(LUNES, 23, 59))
     cerrar_dia(client, h_admin)
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     assert client.patch(url, json=cuerpo, headers=auth_header("coach@club.com")).status_code == 403
 
     r = client.patch(url, json=cuerpo, headers=h_admin)
@@ -274,7 +274,7 @@ def test_deshacer_una_cancelacion_antes_del_cierre(client, h_admin, familia, cre
     assert client.post(url, headers=h_admin).status_code == 409  # no está cancelada
     client.post(f"{S}/{sesion['id']}/cancelar", json={"motivo": "Cancelada por error"}, headers=h_admin)
 
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     for h in (auth_header("coach@club.com"), familia["h"]):
         assert client.post(url, headers=h).status_code == 403
     r = client.post(url, headers=h_admin)
@@ -324,7 +324,7 @@ def test_admin_registra_el_pago_de_una_multa(client, h_admin, multa):
 
 def test_entrenador_no_cobra_multas_y_el_miembro_solo_ve_las_suyas(client, h_admin, multa, familia,
                                                                    crear_usuario, auth_header):
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h_coach = auth_header("coach@club.com")
     pago = {"fecha_pago": (LUNES + timedelta(days=1)).isoformat()}
     assert client.post(f"{M}/{multa['id']}/pago", json=pago, headers=h_coach).status_code == 403
@@ -381,11 +381,11 @@ def test_historial_del_alumno_con_multas_y_alcance(client, h_admin, reloj, famil
     presente = client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=h_admin).json()
     assert [(f["estado"], f["multa_valor"]) for f in presente] == [("presente", None)]
 
-    # La familia no ve el historial de otro alumno, ni un entrenador el de otra rama: 404.
+    # La familia no ve el historial de otro alumno (404); el entrenador ve el de todos.
     assert client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=familia["h"]).status_code == 404
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h_coach = auth_header("coach@club.com")
-    assert client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=h_coach).status_code == 404
+    assert client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=h_coach).status_code == 200
     assert client.get(f"/api/v1/alumnos/{hija['id']}/asistencia", headers=h_coach).status_code == 200
 
 
@@ -409,7 +409,7 @@ def test_pago_de_varias_multas_es_todo_o_nada(client, h_admin, familia, reloj, c
                       headers=h_admin).json()[0]["id"] == de_la_hija[1]
 
     # El entrenador no cobra multas (403); el Admin cobra las de varios alumnos en un solo paso.
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     r = client.post(f"{M}/pagos", json={"multa_ids": [de_la_hija[1]], "fecha_pago": hoy_},
                     headers=auth_header("coach@club.com"))
     assert r.status_code == 403
@@ -424,7 +424,7 @@ def test_solo_se_eliminan_las_sesiones_extra(client, h_admin, familia, reloj, db
     extra = crear_sesion(client, h_admin)
     reloj(en_hora(LUNES, 23, 59))
     cerrar_dia(client, h_admin)  # deja asistencia y multa
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     assert client.delete(f"{S}/{extra['id']}", headers=auth_header("coach@club.com")).status_code == 403
     assert client.delete(f"{S}/{extra['id']}", headers=h_admin).status_code == 204
     assert client.get(f"{S}/{extra['id']}", headers=h_admin).status_code == 404

@@ -92,24 +92,18 @@ def test_miembro_no_se_inscribe_por_su_cuenta_pero_ve_la_inscripcion(client, h_a
     assert _prorrogar(client, h, i["id"]).status_code == 403
 
 
-def test_entrenador_inscribe_solo_su_rama_y_con_fecha_de_hoy(client, h_admin, alumno, crear_usuario, auth_header):
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+def test_entrenador_inscribe_cualquier_rama_pero_con_fecha_de_hoy(client, h_admin, alumno, crear_usuario, auth_header):
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
-    ajeno = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
-    assert inscribir(client, h, ajeno["id"]).status_code == 404
+    otro = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
+    assert inscribir(client, h, otro["id"]).status_code == 201
     assert inscribir(client, h, alumno["id"], hoy() - timedelta(days=3)).status_code == 403
     r = inscribir(client, h, alumno["id"])
     assert r.status_code == 201
-    # Registra abonos de su rama, pero las prórrogas siguen en manos de Admin/SuperAdmin.
+    # Registra abonos, pero las prórrogas siguen en manos de Admin/SuperAdmin.
     assert _pagar(client, h, r.json()["id"], monto=40000).json()["saldo"] == 50000
     assert _prorrogar(client, h, r.json()["id"], dias=40).status_code == 403
-
-
-def test_entrenador_no_registra_abonos_de_otra_rama(client, h_admin, crear_usuario, auth_header):
-    ajeno = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
-    i = inscribir(client, h_admin, ajeno["id"]).json()
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
-    assert _pagar(client, auth_header("coach@club.com"), i["id"]).status_code == 404
+    assert {f["alumno_id"] for f in client.get(I, headers=h).json()} == {alumno["id"], otro["id"]}
 
 
 def _anular(client, h, inscripcion_id, pago_id, motivo="Abono registrado dos veces por error"):
@@ -141,7 +135,7 @@ def test_anulacion_exige_superadmin_no_exige_motivo_y_no_se_repite(
 ):
     i = inscribir(client, h_admin, alumno["id"]).json()
     abono = _pagar(client, h_admin, i["id"], monto=40000).json()["pagos"][0]
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     assert _anular(client, h_admin, i["id"], abono["id"]).status_code == 403
     assert _anular(client, auth_header("coach@club.com"), i["id"], abono["id"]).status_code == 403
 
@@ -238,7 +232,7 @@ def test_prorroga_exige_motivo_fecha_posterior_y_permiso(client, h_admin, alumno
     i = inscribir(client, h_admin, alumno["id"]).json()
     assert _prorrogar(client, h_admin, i["id"], motivo="corto").status_code == 422
     assert _prorrogar(client, h_admin, i["id"], dias=10).status_code == 422  # anterior al límite actual (30 días)
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     assert _prorrogar(client, auth_header("coach@club.com"), i["id"], dias=40).status_code == 403
     assert _prorrogar(client, h_admin, i["id"], dias=40).status_code == 200
 
@@ -309,15 +303,6 @@ def test_estado_invalido_se_rechaza_en_la_base(client, h_admin, alumno, db):
     db.rollback()
 
 
-def test_entrenador_ve_inscripciones_de_su_rama(client, h_admin, alumno, crear_usuario, auth_header):
-    otra = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
-    inscribir(client, h_admin, alumno["id"])
-    inscribir(client, h_admin, otra["id"])
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="masculina")
-    filas = client.get(I, headers=auth_header("coach@club.com")).json()
-    assert [f["alumno_id"] for f in filas] == [otra["id"]]
-
-
 # ---------- Alta de alumno nuevo: ficha + inscripción + primer pago, todo o nada ----------
 NUEVO = f"{I}/alumno-nuevo"
 
@@ -360,16 +345,14 @@ def test_alta_parcial_sin_monto_y_documento_repetido(client, h_admin, db):
 
 
 def test_alta_de_alumno_nuevo_permisos(client, h_admin, crear_usuario, auth_header, db):
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h_coach = auth_header("coach@club.com")
     crear_usuario("familia@club.com", "MIEMBRO")
     h_familia = auth_header("familia@club.com")
 
     assert client.post(NUEVO, json={"alumno": datos_alumno()}, headers=h_familia).status_code == 403
-    # El entrenador asistente solo inscribe en su rama…
-    otra = {"alumno": datos_alumno(rama="masculina"), "pago": {"forma": "completo"}}
-    assert client.post(NUEVO, json=otra, headers=h_coach).status_code == 403
-    assert _cuantos_alumnos(db) == 0
-    # …y en la suya sí, con el pago incluido.
+    # El entrenador (general) inscribe en cualquier rama, con el pago incluido.
+    otra = {"alumno": datos_alumno(rama="masculina", documento="7777777777"), "pago": {"forma": "completo"}}
+    assert client.post(NUEVO, json=otra, headers=h_coach).status_code == 201
     r = client.post(NUEVO, json={"alumno": datos_alumno(), "pago": {"forma": "completo"}}, headers=h_coach)
     assert r.status_code == 201 and r.json()["estado"] == "activo"

@@ -73,7 +73,6 @@ def crear(
     try:
         usuario = servicio.crear_usuario(
             db, email=datos.email, nombre=datos.nombre, password=datos.password, rol_codigo=datos.rol,
-            rama=datos.rama,
         )
     except servicio.EmailDuplicado:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un usuario con ese correo") from None
@@ -82,7 +81,7 @@ def crear(
     auditoria.registrar(
         db, accion="usuario.crear", entidad="usuario", entidad_id=str(usuario.id), usuario_id=actor.id,
         despues={
-            "email": usuario.email, "rol": datos.rol, "rama": datos.rama, "vinculo": _vincular(db, usuario, datos),
+            "email": usuario.email, "rol": datos.rol, "vinculo": _vincular(db, usuario, datos),
         },
         ip=ip_cliente(request),
     )
@@ -105,7 +104,7 @@ def actualizar(
         # Evita que el único SuperAdmin se quite el acceso a sí mismo.
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No puedes cambiar tu propio rol ni desactivarte")
 
-    antes = {"nombre": usuario.nombre, "rol": usuario.rol.codigo, "activo": usuario.activo, "rama": usuario.rama}
+    antes = {"nombre": usuario.nombre, "rol": usuario.rol.codigo, "activo": usuario.activo}
     if datos.nombre is not None:
         usuario.nombre = datos.nombre
     if datos.rol is not None:
@@ -115,8 +114,6 @@ def actualizar(
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "El rol no existe") from None
     if datos.activo is not None:
         usuario.activo = datos.activo
-    if "rama" in datos.model_fields_set:  # null quita la rama
-        usuario.rama = datos.rama
     if datos.password is not None:
         usuario.password_hash = hash_password(datos.password)
     cambio_credenciales = datos.password is not None or (datos.rol is not None and datos.rol != antes["rol"])
@@ -128,7 +125,7 @@ def actualizar(
     auditoria.registrar(
         db, accion="usuario.actualizar", entidad="usuario", entidad_id=str(usuario.id), usuario_id=actor.id,
         antes=antes, despues={
-            "nombre": usuario.nombre, "rol": usuario.rol.codigo, "activo": usuario.activo, "rama": usuario.rama,
+            "nombre": usuario.nombre, "rol": usuario.rol.codigo, "activo": usuario.activo,
             "password_cambiada": datos.password is not None,  # nunca la contraseña
         },
         ip=ip_cliente(request),

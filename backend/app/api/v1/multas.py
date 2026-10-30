@@ -29,7 +29,7 @@ def listar(
     rama: Rama | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
-    usuario: Usuario = Depends(requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")),
+    usuario: Usuario = Depends(requiere_alguno("alumnos.ver_todos", "alumnos.ver_propios")),
     db: Session = Depends(get_db),
 ) -> list[MultaOut]:
     filas = servicio.listar(db, usuario, estado=estado, alumno_id=alumno_id, rama=rama, skip=skip, limit=limit)

@@ -28,7 +28,7 @@ from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/alumnos", tags=["alumnos"])
 
-VER_ALUMNOS = requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")
+VER_ALUMNOS = requiere_alguno("alumnos.ver_todos", "alumnos.ver_propios")
 VER_DOCUMENTOS = requiere_alguno("alumnos.editar", "alumnos.ver_propios")
 
 
@@ -167,7 +167,7 @@ def historial_asistencia(
 def documento_identidad(
     alumno_id: uuid.UUID,
     request: Request,
-    actor: Usuario = Depends(requiere("alumnos.ver_todos")),
+    actor: Usuario = Depends(requiere("alumnos.ver_documento")),
     db: Session = Depends(get_db),
 ) -> DocumentoIdentidadOut:
     """Documento completo, descifrado. Solo Admin/SuperAdmin y cada consulta queda auditada."""

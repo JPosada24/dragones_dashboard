@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import requiere_alguno
+from app.api.deps import requiere
 from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.services import resumen as servicio
@@ -79,7 +79,7 @@ class ResumenOut(BaseModel):
 
 @router.get("", response_model=ResumenOut)
 def ver(
-    usuario: Usuario = Depends(requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama")),
+    usuario: Usuario = Depends(requiere("alumnos.ver_todos")),
     db: Session = Depends(get_db),
 ) -> ResumenOut:
     """Tablero del staff (el Entrenador ve solo su rama). Las familias usan el estado de cuenta de cada alumno."""

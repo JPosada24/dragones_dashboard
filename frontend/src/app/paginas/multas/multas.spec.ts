@@ -16,7 +16,7 @@ registerLocaleData(localeEsCo);
 
 const HOY = new Date();
 const ADMIN = ['alumnos.ver_todos', 'pagos.registrar', 'multas.anular'];
-const ENTRENADOR = ['alumnos.ver_rama'];
+const ENTRENADOR = ['alumnos.ver_todos']; // general, sin cobrar ni anular
 const FAMILIA = ['alumnos.ver_propios'];
 
 const multa = (id: string, alumno: string, extra: Partial<Multa> = {}): Multa => ({
@@ -42,7 +42,7 @@ describe('MultasPage', () => {
       imports: [MultasPage],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
     });
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, rama: null, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(MultasPage);
@@ -109,11 +109,10 @@ describe('MultasPage', () => {
     expect(dialogo().querySelector('[role="alert"]')?.textContent).toContain('Solo se puede anular');
   });
 
-  it('el entrenador ve multas y mora de su rama, pero no cobra ni anula', async () => {
+  it('el entrenador ve multas y mora de ambas ramas, pero no cobra ni anula', async () => {
     await cargarStaff(ENTRENADOR);
     expect(boton('Cobrar')).toBeUndefined();
     expect(boton('Anular')).toBeUndefined();
-    expect(boton('Femenina')).toBeUndefined();
     expect(el().querySelectorAll('.situacion').length).toBe(2);
   });
 

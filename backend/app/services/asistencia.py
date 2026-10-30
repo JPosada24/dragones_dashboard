@@ -30,7 +30,7 @@ def momento_cierre(db: Session, sesion: Sesion) -> datetime:
 
 
 # ---------- Visibilidad ----------
-VER_SESIONES = ("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")
+VER_SESIONES = ("alumnos.ver_todos", "alumnos.ver_propios")
 
 
 def filtro_sesiones_visibles(usuario: Usuario) -> ColumnElement[bool]:

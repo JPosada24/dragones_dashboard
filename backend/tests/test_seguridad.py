@@ -45,19 +45,18 @@ def test_cuerpo_chunked_que_excede_el_limite_tambien_se_corta(client, crear_usua
 
 
 # ---------- Acudientes visibles para el Entrenador ----------
-def test_entrenador_solo_ve_acudientes_de_su_rama(client, crear_usuario, auth_header):
+def test_la_familia_solo_ve_acudientes_de_sus_alumnos(client, crear_usuario, auth_header):
     crear_usuario("adm@club.com", "ADMIN")
     h_admin = auth_header("adm@club.com")
-    de_masculina = crear_acudiente(client, h_admin, documento="5000000001")
-    crear_menor(client, h_admin, documento="6000000001", acudiente=de_masculina, rama="masculina")
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    ajeno = crear_acudiente(client, h_admin, documento="5000000001")
+    crear_menor(client, h_admin, documento="6000000001", acudiente=ajeno, rama="masculina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
-    propio = crear_acudiente(client, h, documento="5000000002")
-    crear_menor(client, h, documento="6000000002", acudiente=propio)
-
-    assert [a["id"] for a in client.get(AC, headers=h).json()] == [propio["id"]]
-    assert client.get(f"{AC}/{de_masculina['id']}", headers=h).status_code == 404
-    assert client.patch(f"{AC}/{de_masculina['id']}", json={"telefono": "3110000000"}, headers=h).status_code == 404
+    # El entrenador (general) ve y edita a todos los acudientes.
+    assert client.get(f"{AC}/{ajeno['id']}", headers=h).status_code == 200
+    # La familia no puede consultar acudientes.
+    crear_usuario("m@club.com", "MIEMBRO")
+    assert client.get(AC, headers=auth_header("m@club.com")).status_code == 403
 
 
 def test_entrenador_encuentra_por_documento_exacto_al_acudiente_de_un_hermano(client, crear_usuario, auth_header):
@@ -65,7 +64,7 @@ def test_entrenador_encuentra_por_documento_exacto_al_acudiente_de_un_hermano(cl
     h_admin = auth_header("adm@club.com")
     madre = crear_acudiente(client, h_admin, documento="5000000001")
     crear_menor(client, h_admin, documento="6000000001", acudiente=madre, rama="masculina")
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
 
     r = client.get(AC, params={"tipo_documento": "CC", "documento": "5000000001"}, headers=h)

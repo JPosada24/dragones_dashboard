@@ -23,7 +23,7 @@ from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/rifas", tags=["rifas"])
 
-VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")
+VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_propios")
 
 
 def rifa_a_out(db: Session, r: Rifa) -> RifaOut:

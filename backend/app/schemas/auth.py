@@ -3,7 +3,6 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.security import validar_politica_password
-from app.schemas.comunes import Rama
 from app.schemas.comunes import normalizar_email as _normalizar_email
 
 
@@ -25,7 +24,6 @@ class UsuarioOut(BaseModel):
     nombre: str
     rol: str
     activo: bool
-    rama: Rama | None = None
     permisos: list[str]
 
 
@@ -47,7 +45,6 @@ class UsuarioCrear(BaseModel):
     nombre: str = Field(min_length=2, max_length=120)
     password: str
     rol: str = Field(min_length=1, max_length=30)
-    rama: Rama | None = None  # solo tiene efecto para el Entrenador
     # Solo para el rol Miembro: la cuenta es del alumno (mayor de edad) o de un acudiente.
     vincular_alumno_id: uuid.UUID | None = None
     vincular_acudiente_id: uuid.UUID | None = None
@@ -76,7 +73,6 @@ class UsuarioActualizar(BaseModel):
     nombre: str | None = Field(default=None, min_length=2, max_length=120)
     rol: str | None = Field(default=None, min_length=1, max_length=30)
     activo: bool | None = None
-    rama: Rama | None = None
     password: str | None = None  # el SuperAdmin asigna una nueva (cierra las sesiones abiertas)
 
     @field_validator("password")

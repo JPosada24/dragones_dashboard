@@ -45,7 +45,7 @@ export class AsistenciaPage implements OnInit {
   private readonly fb = inject(FormBuilder).nonNullable;
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
-  protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
+  protected readonly esStaff = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly veTodasLasRamas = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly puedeMarcar = computed(() => this.auth.tiene('asistencia.marcar_grupo'));
   protected readonly puedeCorregir = computed(() => this.auth.tiene('asistencia.corregir'));

@@ -86,7 +86,7 @@
                 <span class="mono apagado">
                   {{ a.tipo_documento }} {{ documentoCompleto() ?? a.documento }}
                 </span>
-                @if (veTodasLasRamas()) {
+                @if (puedeVerDocumento()) {
                   @if (documentoCompleto()) {
                     <button type="button" class="enlace" (click)="documentoCompleto.set(null)">Ocultar</button>
                   } @else {
@@ -346,17 +346,13 @@
                  [placeholder]="modo === 'editar' ? 'Déjalo vacío para no cambiarlo' : ''" /></label>
         <label class="campo"><span class="etiqueta">Fecha de nacimiento</span>
           <input class="control" type="date" formControlName="fecha_nacimiento" [max]="hoy" /></label>
-        @if (ramaPropia(); as r) {
-          <label class="campo"><span class="etiqueta">Rama</span>
-            <input class="control capital" [value]="r" disabled /></label>
-        } @else {
-          <label class="campo"><span class="etiqueta">Rama</span>
-            <select class="control" formControlName="rama">
-              <option value="" disabled>Selecciona…</option>
-              <option value="femenina">Femenina</option>
-              <option value="masculina">Masculina</option>
-            </select></label>
-        }
+        <label class="campo"><span class="etiqueta">Rama</span>
+          <select class="control" formControlName="rama">
+            <option value="" disabled>Selecciona…</option>
+            <option value="femenina">Femenina</option>
+            <option value="masculina">Masculina</option>
+          </select></label>
+      
         <label class="campo"><span class="etiqueta">Teléfono (opcional)</span>
           <input class="control" type="tel" formControlName="telefono" autocomplete="off" /></label>
         <label class="campo"><span class="etiqueta">Correo (opcional)</span>

@@ -102,7 +102,7 @@ def test_un_torneo_cancela_los_entrenamientos_y_vuelven_si_se_cancela(client, h_
 
 # ---------- Permisos ----------
 def test_solo_admin_y_superadmin_cambian_el_horario(client, h_admin, h_root, familia, crear_usuario, auth_header):
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     for h in (auth_header("coach@club.com"), familia["h"]):
         assert client.put(H, json=HORARIO, headers=h).status_code == 403
         assert client.get(H, headers=h).status_code == 200  # todos pueden consultar el horario

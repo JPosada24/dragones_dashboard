@@ -20,7 +20,7 @@ type Vinculo = 'acudiente' | 'alumno';
 const ROLES: { valor: Rol; texto: string; descripcion: string }[] = [
   { valor: 'SUPERADMIN', texto: 'SuperAdmin', descripcion: 'Acceso total (el dueño del club).' },
   { valor: 'ADMIN', texto: 'Admin', descripcion: 'Alumnos, cobros, inscripciones, rifas y torneos.' },
-  { valor: 'ENTRENADOR', texto: 'Entrenador', descripcion: 'Asistente de una rama: solo ve y gestiona su rama; no cobra.' },
+  { valor: 'ENTRENADOR', texto: 'Entrenador', descripcion: 'Ambas ramas: alumnos, asistencia e inscripciones; no cobra multas ni rifas.' },
   { valor: 'MIEMBRO', texto: 'Miembro', descripcion: 'Acudiente o alumno mayor de edad: solo consulta lo suyo.' },
 ];
 
@@ -84,14 +84,12 @@ export class UsuariosPage implements OnInit {
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
     password: ['', [Validators.required, Validators.pattern(POLITICA)]],
     rol: this.fb.control<Rol | ''>('', Validators.required),
-    rama: this.fb.control<'' | 'femenina' | 'masculina'>(''),
     vinculo: this.fb.control<Vinculo>('acudiente'),
     acudiente_id: [''],
   });
   protected readonly formEditar = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     rol: this.fb.control<Rol | ''>('', Validators.required),
-    rama: this.fb.control<'' | 'femenina' | 'masculina'>(''),
     activo: true,
   });
   protected readonly formClave = this.fb.group({ password: ['', [Validators.required, Validators.pattern(POLITICA)]] });
@@ -175,9 +173,8 @@ export class UsuariosPage implements OnInit {
         ? 'La contraseña debe tener al menos 12 caracteres, con mayúscula, minúscula y número.'
         : 'Completa nombre, correo, contraseña y rol.');
     }
-    if (f.rol === 'ENTRENADOR' && !f.rama) return this.errorDialogo.set('Elige la rama del entrenador.');
     const cuerpo: Record<string, unknown> = {
-      nombre: f.nombre, email: f.email, password: f.password, rol: f.rol, rama: f.rol === 'ENTRENADOR' ? f.rama : null,
+      nombre: f.nombre, email: f.email, password: f.password, rol: f.rol,
     };
     if (f.rol === 'MIEMBRO') {
       const a = this.alumnoElegido();
@@ -195,7 +192,7 @@ export class UsuariosPage implements OnInit {
 
   // ---------- Editar ----------
   protected abrirEditar(u: UsuarioLista): void {
-    this.formEditar.reset({ nombre: u.nombre, rol: u.rol, rama: u.rama ?? '', activo: u.activo });
+    this.formEditar.reset({ nombre: u.nombre, rol: u.rol, activo: u.activo });
     this.abrir(() => this.editando.set(u));
   }
 
@@ -204,8 +201,7 @@ export class UsuariosPage implements OnInit {
     if (!u) return;
     const f = this.formEditar.getRawValue();
     if (this.formEditar.invalid) return this.errorDialogo.set('Revisa el nombre y el rol.');
-    if (f.rol === 'ENTRENADOR' && !f.rama) return this.errorDialogo.set('Elige la rama del entrenador.');
-    const cuerpo: Record<string, unknown> = { nombre: f.nombre, rama: f.rol === 'ENTRENADOR' ? f.rama : null };
+    const cuerpo: Record<string, unknown> = { nombre: f.nombre };
     if (u.id !== this.yo()) Object.assign(cuerpo, { rol: f.rol, activo: f.activo }); // nadie se quita su propio acceso
     this.ejecutar(this.http.patch<Usuario>(`${API}/usuarios/${encodeURIComponent(u.id)}`, cuerpo), () => {
       this.editando.set(null);

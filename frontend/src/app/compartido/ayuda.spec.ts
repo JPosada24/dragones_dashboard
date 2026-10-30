@@ -17,7 +17,7 @@ describe('AyudaBoton', () => {
   let fixture: ComponentFixture<AyudaBoton>;
 
   function crear(permisos: string[]) {
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'MIEMBRO', activo: true, rama: null, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'MIEMBRO', activo: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     fixture = TestBed.createComponent(AyudaBoton);
     fixture.componentRef.setInput('ayuda', AYUDA);

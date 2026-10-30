@@ -1,7 +1,7 @@
 import { Ayuda } from '../compartido/ayuda';
 
 /** Quien gestiona (todo el club o su rama); la familia no ve estos pasos. */
-const STAFF = ['alumnos.ver_todos', 'alumnos.ver_rama'];
+const STAFF = ['alumnos.ver_todos'];
 const FAMILIA = ['alumnos.ver_propios'];
 
 /** Explicación de cada vista (botón "?" junto al título). La clave es la ruta de `secciones.ts`. */
@@ -112,7 +112,7 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       { titulo: 'SuperAdmin', texto: 'El dueño y entrenador principal: acceso total.' },
       { titulo: 'Admin', texto: 'Gestiona alumnos, cobros, inscripciones y torneos.' },
-      { titulo: 'Entrenador', texto: 'Asistente de una rama: ve y gestiona solo su rama; no cobra multas ni rifas.' },
+      { titulo: 'Entrenador', texto: 'Asistente general (ambas ramas): alumnos, asistencia e inscripciones con abonos. No cobra multas ni rifas, no ve el documento completo ni cambia el horario.' },
       { titulo: 'Miembro', texto: 'Acudiente o alumno mayor de edad: solo consulta lo suyo. Al crear la cuenta se elige a qué alumno pertenece.' },
       { titulo: 'Contraseña', texto: 'La llave cambia la contraseña y cierra sus sesiones abiertas. Desactivar una cuenta le impide entrar sin borrar nada.' },
     ],

@@ -6,18 +6,18 @@ PERMISOS: dict[str, str] = {
     "config.editar": "Cambiar parámetros críticos (multa, plazos, políticas)",
     "auditoria.ver": "Consultar la bitácora de auditoría",
     "alumnos.ver_todos": "Ver fichas de todos los alumnos",
-    "alumnos.ver_rama": "Ver fichas de los alumnos de su rama",
+    "alumnos.ver_documento": "Ver el número de documento completo (cada consulta queda en la auditoría)",
     "alumnos.ver_propios": "Ver sus propios datos o los de sus hijos",
-    "alumnos.editar": "Crear y editar alumnos, acudientes y documentos (el Entrenador, solo de su rama)",
+    "alumnos.editar": "Crear y editar alumnos, acudientes y documentos",
     "alumnos.eliminar": "Eliminar un alumno con toda su información (no se puede deshacer)",
-    "inscripciones.crear": "Inscribir alumnos (el Entrenador, solo de su rama)",
+    "inscripciones.crear": "Inscribir alumnos",
     "inscripciones.gestionar": "Gestionar inscripciones (estados, vencimientos, fechas anteriores)",
-    "inscripciones.abonar": "Registrar abonos de inscripción (el Entrenador, solo de su rama)",
+    "inscripciones.abonar": "Registrar abonos de inscripción",
     "prorroga.conceder": "Conceder prórrogas de pago",
     "expulsion.confirmar": "Confirmar una expulsión",
     "sesiones.gestionar": "Cambiar el horario de entrenamiento, crear, cancelar y eliminar sesiones extra",
     "asistencia.marcar_propia": "Marcar asistencia o justificar la propia (o la de sus hijos)",
-    "asistencia.marcar_grupo": "Marcar asistencia de un grupo (el Entrenador, solo de su rama)",
+    "asistencia.marcar_grupo": "Marcar la asistencia de la planilla",
     "asistencia.corregir": "Corregir asistencia ya cerrada",
     "justificaciones.revisar": "Aprobar o rechazar justificaciones",
     "pagos.registrar": "Registrar pagos de multas, rifas y paz y salvo",
@@ -36,7 +36,7 @@ PERMISOS: dict[str, str] = {
 ROLES: dict[str, tuple[str, str]] = {
     "SUPERADMIN": ("SuperAdmin", "Dueño y entrenador principal del club: acceso total y parámetros críticos"),
     "ADMIN": ("Admin", "Coordinación y pagos del día a día"),
-    "ENTRENADOR": ("Entrenador", "Entrenador asistente: gestiona solo los alumnos de su rama"),
+    "ENTRENADOR": ("Entrenador", "Entrenador asistente: alumnos de ambas ramas, asistencia e inscripciones; no cobra"),
     "MIEMBRO": ("Miembro", "Alumno mayor de edad o acudiente"),
 }
 
@@ -44,15 +44,16 @@ ROLES_PERMISOS: dict[str, set[str]] = {
     "SUPERADMIN": set(PERMISOS),
     "ADMIN": {
         "config.ver", "auditoria.ver",
-        "alumnos.ver_todos", "alumnos.editar",
+        "alumnos.ver_todos", "alumnos.ver_documento", "alumnos.editar",
         "inscripciones.crear", "inscripciones.gestionar", "inscripciones.abonar", "prorroga.conceder",
         "sesiones.gestionar", "asistencia.marcar_grupo", "asistencia.corregir", "justificaciones.revisar",
         "pagos.registrar", "multas.anular", "rifas.gestionar", "sorteo.jugar",
         "eventos.gestionar", "notificaciones.gestionar", "club.editar", "agente.usar",
     },
-    # El Entrenador hace todo el proceso de inscripción de su rama (alumno, acudiente, documentos, inscripción).
+    # El Entrenador es general (ambas ramas) y hace todo el proceso de inscripción (alumno, acudiente, documentos,
+    # inscripción). No cobra multas ni rifas, no ve el documento completo ni gestiona horarios ni prórrogas.
     "ENTRENADOR": {
-        "alumnos.ver_rama", "alumnos.editar", "inscripciones.crear", "inscripciones.abonar",
+        "alumnos.ver_todos", "alumnos.editar", "inscripciones.crear", "inscripciones.abonar",
         "asistencia.marcar_grupo", "agente.usar",
     },
     "MIEMBRO": {

@@ -23,7 +23,7 @@ export class ResumenPage implements OnInit {
   private readonly auth = inject(AuthService);
 
   /** Staff (todo el club o su rama) ve el tablero; las familias ven a sus hijos. */
-  protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
+  protected readonly esStaff = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly error = signal(false);
 
   protected readonly resumen = signal<ResumenStaff | null>(null);

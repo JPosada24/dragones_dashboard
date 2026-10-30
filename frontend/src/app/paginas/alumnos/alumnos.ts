@@ -65,14 +65,13 @@ export class AlumnosPage implements OnInit {
   protected readonly pestanas = PESTANAS_ALUMNOS;
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
-  protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
+  protected readonly esStaff = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly veTodasLasRamas = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly puedeEditar = computed(() => this.auth.tiene('alumnos.editar'));
   protected readonly puedeInscribir = computed(() => this.auth.tiene('inscripciones.crear'));
   protected readonly puedeAbonar = computed(() => this.auth.tiene('inscripciones.abonar'));
   protected readonly puedeEliminar = computed(() => this.auth.tiene('alumnos.eliminar'));
-  /** Rama fija para quien solo maneja la suya (el Entrenador). */
-  protected readonly ramaPropia = computed(() => (this.veTodasLasRamas() ? null : (this.auth.usuario()?.rama ?? null)));
+  protected readonly puedeVerDocumento = computed(() => this.auth.tiene('alumnos.ver_documento'));
 
   protected readonly tiposDocumento = TIPOS_DOCUMENTO;
   protected readonly tiposArchivo = TIPOS_ARCHIVO;
@@ -297,7 +296,7 @@ export class AlumnosPage implements OnInit {
 
   // ---------- Alumno: crear / editar ----------
   protected abrirNuevo(): void {
-    this.formAlumno.reset({ rama: this.ramaPropia() ?? '' });
+    this.formAlumno.reset({ rama: '' });
     this.reiniciarAcudiente();
     this.reiniciarInscripcion();
     this.abrir(() => this.editandoAlumno.set('nuevo'));
@@ -326,7 +325,7 @@ export class AlumnosPage implements OnInit {
     };
     const base = {
       nombres: f.nombres, apellidos: f.apellidos, fecha_nacimiento: f.fecha_nacimiento,
-      rama: this.ramaPropia() ?? (f.rama || null), ...opcionales,
+      rama: f.rama || null, ...opcionales,
     };
 
     if (modo === 'nuevo') {

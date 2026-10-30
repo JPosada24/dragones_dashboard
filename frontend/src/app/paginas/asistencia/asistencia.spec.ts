@@ -51,7 +51,7 @@ describe('AsistenciaPage', () => {
       imports: [AsistenciaPage],
       providers: [provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
     });
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, rama: null, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AsistenciaPage);

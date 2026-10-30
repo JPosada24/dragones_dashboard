@@ -31,7 +31,7 @@ export class MultasPage implements OnInit {
   private readonly pesos = new PesosPipe();
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
-  protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
+  protected readonly esStaff = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly veTodasLasRamas = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly puedeCobrar = computed(() => this.auth.tiene('pagos.registrar'));
   protected readonly puedeAnular = computed(() => this.auth.tiene('multas.anular'));

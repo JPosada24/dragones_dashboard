@@ -37,7 +37,7 @@
             @if (u.vinculado_a) { <span class="nota-chica vinculo">{{ u.vinculado_a }}</span> }
           </span>
           <span class="chip-rol" [attr.data-rol]="u.rol">
-            {{ nombreRol[u.rol] }}@if (u.rama) { <span class="capital"> · {{ u.rama }}</span> }
+            {{ nombreRol[u.rol] }}
           </span>
           <span class="estado" [class.apagado]="!u.activo">{{ u.activo ? 'Activa' : 'Desactivada' }}</span>
           <span class="acciones-fila">
@@ -77,14 +77,6 @@
       </div>
       @if (formNuevo.controls.rol.value; as rol) {
         <p class="nota-chica">{{ descripcionRol(rol) }}</p>
-      }
-      @if (formNuevo.controls.rol.value === 'ENTRENADOR') {
-        <label class="campo corto"><span class="etiqueta">Rama</span>
-          <select class="control" formControlName="rama">
-            <option value="" disabled>Selecciona…</option>
-            <option value="femenina">Femenina</option>
-            <option value="masculina">Masculina</option>
-          </select></label>
       }
       @if (formNuevo.controls.rol.value === 'MIEMBRO') {
         <fieldset class="grupo">
@@ -148,14 +140,6 @@
           <select class="control" formControlName="rol">
             @for (r of roles; track r.valor) { <option [value]="r.valor">{{ r.texto }}</option> }
           </select></label>
-        @if (formEditar.controls.rol.value === 'ENTRENADOR') {
-          <label class="campo"><span class="etiqueta">Rama</span>
-            <select class="control" formControlName="rama">
-              <option value="" disabled>Selecciona…</option>
-              <option value="femenina">Femenina</option>
-              <option value="masculina">Masculina</option>
-            </select></label>
-        }
         <label class="casilla"><input type="checkbox" formControlName="activo" />
           <span>Cuenta activa <span class="nota-chica">(desactivarla cierra sus sesiones y le impide entrar)</span></span></label>
       }

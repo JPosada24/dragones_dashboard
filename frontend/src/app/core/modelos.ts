@@ -8,7 +8,6 @@ export interface Usuario {
   nombre: string;
   rol: Rol;
   activo: boolean;
-  rama: 'masculina' | 'femenina' | null;
   permisos: string[];
 }
 

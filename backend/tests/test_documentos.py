@@ -79,17 +79,15 @@ def test_miembro_ve_documentos_de_su_hijo_pero_no_sube_ni_ve_ajenos(client, h_ad
     assert client.get(f"{A}/{ajeno['id']}/documentos", headers=h).status_code == 404
 
 
-def test_entrenador_sube_y_ve_documentos_solo_de_su_rama(client, h_admin, crear_usuario, auth_header):
-    propia = crear_alumno(client, h_admin, rama="femenina")
-    ajena = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+def test_entrenador_sube_y_ve_documentos_de_cualquier_alumno(client, h_admin, crear_usuario, auth_header):
+    fem = crear_alumno(client, h_admin, rama="femenina")
+    mas = crear_alumno(client, h_admin, documento="2222222222", rama="masculina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
-    doc = _subir(client, h, propia["id"])
-    assert doc.status_code == 201
-    assert len(client.get(f"{A}/{propia['id']}/documentos", headers=h).json()) == 1
-    assert client.get(f"{A}/{propia['id']}/documentos/{doc.json()['id']}/archivo", headers=h).content == PDF
-    assert _subir(client, h, ajena["id"]).status_code == 404
-    assert client.get(f"{A}/{ajena['id']}/documentos", headers=h).status_code == 404
+    for alumno in (fem, mas):
+        doc = _subir(client, h, alumno["id"])
+        assert doc.status_code == 201
+        assert client.get(f"{A}/{alumno['id']}/documentos/{doc.json()['id']}/archivo", headers=h).content == PDF
 
 
 def test_eliminar_documento_borra_el_archivo_y_queda_auditado(client, h_admin, crear_usuario, auth_header, db):

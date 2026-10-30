@@ -59,10 +59,9 @@ def destinatarios_de_alumno(db: Session, alumno: Alumno) -> list[Destinatario]:
 
 
 def staff_de_rama(db: Session, rama: str) -> list[Destinatario]:
-    """SuperAdmin y Admin activos, más los entrenadores de esa rama. Solo bandeja y correo."""
+    """SuperAdmin, Admin y entrenadores activos (los entrenadores son de ambas ramas). Solo bandeja y correo."""
     filas = db.scalars(select(Usuario).join(Usuario.rol).where(
-        Usuario.activo.is_(True),
-        or_(Rol.codigo.in_(("SUPERADMIN", "ADMIN")), (Rol.codigo == "ENTRENADOR") & (Usuario.rama == rama)),
+        Usuario.activo.is_(True), Rol.codigo.in_(("SUPERADMIN", "ADMIN", "ENTRENADOR")),
     ))
     return [Destinatario(u.nombre, u.id, u.email, None) for u in filas]
 

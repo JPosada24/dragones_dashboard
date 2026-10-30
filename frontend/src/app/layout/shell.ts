@@ -42,7 +42,7 @@ export class Shell {
   protected readonly rol = computed(() => {
     const u = this.usuario();
     if (!u) return '';
-    return u.rama && u.rol === 'ENTRENADOR' ? `${NOMBRE_ROL[u.rol]} · ${u.rama}` : NOMBRE_ROL[u.rol];
+    return NOMBRE_ROL[u.rol];
   });
 
   protected readonly iniciales = computed(() =>

@@ -24,7 +24,7 @@ from app.models.notificaciones import Notificacion
 from app.models.rifas import ActaSorteo, PagoTalonario, Talonario
 from app.schemas.comunes import TipoDocumento, normalizar_documento
 from app.services import auditoria, configuracion
-from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
+from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado
 
 MENOR_SIN_ACUDIENTE = "El alumno es menor de edad: debe tener al menos un acudiente."
 
@@ -83,15 +83,6 @@ def _verificar_usuario(db: Session, modelo: type[Alumno] | type[Acudiente], camb
         raise Conflicto(f"Ese usuario ya está asociado a otro {quien}.")
 
 
-def _verificar_rama_permitida(actor: Usuario, rama: str) -> None:
-    """Quien no ve todos los alumnos (el Entrenador) solo registra o mueve alumnos dentro de su rama."""
-    if "alumnos.ver_todos" in actor.permisos_codigos or rama == actor.rama:
-        return
-    if actor.rama is None:
-        raise Prohibido("No tienes una rama asignada: pide al SuperAdmin que te asigne una.")
-    raise Prohibido(f"Solo puedes registrar alumnos de tu rama ({actor.rama}).")
-
-
 def _resumen_alumno(a: Alumno) -> dict[str, Any]:
     """Foto del alumno para la auditoría. El documento va enmascarado: nunca en claro en la bitácora."""
     return {
@@ -121,12 +112,9 @@ def filtro_visibles(usuario: Usuario) -> ColumnElement[bool]:
     permisos = set(usuario.permisos_codigos)
     if "alumnos.ver_todos" in permisos:
         return true()
-    condiciones = []
-    if "alumnos.ver_rama" in permisos and usuario.rama:
-        condiciones.append(Alumno.rama == usuario.rama)
     if "alumnos.ver_propios" in permisos:
-        condiciones.append(filtro_propios(usuario))
-    return or_(*condiciones) if condiciones else false()
+        return filtro_propios(usuario)
+    return false()
 
 
 def obtener_visible(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> Alumno:
@@ -225,7 +213,6 @@ def siguiente_codigo(db: Session, rama: str) -> str:
 def crear_alumno(
     db: Session, *, datos: dict[str, Any], vinculos: list[dict[str, Any]], actor: Usuario, ip: str | None
 ) -> Alumno:
-    _verificar_rama_permitida(actor, datos["rama"])
     _aplicar_documento(datos)
     _verificar_documento_libre(db, Alumno, datos)
     _verificar_usuario(db, Alumno, datos)
@@ -247,8 +234,6 @@ def actualizar_alumno(
     db: Session, alumno: Alumno, *, cambios: dict[str, Any], actor: Usuario, ip: str | None
 ) -> Alumno:
     antes = _resumen_alumno(alumno)
-    if "rama" in cambios:
-        _verificar_rama_permitida(actor, cambios["rama"])
     _aplicar_documento(cambios, alumno)
     _verificar_documento_libre(db, Alumno, cambios, alumno.id)
     _verificar_usuario(db, Alumno, cambios, alumno.id)
@@ -309,7 +294,7 @@ def ver_documento(db: Session, alumno: Alumno, *, actor: Usuario, ip: str | None
 
 # ---------- Acudientes ----------
 def filtro_acudientes_visibles(usuario: Usuario) -> ColumnElement[bool]:
-    """Admin/SA ven todos. El Entrenador ve los vinculados a alumnos de su rama y los aún sin vincular."""
+    """El staff (Admin, SA, Entrenador) ve todos; la familia, los vinculados a sus alumnos y los aún sin vincular."""
     if "alumnos.ver_todos" in usuario.permisos_codigos:
         return true()
     de_sus_alumnos = select(AlumnoAcudiente.acudiente_id).join(Alumno).where(filtro_visibles(usuario))

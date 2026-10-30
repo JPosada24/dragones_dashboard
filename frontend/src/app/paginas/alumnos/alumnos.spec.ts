@@ -13,8 +13,8 @@ import { Alumno, EstadoCuenta } from './alumnos.modelos';
 
 registerLocaleData(localeEsCo);
 
-const ADMIN = ['alumnos.ver_todos', 'alumnos.editar'];
-const ENTRENADOR = ['alumnos.ver_rama', 'alumnos.editar'];
+const ADMIN = ['alumnos.ver_todos', 'alumnos.ver_documento', 'alumnos.editar'];
+const ENTRENADOR = ['alumnos.ver_todos', 'alumnos.editar']; // general: ambas ramas, sin documento completo
 const FAMILIA = ['alumnos.ver_propios'];
 const INSCRIBE = [...ADMIN, 'inscripciones.crear', 'inscripciones.abonar'];
 
@@ -40,12 +40,12 @@ describe('AlumnosPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<AlumnosPage>;
 
-  function crear(permisos: string[], rama: 'femenina' | null = null) {
+  function crear(permisos: string[]) {
     TestBed.configureTestingModule({
       imports: [AlumnosPage],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
     });
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, rama, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AlumnosPage);
@@ -121,11 +121,11 @@ describe('AlumnosPage', () => {
     expect(texto()).not.toContain('1098765432');
   });
 
-  it('el entrenador no filtra por rama ni ve el documento completo', async () => {
-    crear(ENTRENADOR, 'femenina');
+  it('el entrenador ve ambas ramas pero no el documento completo', async () => {
+    crear(ENTRENADOR);
     pedirLista().flush([alumno('a1')]);
     await estable();
-    expect(boton('Masculina')).toBeUndefined();
+    expect(boton('Masculina')).toBeDefined();
     (el().querySelector('.item') as HTMLButtonElement).click();
     responderFicha(alumno('a1'));
     await estable();

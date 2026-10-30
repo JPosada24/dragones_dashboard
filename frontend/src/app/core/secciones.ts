@@ -1,6 +1,6 @@
 /** Mapa de la aplicación: de aquí salen el menú lateral, las pestañas del celular y las rutas. */
 
-const VER_ALUMNOS = ['alumnos.ver_todos', 'alumnos.ver_rama', 'alumnos.ver_propios'];
+const VER_ALUMNOS = ['alumnos.ver_todos', 'alumnos.ver_propios'];
 
 export interface Seccion {
   ruta: string; // sin "/" inicial ('' = inicio)

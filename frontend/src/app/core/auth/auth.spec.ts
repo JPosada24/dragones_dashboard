@@ -9,7 +9,7 @@ import { authInterceptor } from './auth.interceptor';
 import { AuthService, rutaSegura } from './auth.service';
 
 const usuario = (permisos: string[] = []): Usuario => ({
-  id: 'u1', email: 'root@club.com', nombre: 'Julian Posada', rol: 'SUPERADMIN', activo: true, rama: null, permisos,
+  id: 'u1', email: 'root@club.com', nombre: 'Julian Posada', rol: 'SUPERADMIN', activo: true, permisos,
 });
 const token = (t: string, permisos: string[] = []): TokenOut => ({
   access_token: t, token_type: 'bearer', expires_in: 900, usuario: usuario(permisos),

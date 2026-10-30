@@ -29,7 +29,7 @@ def test_fechas_del_torneo_se_validan(client, h_admin):
 
 def test_solo_el_staff_maneja_torneos(client, h_admin, crear_usuario, auth_header):
     torneo = crear_torneo(client, h_admin).json()
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    crear_usuario("coach@club.com", "ENTRENADOR")
     crear_usuario("m@club.com", "MIEMBRO")
     for h in (auth_header("coach@club.com"), auth_header("m@club.com")):
         assert crear_torneo(client, h).status_code == 403

@@ -15,7 +15,7 @@ import { ResumenStaff } from './resumen.modelos';
 registerLocaleData(localeEsCo);
 
 const conPermisos = (permisos: string[]): Usuario => ({
-  id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, rama: null, permisos,
+  id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos,
 });
 
 const RESUMEN: ResumenStaff = {

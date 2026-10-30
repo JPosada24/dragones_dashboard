@@ -27,7 +27,7 @@ from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/inscripciones", tags=["inscripciones"])
 
-VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")
+VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_propios")
 
 
 def _pagos_out(i: Inscripcion) -> list[PagoOut]:
