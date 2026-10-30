@@ -4,15 +4,17 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 
+import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { desdeIso, diaSemana, isoLocal, lunesDe, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
 import {
-  AlertaInasistencia, EstadoAsistencia, FilaPlanilla, Justificacion, Marca, Rama, Sesion,
+  AlertaInasistencia, EstadoAsistencia, FilaPlanilla, Horario, HorarioActualizado, Justificacion, Marca, Rama, Sesion,
 } from './asistencia.modelos';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 const ESTADO: Record<EstadoAsistencia, string> = {
   presente: 'Presente',
@@ -20,11 +22,18 @@ const ESTADO: Record<EstadoAsistencia, string> = {
   justificado: 'Justificado',
 };
 
+const CANCELACION: Record<string, string> = {
+  festivo: 'festivo',
+  torneo: 'torneo',
+  horario: 'sin entreno',
+  manual: 'cancelada',
+};
+
 const sesionUrl = (id: string) => `${API}/sesiones/${encodeURIComponent(id)}`;
 
 @Component({
   selector: 'app-asistencia',
-  imports: [DatePipe, ReactiveFormsModule],
+  imports: [DatePipe, ReactiveFormsModule, Dialogo],
   templateUrl: './asistencia.html',
   styleUrl: './asistencia.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,31 +53,53 @@ export class AsistenciaPage implements OnInit {
   protected readonly esFamilia = computed(() => this.auth.tiene('asistencia.marcar_propia') && !this.puedeMarcar());
 
   protected readonly dias = DIAS;
+  protected readonly diasLargos = DIAS_LARGOS;
   protected readonly estadoTexto = ESTADO;
   protected readonly hoy = isoLocal(new Date());
 
   // ---------- Estado ----------
   protected readonly lunes = signal(lunesDe(new Date()));
-  protected readonly rama = signal<Rama | ''>('');
   protected readonly sesiones = signal<Sesion[] | null>(null);
   protected readonly seleccionadaId = signal<string | null>(null);
   protected readonly planilla = signal<FilaPlanilla[] | null>(null);
+  protected readonly filtroRama = signal<Rama | ''>('');
   /** Marcas sin guardar: alumno_id → presente/ausente. */
   protected readonly cambios = signal<Record<string, Marca>>({});
+  protected readonly horario = signal<Horario | null>(null);
   protected readonly justificaciones = signal<Justificacion[]>([]);
   protected readonly alertas = signal<AlertaInasistencia[]>([]);
 
   protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
+  protected readonly errorDialogo = signal<string | null>(null);
   protected readonly ocupado = signal(false);
   protected readonly errorCarga = signal(false);
 
-  // Formularios en línea (uno abierto a la vez por tipo).
-  protected readonly corrigiendo = signal<string | null>(null);
-  protected readonly justificando = signal<string | null>(null);
-  protected readonly rechazando = signal<string | null>(null);
+  // Ventanas emergentes (popups).
+  protected readonly editandoHorario = signal(false);
+  protected readonly creandoExtra = signal(false);
   protected readonly cancelandoSesion = signal(false);
-  protected readonly programando = signal(false);
+  protected readonly corrigiendo = signal<FilaPlanilla | null>(null);
+  protected readonly justificando = signal<FilaPlanilla | null>(null);
+  protected readonly rechazando = signal<Justificacion | null>(null);
 
+  protected readonly formHorario = this.fb.group({
+    dias: this.fb.array(
+      DIAS.map(() =>
+        this.fb.group({
+          activo: false,
+          hora_inicio: ['18:00', Validators.required],
+          hora_fin: ['20:00', Validators.required],
+          lugar: ['', Validators.maxLength(120)],
+        }),
+      ),
+    ),
+  });
+  protected readonly formExtra = this.fb.group({
+    fecha: [this.hoy, Validators.required],
+    hora_inicio: ['18:00', Validators.required],
+    hora_fin: ['20:00', Validators.required],
+    lugar: ['', Validators.maxLength(120)],
+  });
   protected readonly formCorregir = this.fb.group({
     estado: this.fb.control<EstadoAsistencia>('presente'),
     motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(255)]],
@@ -82,15 +113,6 @@ export class AsistenciaPage implements OnInit {
   protected readonly formCancelar = this.fb.group({
     motivo: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(255)]],
   });
-  protected readonly formProgramar = this.fb.group({
-    rama: this.fb.control<Rama>('femenina', Validators.required),
-    desde: [this.hoy, Validators.required],
-    hasta: [''],
-    dias: this.fb.control<number[]>([]),
-    hora_inicio: ['18:00', Validators.required],
-    hora_fin: ['20:00', Validators.required],
-    lugar: ['', Validators.maxLength(120)],
-  });
 
   // ---------- Derivados ----------
   protected readonly domingo = computed(() => sumarDias(this.lunes(), 6));
@@ -102,10 +124,15 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     return !!s && this.puedeMarcar() && !s.cancelada && !s.cerrada && s.fecha <= this.hoy;
   });
+  /** Filas que se muestran (Admin/SA pueden filtrar por rama; el servidor ya limita al Entrenador y la familia). */
+  protected readonly filas = computed(() => {
+    const r = this.filtroRama();
+    return (this.planilla() ?? []).filter((f) => !r || f.rama === r);
+  });
   protected readonly hayCambios = computed(() => Object.keys(this.cambios()).length > 0);
   protected readonly conteo = computed(() => {
     const c = { presente: 0, justificado: 0, ausente: 0, sin_marcar: 0 };
-    for (const f of this.planilla() ?? []) {
+    for (const f of this.filas()) {
       const e = this.estadoDe(f);
       if (e) c[e]++;
       else c.sin_marcar++;
@@ -114,10 +141,8 @@ export class AsistenciaPage implements OnInit {
   });
 
   ngOnInit(): void {
-    const u = this.auth.usuario();
-    if (u?.rama) this.formProgramar.controls.rama.setValue(u.rama);
-    if (u?.rama && !this.veTodasLasRamas()) this.formProgramar.controls.rama.disable();
     this.cargarSesiones(true);
+    this.cargarHorario();
     this.cargarJustificaciones();
     if (this.esStaff()) {
       this.http.get<AlertaInasistencia[]>(`${API}/sesiones/alertas`).subscribe({
@@ -138,15 +163,9 @@ export class AsistenciaPage implements OnInit {
     this.cargarSesiones(true);
   }
 
-  protected cambiarRama(valor: string): void {
-    this.rama.set(valor === 'masculina' || valor === 'femenina' ? valor : '');
-    this.cargarSesiones(true);
-  }
-
   /** `elegir`: seleccionar de nuevo una sesión (la de hoy si la hay) en vez de conservar la actual. */
   private cargarSesiones(elegir: boolean): void {
-    const params: Record<string, string> = { desde: isoLocal(this.lunes()), hasta: isoLocal(this.domingo()) };
-    if (this.rama()) params['rama'] = this.rama();
+    const params = { desde: isoLocal(this.lunes()), hasta: isoLocal(this.domingo()) };
     this.http.get<Sesion[]>(`${API}/sesiones`, { params }).subscribe({
       next: (lista) => {
         const ordenadas = [...lista].sort((a, b) => (a.fecha + a.hora_inicio).localeCompare(b.fecha + b.hora_inicio));
@@ -159,6 +178,7 @@ export class AsistenciaPage implements OnInit {
             activas.find((s) => s.fecha === this.hoy) ??
             [...activas].reverse().find((s) => s.fecha < this.hoy) ??
             activas[0] ??
+            ordenadas[0] ??
             null;
           this.seleccionar(preferida);
         }
@@ -167,15 +187,26 @@ export class AsistenciaPage implements OnInit {
     });
   }
 
+  private cargarHorario(): void {
+    this.http.get<Horario>(`${API}/sesiones/horario`).subscribe({
+      next: (h) => this.horario.set(h),
+      error: () => undefined,
+    });
+  }
+
   protected seleccionar(s: Sesion | null): void {
     this.seleccionadaId.set(s?.id ?? null);
     this.cambios.set({});
-    this.cerrarFormularios();
     this.planilla.set(null);
-    if (!s) return;
-    this.http.get<FilaPlanilla[]>(`${sesionUrl(s.id)}/asistencia`).subscribe({
+    if (s && !s.cancelada) this.recargarPlanilla(); // una cancelada no tiene planilla
+  }
+
+  private recargarPlanilla(): void {
+    const id = this.seleccionadaId();
+    if (!id) return;
+    this.http.get<FilaPlanilla[]>(`${sesionUrl(id)}/asistencia`).subscribe({
       next: (p) => {
-        if (this.seleccionadaId() === s.id) this.planilla.set(p);
+        if (this.seleccionadaId() === id) this.planilla.set(p);
       },
       error: (e) => this.avisar(e),
     });
@@ -205,10 +236,10 @@ export class AsistenciaPage implements OnInit {
     });
   }
 
-  /** Marca como presentes a quienes aún no tienen marca. */
+  /** Marca como presentes a quienes aún no tienen marca (de las filas visibles). */
   protected todosPresentes(): void {
     const nuevo = { ...this.cambios() };
-    for (const f of this.planilla() ?? []) {
+    for (const f of this.filas()) {
       if (!this.estadoDe(f)) nuevo[f.alumno_id] = 'presente';
     }
     this.cambios.set(nuevo);
@@ -243,7 +274,7 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     return (
       !!s && !s.cancelada && (this.esFamilia() || this.puedeMarcar()) && f.asistencia !== 'presente' &&
-      f.justificacion !== 'pendiente' && f.justificacion !== 'aprobada'
+      this.estadoDe(f) !== 'presente' && f.justificacion !== 'pendiente' && f.justificacion !== 'aprobada'
     );
   }
 
@@ -252,56 +283,61 @@ export class AsistenciaPage implements OnInit {
     return !!s && this.esFamilia() && !s.cancelada && !s.cerrada && s.fecha === this.hoy && f.asistencia === null;
   }
 
-  // ---------- Formularios en línea ----------
-  protected abrirCorregir(f: FilaPlanilla): void {
-    this.cerrarFormularios();
-    this.formCorregir.reset({ estado: f.asistencia === 'presente' ? 'ausente' : 'presente', motivo: '' });
-    this.corrigiendo.set(f.alumno_id);
-  }
-
-  protected enviarCorreccion(f: FilaPlanilla): void {
-    const s = this.seleccionada();
-    if (!s || this.formCorregir.invalid) return;
-    const url = `${sesionUrl(s.id)}/asistencia/${encodeURIComponent(f.alumno_id)}`;
-    this.ejecutar(this.http.patch<FilaPlanilla[]>(url, this.formCorregir.getRawValue()), (p) => {
-      this.planilla.set(p);
-      this.corrigiendo.set(null);
-      this.avisar(null, `Asistencia de ${f.alumno_nombre} corregida.`);
+  // ---------- Popups ----------
+  protected abrirHorario(): void {
+    const dias = this.horario()?.dias ?? [];
+    this.formHorario.controls.dias.controls.forEach((g, i) => {
+      const d = dias.find((x) => x.dia_semana === i);
+      g.reset({
+        activo: !!d,
+        hora_inicio: d ? this.hora(d.hora_inicio) : '18:00',
+        hora_fin: d ? this.hora(d.hora_fin) : '20:00',
+        lugar: d?.lugar ?? '',
+      });
     });
+    this.abrir(() => this.editandoHorario.set(true));
   }
 
-  protected abrirJustificar(f: FilaPlanilla): void {
-    this.cerrarFormularios();
-    this.formJustificar.reset();
-    this.justificando.set(f.alumno_id);
+  protected guardarHorario(): void {
+    const dias = this.formHorario.getRawValue().dias.flatMap((d, i) =>
+      d.activo ? [{ dia_semana: i, hora_inicio: d.hora_inicio, hora_fin: d.hora_fin, lugar: d.lugar.trim() || null }] : [],
+    );
+    if (dias.some((d) => d.hora_fin <= d.hora_inicio)) {
+      this.errorDialogo.set('En cada día, la hora de fin debe ser posterior a la de inicio.');
+      return;
+    }
+    this.ejecutar(this.http.put<HorarioActualizado>(`${API}/sesiones/horario`, { dias }), (r) => {
+      this.horario.set(r);
+      this.editandoHorario.set(false);
+      this.cargarSesiones(false);
+      const partes = [`${r.creadas} nuevas`];
+      if (r.eliminadas) partes.push(`${r.eliminadas} quitadas`);
+      if (r.canceladas) partes.push(`${r.canceladas} canceladas (tenían registros)`);
+      this.avisar(null, `Horario guardado. Sesiones: ${partes.join(', ')}.`);
+    }, true);
   }
 
-  protected enviarJustificacion(f: FilaPlanilla): void {
-    const s = this.seleccionada();
-    if (!s || this.formJustificar.invalid) return;
-    const cuerpo = { alumno_id: f.alumno_id, motivo: this.formJustificar.getRawValue().motivo };
-    this.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), () => {
-      this.justificando.set(null);
-      this.recargarPlanilla();
-      this.cargarJustificaciones();
-      this.avisar(null, 'Justificación enviada. El club la revisará.');
-    });
+  protected abrirExtra(): void {
+    this.formExtra.reset({ fecha: this.hoy, hora_inicio: '18:00', hora_fin: '20:00', lugar: '' });
+    this.abrir(() => this.creandoExtra.set(true));
   }
 
-  protected revisar(j: Justificacion, aprobar: boolean): void {
-    if (!aprobar && this.formRechazar.invalid) return;
-    const cuerpo = aprobar ? { aprobar: true } : { aprobar: false, comentario: this.formRechazar.getRawValue().comentario };
-    this.ejecutar(this.http.post<Justificacion>(`${API}/justificaciones/${encodeURIComponent(j.id)}/revisar`, cuerpo), () => {
-      this.justificaciones.update((l) => l.filter((x) => x.id !== j.id));
-      this.rechazando.set(null);
-      if (this.seleccionadaId() === j.sesion_id) this.recargarPlanilla();
-      this.avisar(null, aprobar ? `Justificación de ${j.alumno_nombre} aprobada.` : `Justificación de ${j.alumno_nombre} rechazada.`);
-    });
+  protected crearExtra(): void {
+    if (this.formExtra.invalid) return;
+    const v = this.formExtra.getRawValue();
+    const cuerpo = { ...v, lugar: v.lugar.trim() || null };
+    this.ejecutar(this.http.post<Sesion>(`${API}/sesiones`, cuerpo), (s) => {
+      this.creandoExtra.set(false);
+      this.lunes.set(lunesDe(desdeIso(s.fecha)));
+      this.cargarSesiones(false);
+      this.seleccionar(s);
+      this.avisar(null, 'Sesión extra creada.');
+    }, true);
   }
 
-  protected abrirRechazo(j: Justificacion): void {
-    this.formRechazar.reset();
-    this.rechazando.set(j.id);
+  protected abrirCancelar(): void {
+    this.formCancelar.reset();
+    this.abrir(() => this.cancelandoSesion.set(true));
   }
 
   protected cancelarSesion(): void {
@@ -311,39 +347,67 @@ export class AsistenciaPage implements OnInit {
       this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
       this.cancelandoSesion.set(false);
       this.avisar(null, 'Sesión cancelada.');
-    });
+    }, true);
   }
 
-  protected alternarDia(dia: number): void {
-    const c = this.formProgramar.controls.dias;
-    c.setValue(c.value.includes(dia) ? c.value.filter((d) => d !== dia) : [...c.value, dia].sort());
+  protected abrirCorregir(f: FilaPlanilla): void {
+    this.formCorregir.reset({ estado: f.asistencia === 'presente' ? 'ausente' : 'presente', motivo: '' });
+    this.abrir(() => this.corrigiendo.set(f));
   }
 
-  /** Una fecha → una sesión; un rango → se programan los días elegidos. */
-  protected programar(): void {
-    if (this.formProgramar.invalid) return;
-    const v = this.formProgramar.getRawValue();
-    const horario = { rama: v.rama, hora_inicio: v.hora_inicio, hora_fin: v.hora_fin, lugar: v.lugar.trim() || null };
-    const rango = !!v.hasta && v.hasta !== v.desde;
-    if (rango && v.dias.length === 0) {
-      this.avisar(null, 'Elige al menos un día de la semana para programar el rango.', true);
-      return;
-    }
-    const peticion: Observable<Sesion | Sesion[]> = rango
-      ? this.http.post<Sesion[]>(`${API}/sesiones/programar`, { ...horario, desde: v.desde, hasta: v.hasta, dias_semana: v.dias })
-      : this.http.post<Sesion>(`${API}/sesiones`, { ...horario, fecha: v.desde });
-    this.ejecutar(peticion, (r) => {
-      const n = Array.isArray(r) ? r.length : 1;
-      this.programando.set(false);
-      this.lunes.set(lunesDe(desdeIso(v.desde)));
-      this.cargarSesiones(true);
-      this.avisar(null, n === 1 ? 'Sesión programada.' : `${n} sesiones programadas.`);
-    });
+  protected enviarCorreccion(): void {
+    const s = this.seleccionada();
+    const f = this.corrigiendo();
+    if (!s || !f || this.formCorregir.invalid) return;
+    const url = `${sesionUrl(s.id)}/asistencia/${encodeURIComponent(f.alumno_id)}`;
+    this.ejecutar(this.http.patch<FilaPlanilla[]>(url, this.formCorregir.getRawValue()), (p) => {
+      this.planilla.set(p);
+      this.corrigiendo.set(null);
+      this.avisar(null, `Asistencia de ${f.alumno_nombre} corregida.`);
+    }, true);
   }
 
-  protected abrirProgramar(): void {
-    this.cerrarFormularios();
-    this.programando.set(!this.programando());
+  protected abrirJustificar(f: FilaPlanilla): void {
+    this.formJustificar.reset();
+    this.abrir(() => this.justificando.set(f));
+  }
+
+  protected enviarJustificacion(): void {
+    const s = this.seleccionada();
+    const f = this.justificando();
+    if (!s || !f || this.formJustificar.invalid) return;
+    const cuerpo = { alumno_id: f.alumno_id, motivo: this.formJustificar.getRawValue().motivo };
+    this.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), () => {
+      this.justificando.set(null);
+      this.recargarPlanilla();
+      this.cargarJustificaciones();
+      this.avisar(null, 'Justificación enviada. El club la revisará.');
+    }, true);
+  }
+
+  protected abrirRechazo(j: Justificacion): void {
+    this.formRechazar.reset();
+    this.abrir(() => this.rechazando.set(j));
+  }
+
+  protected aprobar(j: Justificacion): void {
+    this.revisar(j, { aprobar: true }, false);
+  }
+
+  protected rechazar(): void {
+    const j = this.rechazando();
+    if (!j || this.formRechazar.invalid) return;
+    this.revisar(j, { aprobar: false, comentario: this.formRechazar.getRawValue().comentario }, true);
+  }
+
+  private revisar(j: Justificacion, cuerpo: object, enDialogo: boolean): void {
+    const aprobada = (cuerpo as { aprobar: boolean }).aprobar;
+    this.ejecutar(this.http.post<Justificacion>(`${API}/justificaciones/${encodeURIComponent(j.id)}/revisar`, cuerpo), () => {
+      this.justificaciones.update((l) => l.filter((x) => x.id !== j.id));
+      this.rechazando.set(null);
+      if (this.seleccionadaId() === j.sesion_id) this.recargarPlanilla();
+      this.avisar(null, `Justificación de ${j.alumno_nombre} ${aprobada ? 'aprobada' : 'rechazada'}.`);
+    }, enDialogo);
   }
 
   // ---------- Apoyo ----------
@@ -355,33 +419,29 @@ export class AsistenciaPage implements OnInit {
     return h.slice(0, 5);
   }
 
+  protected etiquetaCancelacion(s: Sesion): string {
+    return CANCELACION[s.causa_cancelacion ?? 'manual'] ?? 'cancelada';
+  }
+
   protected pct(n: number): string {
-    const total = this.planilla()?.length ?? 0;
+    const total = this.filas().length;
     return total ? `${Math.round((n / total) * 100)}%` : '0%';
   }
 
-  private recargarPlanilla(): void {
-    const id = this.seleccionadaId();
-    if (!id) return;
-    this.http.get<FilaPlanilla[]>(`${sesionUrl(id)}/asistencia`).subscribe({
-      next: (p) => {
-        if (this.seleccionadaId() === id) this.planilla.set(p);
-      },
-      error: (e) => this.avisar(e),
-    });
+  private abrir(mostrar: () => void): void {
+    this.errorDialogo.set(null);
+    this.mensaje.set(null);
+    mostrar();
   }
 
-  private cerrarFormularios(): void {
-    this.corrigiendo.set(null);
-    this.justificando.set(null);
-    this.cancelandoSesion.set(false);
-    this.programando.set(false);
-  }
-
-  /** Ejecuta una acción mostrando el estado ocupado y el error de la API si falla. */
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
+  /**
+   * Ejecuta una acción mostrando el estado ocupado. Si falla, el error se muestra dentro del popup
+   * (`enDialogo`) para no perder lo escrito, o arriba de la pantalla.
+   */
+  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = false): void {
     this.ocupado.set(true);
     this.mensaje.set(null);
+    this.errorDialogo.set(null);
     peticion.subscribe({
       next: (r) => {
         this.ocupado.set(false);
@@ -389,12 +449,13 @@ export class AsistenciaPage implements OnInit {
       },
       error: (e) => {
         this.ocupado.set(false);
-        this.avisar(e);
+        if (enDialogo) this.errorDialogo.set(mensajeError(e));
+        else this.avisar(e);
       },
     });
   }
 
-  private avisar(e: unknown, texto?: string, error = false): void {
-    this.mensaje.set(e ? { error: true, texto: mensajeError(e) } : { error, texto: texto ?? '' });
+  private avisar(e: unknown, texto?: string): void {
+    this.mensaje.set(e ? { error: true, texto: mensajeError(e) } : { error: false, texto: texto ?? '' });
   }
 }

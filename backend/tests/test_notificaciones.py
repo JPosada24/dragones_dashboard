@@ -103,10 +103,8 @@ def test_recordatorios_de_pago_7_y_1_dia_antes_sin_duplicar(client, h_admin, fam
 
 
 def test_alerta_de_inasistencias_llega_al_staff_una_vez_por_racha(client, h_admin, familia, reloj, auth_header):
-    client.post(f"{S}/programar", json={
-        "rama": "femenina", "desde": LUNES.isoformat(), "hasta": (LUNES + timedelta(days=3)).isoformat(),
-        "dias_semana": [0, 1, 2, 3], "hora_inicio": "18:00", "hora_fin": "20:00",
-    }, headers=h_admin)
+    for n in range(4):
+        _sesion(client, h_admin, dia=LUNES + timedelta(days=n))
     reloj(_en(LUNES + timedelta(days=3), 23, 59))
     _cerrar(client, h_admin)
     tarea = _tarea("avisos_programados")

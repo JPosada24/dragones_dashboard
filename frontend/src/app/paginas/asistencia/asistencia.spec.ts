@@ -10,7 +10,7 @@ import { isoLocal, lunesDe, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
 import { API, Usuario } from '../../core/modelos';
 import { AsistenciaPage } from './asistencia';
-import { FilaPlanilla, Justificacion, Sesion } from './asistencia.modelos';
+import { FilaPlanilla, Horario, Justificacion, Sesion } from './asistencia.modelos';
 
 registerLocaleData(localeEsCo);
 
@@ -19,14 +19,22 @@ const STAFF = [
   'alumnos.ver_todos', 'asistencia.marcar_grupo', 'asistencia.corregir', 'justificaciones.revisar', 'sesiones.gestionar',
 ];
 const FAMILIA = ['alumnos.ver_propios', 'asistencia.marcar_propia'];
+const HORARIO: Horario = {
+  dias: [
+    { dia_semana: 0, hora_inicio: '18:00:00', hora_fin: '20:00:00', lugar: null },
+    { dia_semana: 2, hora_inicio: '18:00:00', hora_fin: '20:00:00', lugar: 'Coliseo' },
+    { dia_semana: 5, hora_inicio: '16:00:00', hora_fin: '18:00:00', lugar: null },
+  ],
+  dias_anticipacion: 60,
+};
 
 const sesion = (extra: Partial<Sesion> = {}): Sesion => ({
-  id: 's1', rama: 'femenina', fecha: HOY, hora_inicio: '18:00:00', hora_fin: '20:00:00', lugar: 'Cancha 2',
-  cancelada: false, motivo_cancelacion: null, cerrada: false, ...extra,
+  id: 's1', fecha: HOY, hora_inicio: '18:00:00', hora_fin: '20:00:00', lugar: 'Cancha 2', automatica: true,
+  cancelada: false, causa_cancelacion: null, motivo_cancelacion: null, cerrada: false, ...extra,
 });
 
 const fila = (id: string, nombre: string, extra: Partial<FilaPlanilla> = {}): FilaPlanilla => ({
-  alumno_id: id, alumno_nombre: nombre, asistencia: null, justificacion: null, multa: null, ...extra,
+  alumno_id: id, alumno_nombre: nombre, rama: 'femenina', asistencia: null, justificacion: null, multa: null, ...extra,
 });
 
 const JUSTIFICACION: Justificacion = {
@@ -52,74 +60,113 @@ describe('AsistenciaPage', () => {
 
   const el = () => fixture.nativeElement as HTMLElement;
   const texto = () => el().textContent ?? '';
-  const boton = (t: string) =>
-    [...el().querySelectorAll('button')].find((b) => b.textContent?.trim() === t) as HTMLButtonElement | undefined;
+  const boton = (t: string, dentro: ParentNode = el()) =>
+    [...dentro.querySelectorAll('button')].find((b) => b.textContent?.trim() === t) as HTMLButtonElement | undefined;
+  const dialogo = () => el().querySelector('dialog');
   const pedirSesiones = (): TestRequest => backend.expectOne((r) => r.url === `${API}/sesiones`);
   async function estable() {
     await fixture.whenStable();
     fixture.detectChanges();
   }
+  function escribir(selector: string, valor: string) {
+    const campo = el().querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+    campo.value = valor;
+    campo.dispatchEvent(new Event('input'));
+  }
+
+  /** Responde la carga inicial del staff (sesiones, horario, pendientes y alertas) y la planilla. */
+  async function cargarStaff(sesiones: Sesion[], planilla: FilaPlanilla[] | null, justificaciones: Justificacion[] = []) {
+    crear(STAFF);
+    pedirSesiones().flush(sesiones);
+    backend.expectOne(`${API}/sesiones/horario`).flush(HORARIO);
+    backend.expectOne((r) => r.url === `${API}/justificaciones`).flush(justificaciones);
+    backend.expectOne(`${API}/sesiones/alertas`).flush([]);
+    if (planilla) backend.expectOne(`${API}/sesiones/s1/asistencia`).flush(planilla);
+    await estable();
+  }
 
   afterEach(() => backend.verify());
 
-  it('el staff marca la planilla de hoy y la guarda', async () => {
+  it('pide la semana actual y el staff marca y guarda la planilla general', async () => {
     crear(STAFF);
     const req = pedirSesiones();
     expect(req.request.params.get('desde')).toBe(isoLocal(lunesDe(new Date())));
     expect(req.request.params.get('hasta')).toBe(isoLocal(sumarDias(lunesDe(new Date()), 6)));
+    expect(req.request.params.has('rama')).toBe(false); // el entrenamiento es general
     req.flush([sesion()]);
+    backend.expectOne(`${API}/sesiones/horario`).flush(HORARIO);
     backend.expectOne((r) => r.url === `${API}/justificaciones`).flush([]);
     backend.expectOne(`${API}/sesiones/alertas`).flush([{ alumno_id: 'a3', alumno_nombre: 'Kevin Ruiz', rama: 'masculina', inasistencias_seguidas: 3 }]);
-    backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez'), fila('a2', 'Ana Díaz')]);
+    backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez'), fila('a2', 'Juan Díaz', { rama: 'masculina' })]);
     await estable();
 
     expect(texto()).toContain('Laura Pérez');
+    expect(texto()).toContain('Juan Díaz');
     expect(texto()).toContain('3 seguidas');
+    expect(texto()).toContain('Miércoles'); // horario semanal
     expect(boton('Guardar planilla')?.disabled).toBe(true);
 
     boton('Todos presentes')!.click();
-    el().querySelector<HTMLButtonElement>('[aria-label="Ausente: Ana Díaz"]')!.click();
+    el().querySelector<HTMLButtonElement>('[aria-label="Ausente: Juan Díaz"]')!.click();
     await estable();
-
     boton('Guardar planilla')!.click();
     const guardar = backend.expectOne(`${API}/sesiones/s1/asistencia`);
     expect(guardar.request.method).toBe('POST');
     expect(guardar.request.body).toEqual({
       marcas: [{ alumno_id: 'a1', estado: 'presente' }, { alumno_id: 'a2', estado: 'ausente' }],
     });
-    guardar.flush([fila('a1', 'Laura Pérez', { asistencia: 'presente' }), fila('a2', 'Ana Díaz', { asistencia: 'ausente' })]);
+    guardar.flush([fila('a1', 'Laura Pérez', { asistencia: 'presente' }), fila('a2', 'Juan Díaz', { rama: 'masculina', asistencia: 'ausente' })]);
     await estable();
     expect(texto()).toContain('Planilla guardada (2 marcas)');
   });
 
-  it('una sesión futura no deja marcar', async () => {
-    crear(STAFF);
-    pedirSesiones().flush([sesion({ fecha: isoLocal(sumarDias(new Date(), 1)) })]);
-    backend.expectOne((r) => r.url === `${API}/justificaciones`).flush([]);
-    backend.expectOne(`${API}/sesiones/alertas`).flush([]);
-    backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez')]);
+  it('filtra la planilla por rama', async () => {
+    await cargarStaff([sesion()], [fila('a1', 'Laura Pérez'), fila('a2', 'Juan Díaz', { rama: 'masculina' })]);
+    boton('Masculina')!.click();
     await estable();
-    expect(el().querySelector('.marca')).toBeNull();
-    expect(boton('Guardar planilla')).toBeUndefined();
+    expect(texto()).toContain('Juan Díaz');
+    expect(texto()).not.toContain('Laura Pérez');
   });
 
-  it('rechazar una justificación exige el motivo', async () => {
-    crear(STAFF);
+  it('una sesión futura no deja marcar y una cancelada muestra el motivo sin pedir la planilla', async () => {
+    await cargarStaff([sesion({ fecha: isoLocal(sumarDias(new Date(), 1)) })], [fila('a1', 'Laura Pérez')]);
+    expect(el().querySelector('.marca')).toBeNull();
+    expect(boton('Guardar planilla')).toBeUndefined();
+    TestBed.resetTestingModule();
+
+    await cargarStaff([sesion({ cancelada: true, causa_cancelacion: 'festivo', motivo_cancelacion: 'Festivo: San José' })], null);
+    expect(texto()).toContain('Festivo: San José');
+    expect(el().querySelector('.sesion-chip')?.textContent).toContain('festivo');
+  });
+
+  it('el horario se edita en un popup y se envía completo', async () => {
+    await cargarStaff([], null);
+    expect(dialogo()).toBeNull();
+    boton('Editar')!.click();
+    await estable();
+    expect(dialogo()).not.toBeNull();
+    const martes = el().querySelectorAll<HTMLInputElement>('dialog input[type="checkbox"]')[1]!;
+    martes.click(); // agrega el martes
+    await estable();
+    boton('Guardar horario', dialogo()!)!.click();
+    const req = backend.expectOne(`${API}/sesiones/horario`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body.dias.map((d: { dia_semana: number }) => d.dia_semana)).toEqual([0, 1, 2, 5]);
+    expect(req.request.body.dias[2]).toEqual({ dia_semana: 2, hora_inicio: '18:00', hora_fin: '20:00', lugar: 'Coliseo' });
+    req.flush({ ...HORARIO, creadas: 8, eliminadas: 0, canceladas: 0 });
     pedirSesiones().flush([]);
-    const pend = backend.expectOne((r) => r.url === `${API}/justificaciones`);
-    expect(pend.request.params.get('estado')).toBe('pendiente');
-    pend.flush([JUSTIFICACION]);
-    backend.expectOne(`${API}/sesiones/alertas`).flush([]);
     await estable();
+    expect(dialogo()).toBeNull();
+    expect(texto()).toContain('Horario guardado');
+  });
 
-    boton('Rechazar')!.click(); // abre el formulario
+  it('rechazar una justificación pide el motivo en un popup', async () => {
+    await cargarStaff([], null, [JUSTIFICACION]);
+    boton('Rechazar')!.click();
     await estable();
-    const enviar = [...el().querySelectorAll<HTMLButtonElement>('button[type="submit"]')].find((b) => b.textContent?.includes('Rechazar'))!;
+    const enviar = boton('Rechazar', dialogo()!)!;
     expect(enviar.disabled).toBe(true);
-
-    const input = el().querySelector<HTMLInputElement>('input[formcontrolname="comentario"]')!;
-    input.value = 'No trae soporte';
-    input.dispatchEvent(new Event('input'));
+    escribir('dialog input[formcontrolname="comentario"]', 'No trae soporte');
     await estable();
     expect(enviar.disabled).toBe(false);
     enviar.click();
@@ -127,12 +174,14 @@ describe('AsistenciaPage', () => {
     expect(req.request.body).toEqual({ aprobar: false, comentario: 'No trae soporte' });
     req.flush({ ...JUSTIFICACION, estado: 'rechazada' });
     await estable();
+    expect(dialogo()).toBeNull();
     expect(texto()).toContain('No hay justificaciones pendientes');
   });
 
-  it('la familia no pide alertas ni pendientes del club, y justifica a su hijo', async () => {
+  it('la familia no ve alertas ni edita el horario, y justifica a su hijo en un popup', async () => {
     crear(FAMILIA);
     pedirSesiones().flush([sesion({ fecha: isoLocal(sumarDias(new Date(), -1)), cerrada: true })]);
+    backend.expectOne(`${API}/sesiones/horario`).flush(HORARIO);
     const mias = backend.expectOne((r) => r.url === `${API}/justificaciones`);
     expect(mias.request.params.has('estado')).toBe(false);
     mias.flush([]);
@@ -142,14 +191,13 @@ describe('AsistenciaPage', () => {
 
     expect(el().querySelector('.marca')).toBeNull();
     expect(boton('Corregir')).toBeUndefined();
+    expect(boton('Editar')).toBeUndefined();
     expect(boton('Marcar presente')).toBeUndefined(); // no es hoy
     boton('Justificar')!.click();
     await estable();
-    const area = el().querySelector<HTMLTextAreaElement>('textarea')!;
-    area.value = 'Estaba enferma con fiebre';
-    area.dispatchEvent(new Event('input'));
+    escribir('dialog textarea', 'Estaba enferma con fiebre');
     await estable();
-    boton('Enviar')!.click();
+    boton('Enviar', dialogo()!)!.click();
     const req = backend.expectOne(`${API}/sesiones/s1/justificaciones`);
     expect(req.request.body).toEqual({ alumno_id: 'a1', motivo: 'Estaba enferma con fiebre' });
     req.flush({ ...JUSTIFICACION, alumno_id: 'a1' });
@@ -160,19 +208,17 @@ describe('AsistenciaPage', () => {
     expect(boton('Justificar')).toBeUndefined();
   });
 
-  it('muestra el mensaje de la API cuando una acción falla', async () => {
-    crear(STAFF);
-    pedirSesiones().flush([sesion()]);
-    backend.expectOne((r) => r.url === `${API}/justificaciones`).flush([]);
-    backend.expectOne(`${API}/sesiones/alertas`).flush([]);
-    backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez')]);
+  it('si la API rechaza, el error se muestra dentro del popup sin perder lo escrito', async () => {
+    await cargarStaff([sesion()], [fila('a1', 'Laura Pérez')]);
+    boton('Cancelar sesión')!.click();
     await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label="Presente: Laura Pérez"]')!.click();
+    escribir('dialog input[formcontrolname="motivo"]', 'Evento del club');
     await estable();
-    boton('Guardar planilla')!.click();
-    backend.expectOne(`${API}/sesiones/s1/asistencia`).flush({ detail: 'La sesión ya fue cerrada.' }, { status: 409, statusText: 'Conflict' });
+    boton('Cancelar sesión', dialogo()!)!.click();
+    backend.expectOne(`${API}/sesiones/s1/cancelar`).flush({ detail: 'La sesión ya estaba cancelada.' }, { status: 409, statusText: 'Conflict' });
     await estable();
-    expect(el().querySelector('[role="alert"]')?.textContent).toContain('La sesión ya fue cerrada.');
+    expect(dialogo()?.querySelector('[role="alert"]')?.textContent).toContain('La sesión ya estaba cancelada.');
+    expect(dialogo()!.querySelector<HTMLInputElement>('input')!.value).toBe('Evento del club');
   });
 });
 

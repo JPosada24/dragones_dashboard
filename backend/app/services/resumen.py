@@ -34,7 +34,7 @@ class Alerta:
 @dataclass
 class SesionHoy:
     id: str
-    rama: str
+    lugar: str | None
     horario: str
     cerrada: bool
     esperados: int
@@ -143,14 +143,14 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
         select(Sesion).where(asistencia.filtro_sesiones_visibles(usuario), Sesion.fecha == hoy,
                              Sesion.cancelada.is_(False)).order_by(Sesion.hora_inicio)
     ):
-        esperados = {a.id for a in asistencia.esperados(db, sesion)}
+        esperados = {a.id for a in asistencia.esperados_visibles(db, usuario, sesion)}  # Entrenador: su rama
         estados = [
             e for alumno_id, e in db.execute(
                 select(Asistencia.alumno_id, Asistencia.estado).where(Asistencia.sesion_id == sesion.id)
             ) if alumno_id in esperados
         ]
         r.hoy.append(SesionHoy(
-            str(sesion.id), sesion.rama,
+            str(sesion.id), sesion.lugar,
             f"{sesion.hora_inicio.strftime('%H:%M')}–{sesion.hora_fin.strftime('%H:%M')}",
             sesion.cerrada_en is not None, len(esperados), estados.count("presente"),
             estados.count("justificado"), estados.count("ausente"),

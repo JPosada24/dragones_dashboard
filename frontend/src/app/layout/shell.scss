@@ -184,23 +184,6 @@ $movil: 899px;
   color: var(--texto-3);
 }
 
-.avisos {
-  padding: 8px 12px;
-  border: 1px solid var(--borde-fuerte);
-  border-radius: var(--radio-sm);
-  font: 500 12px var(--f-texto);
-  color: var(--texto-2);
-
-  .mono {
-    color: var(--oro);
-  }
-
-  &:hover {
-    color: var(--texto);
-    border-color: rgba(255, 255, 255, 0.28);
-  }
-}
-
 .contenido {
   padding: 22px 26px 40px;
   display: grid;
@@ -261,33 +244,6 @@ $movil: 899px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .campana {
-    position: relative;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    color: var(--texto-2);
-
-    .icono {
-      font-size: 23px;
-    }
-  }
-
-  .campana-conteo {
-    position: absolute;
-    top: 6px;
-    right: 5px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: 8px;
-    background: var(--oro);
-    color: var(--fondo);
-    font: 700 9.5px/16px var(--f-mono);
-    text-align: center;
   }
 
   .pestanas {

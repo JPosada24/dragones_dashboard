@@ -10,30 +10,54 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.alumnos import Alumno
 from app.models.dominio import (
-    ESTADOS_ASISTENCIA, ESTADOS_JUSTIFICACION, ESTADOS_MULTA, ORIGENES_ASISTENCIA, RAMAS, en,
+    CAUSAS_CANCELACION, ESTADOS_ASISTENCIA, ESTADOS_JUSTIFICACION, ESTADOS_MULTA, ORIGENES_ASISTENCIA, en,
 )
 from app.models.mixins import TiempoMixin, UUIDMixin
 
 
 class Sesion(UUIDMixin, TiempoMixin, Base):
-    """Un entrenamiento de una rama en una fecha. Al cierre del día se generan ausencias y multas."""
+    """Un entrenamiento del club (general, para ambas ramas). Al cierre del día se generan ausencias y multas.
+
+    Las automáticas salen del horario semanal; las extra las crea el staff. Se cancelan por festivo, por torneo
+    (y se reactivan si el torneo se cancela), por cambio de horario o a mano (otro evento, con motivo).
+    """
 
     __tablename__ = "sesiones"
     __table_args__ = (
-        CheckConstraint(en("rama", RAMAS), name="ck_sesiones_rama"),
         CheckConstraint("hora_fin > hora_inicio", name="ck_sesiones_horario"),
-        UniqueConstraint("rama", "fecha", "hora_inicio", name="uq_sesiones_rama_fecha_hora"),
+        CheckConstraint(
+            f"causa_cancelacion IS NULL OR {en('causa_cancelacion', CAUSAS_CANCELACION)}",
+            name="ck_sesiones_causa_cancelacion",
+        ),
+        UniqueConstraint("fecha", "hora_inicio", name="uq_sesiones_fecha_hora"),
     )
 
-    rama: Mapped[str] = mapped_column(String(10))
     fecha: Mapped[date] = mapped_column(Date, index=True)
     hora_inicio: Mapped[time] = mapped_column(Time)
     hora_fin: Mapped[time] = mapped_column(Time)
     lugar: Mapped[str | None] = mapped_column(String(120))
+    automatica: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     cancelada: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    causa_cancelacion: Mapped[str | None] = mapped_column(String(10))
     motivo_cancelacion: Mapped[str | None] = mapped_column(String(255))
     cerrada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
+
+
+class HorarioEntrenamiento(UUIDMixin, TiempoMixin, Base):
+    """Un día de entrenamiento de la semana (0 = lunes … 6 = domingo). De aquí salen las sesiones automáticas."""
+
+    __tablename__ = "horario_entrenamiento"
+    __table_args__ = (
+        CheckConstraint("dia_semana BETWEEN 0 AND 6", name="ck_horario_dia"),
+        CheckConstraint("hora_fin > hora_inicio", name="ck_horario_horas"),
+        UniqueConstraint("dia_semana", name="uq_horario_dia"),
+    )
+
+    dia_semana: Mapped[int] = mapped_column(Integer)
+    hora_inicio: Mapped[time] = mapped_column(Time)
+    hora_fin: Mapped[time] = mapped_column(Time)
+    lugar: Mapped[str | None] = mapped_column(String(120))
 
 
 class Asistencia(UUIDMixin, TiempoMixin, Base):

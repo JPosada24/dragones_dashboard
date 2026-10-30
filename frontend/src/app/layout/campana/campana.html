@@ -1,0 +1,46 @@
+<button type="button" class="disparador" (click)="alternar()" [attr.aria-expanded]="abierta()" [attr.aria-controls]="idPanel"
+        [attr.aria-label]="noLeidas() > 0 ? 'Avisos: ' + noLeidas() + ' sin leer' : 'Avisos'" title="Avisos">
+  <span class="icono" aria-hidden="true">notifications</span>
+  @if (noLeidas() > 0) {
+    <span class="conteo" aria-hidden="true">{{ noLeidas() > 99 ? '99+' : noLeidas() }}</span>
+  }
+</button>
+
+@if (abierta()) {
+  <section class="panel desplegable" [id]="idPanel" aria-label="Avisos">
+    <div class="cabecera">
+      <h2>Avisos</h2>
+      @if (noLeidas() > 0) {
+        <button type="button" class="enlace" (click)="leerTodas()">Marcar todo como leído</button>
+      }
+    </div>
+    <div class="lista">
+      @if (error()) {
+        <p class="vacio" role="alert">No se pudieron cargar los avisos.</p>
+      } @else if (avisos() === null) {
+        <p class="vacio">Cargando…</p>
+      } @else {
+        @for (a of avisos(); track a.id) {
+          <!-- El mensaje se muestra como texto (interpolación): nunca se interpreta como HTML. -->
+          <article class="aviso" [class.leido]="a.leida">
+            <span class="icono" aria-hidden="true">{{ icono(a.tipo) }}</span>
+            <div>
+              <div class="fila">
+                <h3>{{ a.titulo }}</h3>
+                <time class="mono" [attr.datetime]="a.creado_en">{{ a.creado_en | date: 'd MMM, h:mm a' }}</time>
+              </div>
+              <p>{{ a.mensaje }}</p>
+            </div>
+            @if (!a.leida) {
+              <button type="button" class="marcar" (click)="leer(a)" aria-label="Marcar como leído" title="Marcar como leído">
+                <span class="punto" aria-hidden="true"></span>
+              </button>
+            }
+          </article>
+        } @empty {
+          <p class="vacio">No tienes avisos por ahora.</p>
+        }
+      }
+    </div>
+  </section>
+}

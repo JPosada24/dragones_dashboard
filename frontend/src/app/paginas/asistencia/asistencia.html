@@ -1,5 +1,5 @@
 <!-- Barra de controles -->
-<section class="controles" aria-label="Semana y filtros">
+<section class="controles" aria-label="Semana">
   <div class="semana">
     <button type="button" class="boton secundario chico" (click)="cambiarSemana(-1)" aria-label="Semana anterior">
       <span class="icono" aria-hidden="true">chevron_left</span>
@@ -10,94 +10,31 @@
     </button>
     <button type="button" class="boton secundario chico" (click)="irAHoy()">Hoy</button>
   </div>
-  <div class="semana">
-    @if (veTodasLasRamas()) {
-      <label class="solo-lectores" for="filtro-rama">Rama</label>
-      <select id="filtro-rama" class="control filtro" [value]="rama()" (change)="cambiarRama($any($event.target).value)">
-        <option value="">Ambas ramas</option>
-        <option value="femenina">Femenina</option>
-        <option value="masculina">Masculina</option>
-      </select>
-    }
-    @if (puedeGestionar()) {
-      <button type="button" class="boton chico" (click)="abrirProgramar()" [attr.aria-expanded]="programando()">
-        <span class="icono" aria-hidden="true">add</span> Programar
-      </button>
-    }
-  </div>
+  @if (puedeGestionar()) {
+    <button type="button" class="boton secundario chico" (click)="abrirExtra()">
+      <span class="icono" aria-hidden="true">add</span> Sesión extra
+    </button>
+  }
 </section>
 
 @if (mensaje(); as m) {
   <p class="mensaje" [class.error]="m.error" [attr.role]="m.error ? 'alert' : 'status'">{{ m.texto }}</p>
 }
 
-<!-- Programar sesiones -->
-@if (programando()) {
-  <form class="panel relleno programar" [formGroup]="formProgramar" (ngSubmit)="programar()">
-    <h2>Programar entrenamientos</h2>
-    <div class="rejilla">
-      <label class="campo">
-        <span class="etiqueta">Rama</span>
-        <select class="control" formControlName="rama">
-          <option value="femenina">Femenina</option>
-          <option value="masculina">Masculina</option>
-        </select>
-      </label>
-      <label class="campo">
-        <span class="etiqueta">Fecha (o desde)</span>
-        <input class="control" type="date" formControlName="desde" [min]="hoy" />
-      </label>
-      <label class="campo">
-        <span class="etiqueta">Hasta (opcional)</span>
-        <input class="control" type="date" formControlName="hasta" [min]="formProgramar.controls.desde.value" />
-      </label>
-      <label class="campo">
-        <span class="etiqueta">Inicio</span>
-        <input class="control" type="time" formControlName="hora_inicio" />
-      </label>
-      <label class="campo">
-        <span class="etiqueta">Fin</span>
-        <input class="control" type="time" formControlName="hora_fin" />
-      </label>
-      <label class="campo">
-        <span class="etiqueta">Lugar</span>
-        <input class="control" type="text" formControlName="lugar" maxlength="120" placeholder="Cancha 2" />
-      </label>
-    </div>
-    @if (formProgramar.controls.hasta.value && formProgramar.controls.hasta.value !== formProgramar.controls.desde.value) {
-      <fieldset class="dias-semana">
-        <legend class="etiqueta">Días de la semana</legend>
-        @for (d of dias; track $index) {
-          <button type="button" class="dia" [attr.aria-pressed]="formProgramar.controls.dias.value.includes($index)"
-                  (click)="alternarDia($index)">{{ d }}</button>
-        }
-      </fieldset>
-    }
-    <div class="acciones">
-      <button type="button" class="boton secundario chico" (click)="programando.set(false)">Cancelar</button>
-      <button type="submit" class="boton chico" [disabled]="formProgramar.invalid || ocupado()">Programar</button>
-    </div>
-  </form>
-}
-
 @if (errorCarga()) {
   <p class="panel vacio" role="alert">No se pudieron cargar las sesiones. Recarga la página.</p>
 } @else {
   <!-- Sesiones de la semana -->
-  <nav class="tira" aria-label="Sesiones de la semana">
+  <nav class="tira" aria-label="Entrenamientos de la semana">
     @for (s of sesiones(); track s.id) {
       <button type="button" class="sesion-chip" [class.activa]="s.id === seleccionadaId()" [class.cancelada]="s.cancelada"
               [class.hoy]="s.fecha === hoy" [attr.aria-pressed]="s.id === seleccionadaId()" (click)="seleccionar(s)">
-        <span class="chip-dia mono">{{ diaCorto(s.fecha) }} {{ s.fecha | date: 'd' }}</span>
-        <span class="chip-rama">{{ s.rama }}</span>
-        <span class="chip-hora mono">{{ s.cancelada ? 'cancelada' : hora(s.hora_inicio) }}</span>
+        <span class="chip-dia mono">{{ diaCorto(s.fecha) }}</span>
+        <span class="chip-fecha">{{ s.fecha | date: 'd MMM' }}</span>
+        <span class="chip-hora mono">{{ s.cancelada ? etiquetaCancelacion(s) : hora(s.hora_inicio) }}</span>
       </button>
     } @empty {
-      @if (sesiones()) {
-        <p class="vacio sin-borde">No hay entrenamientos programados esta semana.</p>
-      } @else {
-        <p class="vacio sin-borde">Cargando…</p>
-      }
+      <p class="vacio sin-borde">{{ sesiones() ? 'No hay entrenamientos esta semana.' : 'Cargando…' }}</p>
     }
   </nav>
 
@@ -107,34 +44,35 @@
       @if (seleccionada(); as s) {
         <div class="panel-cabecera">
           <div>
-            <h2 id="titulo-planilla" class="capital">Rama {{ s.rama }} · {{ s.fecha | date: 'EEEE d MMMM' }}</h2>
+            <h2 id="titulo-planilla" class="capital">Entrenamiento · {{ s.fecha | date: 'EEEE d MMMM' }}</h2>
             <p class="panel-sub">
               {{ hora(s.hora_inicio) }}–{{ hora(s.hora_fin) }}@if (s.lugar) { · {{ s.lugar }} }
               · {{ s.cancelada ? 'Cancelada' : s.cerrada ? 'Cerrada' : s.fecha > hoy ? 'Programada' : 'Abierta' }}
+              @if (!s.automatica) { · sesión extra }
             </p>
           </div>
-          @if (puedeGestionar() && !s.cancelada) {
-            <button type="button" class="enlace-rojo" (click)="cancelandoSesion.set(!cancelandoSesion())"
-                    [attr.aria-expanded]="cancelandoSesion()">Cancelar sesión</button>
+          @if (puedeGestionar() && !s.cancelada && !s.cerrada) {
+            <button type="button" class="enlace-rojo" (click)="abrirCancelar()">Cancelar sesión</button>
           }
         </div>
 
         @if (s.cancelada) {
-          <p class="vacio">Sesión cancelada{{ s.motivo_cancelacion ? ': ' + s.motivo_cancelacion : '' }}. Sus multas pendientes se anularon.</p>
-        }
+          <p class="cancelada-aviso">
+            <span class="icono" aria-hidden="true">event_busy</span>
+            {{ s.motivo_cancelacion || 'Sesión cancelada' }}. No se toma asistencia ni se generan multas.
+          </p>
+        } @else if (planilla(); as todas) {
+          @if (veTodasLasRamas() && todas.length) {
+            <div class="filtros" role="group" aria-label="Filtrar por rama">
+              @for (op of [{ v: '', t: 'Todos' }, { v: 'femenina', t: 'Femenina' }, { v: 'masculina', t: 'Masculina' }]; track op.v) {
+                <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === op.v" (click)="filtroRama.set($any(op.v))">
+                  {{ op.t }}
+                </button>
+              }
+            </div>
+          }
 
-        @if (cancelandoSesion()) {
-          <form class="en-linea" [formGroup]="formCancelar" (ngSubmit)="cancelarSesion()">
-            <label class="campo crece">
-              <span class="etiqueta">Motivo de la cancelación</span>
-              <input class="control" type="text" formControlName="motivo" maxlength="255" placeholder="Lluvia, cancha ocupada…" />
-            </label>
-            <button type="submit" class="boton chico" [disabled]="formCancelar.invalid || ocupado()">Confirmar</button>
-          </form>
-        }
-
-        @if (planilla(); as filas) {
-          @if (filas.length && !s.cancelada) {
+          @if (filas().length) {
             <div class="resumen-planilla">
               <div class="barra" role="img"
                    [attr.aria-label]="conteo().presente + ' presentes, ' + conteo().justificado + ' justificados, ' + conteo().ausente + ' ausentes, ' + conteo().sin_marcar + ' sin marcar'">
@@ -151,16 +89,16 @@
             </div>
           }
 
-          @for (f of filas; track f.alumno_id) {
+          @for (f of filas(); track f.alumno_id) {
             <div class="fila" [attr.data-estado]="estadoDe(f) ?? 'sin'">
               <div class="alumno">
                 <span class="avatar" aria-hidden="true">{{ f.alumno_nombre.charAt(0) }}</span>
                 <div class="alumno-textos">
                   <div class="alumno-nombre">{{ f.alumno_nombre }}</div>
                   <div class="alumno-nota">
-                    @if (f.justificacion) { Justificación {{ f.justificacion }} }
-                    @if (f.justificacion && f.multa) { · }
-                    @if (f.multa) { Multa {{ f.multa }} }
+                    <span class="capital">{{ f.rama }}</span>
+                    @if (f.justificacion) { · Justificación {{ f.justificacion }} }
+                    @if (f.multa) { · Multa {{ f.multa }} }
                   </div>
                 </div>
               </div>
@@ -172,54 +110,22 @@
                   <button type="button" class="marca" data-marca="ausente" [attr.aria-pressed]="estadoDe(f) === 'ausente'"
                           [attr.aria-label]="'Ausente: ' + f.alumno_nombre" (click)="marcar(f, 'ausente')">A</button>
                 }
-                @if (s.cerrada && !s.cancelada && puedeCorregir()) {
+                @if (s.cerrada && puedeCorregir()) {
                   <button type="button" class="boton secundario chico" (click)="abrirCorregir(f)">Corregir</button>
                 }
                 @if (puedeMarcarPropia(f)) {
                   <button type="button" class="boton chico" [disabled]="ocupado()" (click)="marcarPropia(f)">Marcar presente</button>
                 }
-                @if (puedeJustificar(f) && (esFamilia() || estadoDe(f) !== 'presente')) {
+                @if (puedeJustificar(f)) {
                   <button type="button" class="boton secundario chico" (click)="abrirJustificar(f)">Justificar</button>
                 }
               </div>
             </div>
-
-            @if (corrigiendo() === f.alumno_id) {
-              <form class="en-linea" [formGroup]="formCorregir" (ngSubmit)="enviarCorreccion(f)">
-                <label class="campo">
-                  <span class="etiqueta">Nuevo estado</span>
-                  <select class="control" formControlName="estado">
-                    <option value="presente">Presente</option>
-                    <option value="justificado">Justificado</option>
-                    <option value="ausente">Ausente (genera multa)</option>
-                  </select>
-                </label>
-                <label class="campo crece">
-                  <span class="etiqueta">Motivo (mín. 10 caracteres)</span>
-                  <input class="control" type="text" formControlName="motivo" maxlength="255" />
-                </label>
-                <button type="button" class="boton secundario chico" (click)="corrigiendo.set(null)">Cancelar</button>
-                <button type="submit" class="boton chico" [disabled]="formCorregir.invalid || ocupado()">Guardar</button>
-              </form>
-            }
-
-            @if (justificando() === f.alumno_id) {
-              <form class="en-linea" [formGroup]="formJustificar" (ngSubmit)="enviarJustificacion(f)">
-                <label class="campo crece">
-                  <span class="etiqueta">Motivo de la inasistencia (mín. 10 caracteres)</span>
-                  <textarea class="control" formControlName="motivo" maxlength="500" rows="2"></textarea>
-                </label>
-                <button type="button" class="boton secundario chico" (click)="justificando.set(null)">Cancelar</button>
-                <button type="submit" class="boton chico" [disabled]="formJustificar.invalid || ocupado()">Enviar</button>
-              </form>
-            }
           } @empty {
-            @if (!s.cancelada) {
-              <p class="vacio">{{ esFamilia() ? 'Ninguno de tus alumnos está citado a esta sesión.' : 'No hay alumnos activos esperados en esta sesión.' }}</p>
-            }
+            <p class="vacio">{{ esFamilia() ? 'Ninguno de tus alumnos está citado a este entrenamiento.' : 'No hay alumnos con inscripción vigente para este entrenamiento.' }}</p>
           }
 
-          @if (marcable() && filas.length) {
+          @if (marcable() && filas().length) {
             <div class="pie">
               <button type="button" class="boton secundario chico" (click)="todosPresentes()">Todos presentes</button>
               <span class="crece"></span>
@@ -235,7 +141,7 @@
           <p class="vacio">Cargando planilla…</p>
         }
       } @else {
-        <p class="vacio">Elige una sesión de la semana.</p>
+        <p class="vacio">Elige un entrenamiento de la semana.</p>
       }
       <p class="nota">
         A las 11:59 pm el sistema cierra el día: quien no marcó ni justificó queda ausente y con multa.
@@ -244,6 +150,32 @@
     </section>
 
     <div class="columna">
+      <!-- Horario semanal -->
+      <section class="panel relleno" aria-labelledby="titulo-horario">
+        <div class="fila-base">
+          <h2 id="titulo-horario">Horario de entrenamiento</h2>
+          @if (puedeGestionar()) {
+            <button type="button" class="boton secundario chico" (click)="abrirHorario()" [disabled]="!horario()">Editar</button>
+          }
+        </div>
+        @if (horario(); as h) {
+          @for (d of h.dias; track d.dia_semana) {
+            <div class="fila-base dia-horario">
+              <span>{{ diasLargos[d.dia_semana] }}</span>
+              <span class="mono apagado">{{ hora(d.hora_inicio) }}–{{ hora(d.hora_fin) }}@if (d.lugar) { · {{ d.lugar }} }</span>
+            </div>
+          } @empty {
+            <p class="vacio sin-borde">No hay días de entrenamiento definidos.</p>
+          }
+          <p class="nota-chica">
+            Los entrenamientos se programan solos ({{ h.dias_anticipacion }} días adelante). Los festivos y los días de
+            torneo se cancelan automáticamente.
+          </p>
+        } @else {
+          <p class="vacio sin-borde">Cargando…</p>
+        }
+      </section>
+
       <!-- Justificaciones -->
       @if (puedeRevisar() || esFamilia()) {
         <section class="panel relleno" aria-labelledby="titulo-justificaciones">
@@ -261,21 +193,10 @@
               </div>
               <p class="justificacion-texto">{{ j.motivo }}</p>
               @if (puedeRevisar()) {
-                @if (rechazando() === j.id) {
-                  <form class="en-linea sin-margen" [formGroup]="formRechazar" (ngSubmit)="revisar(j, false)">
-                    <label class="campo crece">
-                      <span class="etiqueta">Motivo del rechazo</span>
-                      <input class="control" type="text" formControlName="comentario" maxlength="255" />
-                    </label>
-                    <button type="button" class="boton secundario chico" (click)="rechazando.set(null)">Cancelar</button>
-                    <button type="submit" class="boton chico peligro" [disabled]="formRechazar.invalid || ocupado()">Rechazar</button>
-                  </form>
-                } @else {
-                  <div class="acciones">
-                    <button type="button" class="enlace-rojo" (click)="abrirRechazo(j)">Rechazar</button>
-                    <button type="button" class="boton chico" [disabled]="ocupado()" (click)="revisar(j, true)">Aprobar</button>
-                  </div>
-                }
+                <div class="acciones">
+                  <button type="button" class="enlace-rojo" (click)="abrirRechazo(j)">Rechazar</button>
+                  <button type="button" class="boton chico" [disabled]="ocupado()" (click)="aprobar(j)">Aprobar</button>
+                </div>
               } @else {
                 <div class="fila-base">
                   <span class="chip" [attr.data-estado]="j.estado">{{ j.estado }}</span>
@@ -308,4 +229,143 @@
       }
     </div>
   </div>
+}
+
+<!-- ================= Popups ================= -->
+@if (editandoHorario()) {
+  <app-dialogo titulo="Horario de entrenamiento" ancho="ancho" (cerrar)="editandoHorario.set(false)"
+               descripcion="Marca los días en que se entrena. Al guardar se reprograman los entrenamientos desde mañana; los que ya tienen marcas o justificaciones se conservan.">
+    <form class="formulario" [formGroup]="formHorario" (ngSubmit)="guardarHorario()">
+      <div class="tabla-horario" formArrayName="dias">
+        @for (g of formHorario.controls.dias.controls; track $index) {
+          <div class="dia-fila" [formGroupName]="$index" [class.inactivo]="!g.controls.activo.value">
+            <label class="dia-check">
+              <input type="checkbox" formControlName="activo" />
+              <span>{{ diasLargos[$index] }}</span>
+            </label>
+            @if (g.controls.activo.value) {
+              <input class="control" type="time" formControlName="hora_inicio" [attr.aria-label]="'Inicio ' + diasLargos[$index]" />
+              <input class="control" type="time" formControlName="hora_fin" [attr.aria-label]="'Fin ' + diasLargos[$index]" />
+              <input class="control" type="text" formControlName="lugar" maxlength="120" placeholder="Lugar (opcional)"
+                     [attr.aria-label]="'Lugar ' + diasLargos[$index]" />
+            } @else {
+              <span class="apagado chico sin-entreno">Sin entrenamiento</span>
+            }
+          </div>
+        }
+      </div>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="editandoHorario.set(false)">Cancelar</button>
+        <button type="submit" class="boton chico" [disabled]="formHorario.invalid || ocupado()">Guardar horario</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (creandoExtra()) {
+  <app-dialogo titulo="Sesión extra" (cerrar)="creandoExtra.set(false)"
+               descripcion="Un entrenamiento fuera del horario semanal, por ejemplo para reponer un festivo.">
+    <form class="formulario" [formGroup]="formExtra" (ngSubmit)="crearExtra()">
+      <div class="rejilla">
+        <label class="campo">
+          <span class="etiqueta">Fecha</span>
+          <input class="control" type="date" formControlName="fecha" [min]="hoy" />
+        </label>
+        <label class="campo">
+          <span class="etiqueta">Lugar</span>
+          <input class="control" type="text" formControlName="lugar" maxlength="120" placeholder="Opcional" />
+        </label>
+        <label class="campo">
+          <span class="etiqueta">Inicio</span>
+          <input class="control" type="time" formControlName="hora_inicio" />
+        </label>
+        <label class="campo">
+          <span class="etiqueta">Fin</span>
+          <input class="control" type="time" formControlName="hora_fin" />
+        </label>
+      </div>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="creandoExtra.set(false)">Cancelar</button>
+        <button type="submit" class="boton chico" [disabled]="formExtra.invalid || ocupado()">Crear sesión</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (cancelandoSesion()) {
+  <app-dialogo titulo="Cancelar entrenamiento" (cerrar)="cancelandoSesion.set(false)"
+               descripcion="Úsalo para otro evento del club. Los festivos y torneos se cancelan solos.">
+    <form class="formulario" [formGroup]="formCancelar" (ngSubmit)="cancelarSesion()">
+      <label class="campo">
+        <span class="etiqueta">Motivo</span>
+        <input class="control" type="text" formControlName="motivo" maxlength="255" placeholder="Evento del club, cancha ocupada…" />
+      </label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="cancelandoSesion.set(false)">Volver</button>
+        <button type="submit" class="boton chico peligro" [disabled]="formCancelar.invalid || ocupado()">Cancelar sesión</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (corrigiendo(); as f) {
+  <app-dialogo [titulo]="'Corregir asistencia · ' + f.alumno_nombre" (cerrar)="corrigiendo.set(null)"
+               descripcion="La sesión ya se cerró. El cambio ajusta la multa y queda en la auditoría.">
+    <form class="formulario" [formGroup]="formCorregir" (ngSubmit)="enviarCorreccion()">
+      <label class="campo">
+        <span class="etiqueta">Nuevo estado</span>
+        <select class="control" formControlName="estado">
+          <option value="presente">Presente</option>
+          <option value="justificado">Justificado</option>
+          <option value="ausente">Ausente (genera multa)</option>
+        </select>
+      </label>
+      <label class="campo">
+        <span class="etiqueta">Motivo (mín. 10 caracteres)</span>
+        <input class="control" type="text" formControlName="motivo" maxlength="255" />
+      </label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="corrigiendo.set(null)">Cancelar</button>
+        <button type="submit" class="boton chico" [disabled]="formCorregir.invalid || ocupado()">Guardar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (justificando(); as f) {
+  <app-dialogo [titulo]="'Justificar · ' + f.alumno_nombre" (cerrar)="justificando.set(null)"
+               descripcion="Explica por qué no asistió. El club la revisará; si se aprueba, no hay multa.">
+    <form class="formulario" [formGroup]="formJustificar" (ngSubmit)="enviarJustificacion()">
+      <label class="campo">
+        <span class="etiqueta">Motivo (mín. 10 caracteres)</span>
+        <textarea class="control" formControlName="motivo" maxlength="500" rows="3"></textarea>
+      </label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="justificando.set(null)">Cancelar</button>
+        <button type="submit" class="boton chico" [disabled]="formJustificar.invalid || ocupado()">Enviar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (rechazando(); as j) {
+  <app-dialogo [titulo]="'Rechazar justificación · ' + j.alumno_nombre" (cerrar)="rechazando.set(null)"
+               descripcion="La familia verá el motivo. Si la sesión ya cerró, se genera la multa.">
+    <form class="formulario" [formGroup]="formRechazar" (ngSubmit)="rechazar()">
+      <label class="campo">
+        <span class="etiqueta">Motivo del rechazo</span>
+        <input class="control" type="text" formControlName="comentario" maxlength="255" />
+      </label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="rechazando.set(null)">Volver</button>
+        <button type="submit" class="boton chico peligro" [disabled]="formRechazar.invalid || ocupado()">Rechazar</button>
+      </div>
+    </form>
+  </app-dialogo>
 }

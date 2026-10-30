@@ -31,7 +31,7 @@ class AlertaOut(BaseModel):
 
 class SesionHoyOut(BaseModel):
     id: str
-    rama: str
+    lugar: str | None
     horario: str
     cerrada: bool
     esperados: int

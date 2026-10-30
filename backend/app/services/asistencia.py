@@ -14,9 +14,6 @@ from app.models.dominio import ESTADOS_VIGENTES
 from app.services import alumnos, auditoria, configuracion, multas, notificaciones
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
 
-MAX_DIAS_PROGRAMACION = 186  # unos 6 meses por llamada
-
-
 def _auditar(db: Session, accion: str, entidad: str, entidad_id, actor_id, ip, **extra) -> None:
     auditoria.registrar(
         db, accion=accion, entidad=entidad, entidad_id=str(entidad_id), usuario_id=actor_id, ip=ip, **extra,
@@ -32,16 +29,13 @@ def momento_cierre(db: Session, sesion: Sesion) -> datetime:
 
 
 # ---------- Visibilidad ----------
+VER_SESIONES = ("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_propios")
+
+
 def filtro_sesiones_visibles(usuario: Usuario) -> ColumnElement[bool]:
-    permisos = set(usuario.permisos_codigos)
-    if "alumnos.ver_todos" in permisos:
-        return true()
-    condiciones = []
-    if "alumnos.ver_rama" in permisos and usuario.rama:
-        condiciones.append(Sesion.rama == usuario.rama)
-    if "alumnos.ver_propios" in permisos:
-        condiciones.append(Sesion.rama.in_(select(Alumno.rama).where(alumnos.filtro_propios(usuario))))
-    return or_(*condiciones) if condiciones else false()
+    """El entrenamiento es general: lo ve cualquiera que pueda ver alumnos. Las filas de la planilla sí se
+    limitan (Entrenador: su rama; Miembro: los suyos)."""
+    return true() if set(usuario.permisos_codigos) & set(VER_SESIONES) else false()
 
 
 def obtener_visible(db: Session, usuario: Usuario, sesion_id: uuid.UUID) -> Sesion:
@@ -52,33 +46,37 @@ def obtener_visible(db: Session, usuario: Usuario, sesion_id: uuid.UUID) -> Sesi
 
 
 def listar(
-    db: Session, usuario: Usuario, *, desde: date | None, hasta: date | None, rama: str | None, skip: int, limit: int
+    db: Session, usuario: Usuario, *, desde: date | None, hasta: date | None, skip: int, limit: int
 ) -> list[Sesion]:
     q = select(Sesion).where(filtro_sesiones_visibles(usuario))
     if desde:
         q = q.where(Sesion.fecha >= desde)
     if hasta:
         q = q.where(Sesion.fecha <= hasta)
-    if rama:
-        q = q.where(Sesion.rama == rama)
     return list(db.scalars(q.order_by(Sesion.fecha, Sesion.hora_inicio).offset(skip).limit(limit)))
 
 
 def esperados(db: Session, sesion: Sesion) -> list[Alumno]:
-    """Alumnos que deben asistir: activos, de la rama, con inscripción vigente desde antes de la sesión."""
+    """Alumnos que deben asistir (ambas ramas): activos, con inscripción vigente desde antes de la sesión."""
     return list(db.scalars(
         select(Alumno).join(Inscripcion, Inscripcion.alumno_id == Alumno.id).where(
-            Alumno.rama == sesion.rama, Alumno.activo.is_(True),
+            Alumno.activo.is_(True),
             Inscripcion.anio == sesion.fecha.year, Inscripcion.estado.in_(ESTADOS_VIGENTES),
             Inscripcion.fecha_inscripcion <= sesion.fecha,
         ).order_by(Alumno.apellidos, Alumno.nombres)
     ))
 
 
+def esperados_visibles(db: Session, usuario: Usuario, sesion: Sesion) -> list[Alumno]:
+    """Los esperados que este usuario puede ver: todos (Admin/SA), su rama (Entrenador) o los suyos (Miembro)."""
+    visibles = set(db.scalars(select(Alumno.id).where(alumnos.filtro_visibles(usuario))))
+    return [a for a in esperados(db, sesion) if a.id in visibles]
+
+
 def _esperado(db: Session, sesion: Sesion, alumno_id: uuid.UUID) -> Alumno:
     alumno = next((a for a in esperados(db, sesion) if a.id == alumno_id), None)
     if alumno is None:
-        raise ErrorNegocio("El alumno no está inscrito en la rama de esta sesión.")
+        raise ErrorNegocio("El alumno no tiene una inscripción vigente para esta sesión.")
     return alumno
 
 
@@ -113,62 +111,32 @@ def _verificar_abierta(sesion: Sesion) -> None:
         raise ErrorNegocio("La asistencia de esta sesión ya se cerró; para cambiarla usa la corrección.")
 
 
-def _verificar_rama(actor: Usuario, rama: str) -> None:
-    if "alumnos.ver_todos" in actor.permisos_codigos or rama == actor.rama:
-        return
-    raise Prohibido("Solo puedes gestionar sesiones de tu rama.")
-
-
-# ---------- Programación ----------
-def _validar_horario(hora_inicio: time, hora_fin: time) -> None:
+# ---------- Sesiones extra y cancelación ----------
+def crear_extra(
+    db: Session, *, fecha: date, hora_inicio: time, hora_fin: time, lugar: str | None, actor: Usuario, ip: str | None,
+) -> Sesion:
+    """Una sesión fuera del horario semanal (p. ej. para reponer un festivo)."""
     if hora_fin <= hora_inicio:
         raise ErrorNegocio("La hora de fin debe ser posterior a la de inicio.")
-
-
-def programar(
-    db: Session, *, rama: str, desde: date, hasta: date, dias_semana: list[int], hora_inicio: time, hora_fin: time,
-    lugar: str | None, actor: Usuario, ip: str | None,
-) -> list[Sesion]:
-    """Crea las sesiones de los días de la semana indicados (0 = lunes) entre dos fechas. Omite las que ya existen."""
-    _verificar_rama(actor, rama)
-    _validar_horario(hora_inicio, hora_fin)
-    if hasta < desde:
-        raise ErrorNegocio("La fecha final debe ser igual o posterior a la inicial.")
-    if desde < fechas.hoy():
-        raise ErrorNegocio("No se pueden programar sesiones en fechas pasadas.")
-    if (hasta - desde).days > MAX_DIAS_PROGRAMACION:
-        raise ErrorNegocio("Programa como máximo unos 6 meses a la vez.")
-
-    existentes = set(db.scalars(select(Sesion.fecha).where(
-        Sesion.rama == rama, Sesion.hora_inicio == hora_inicio, Sesion.fecha.between(desde, hasta)
-    )))
-    nuevas = []
-    dia = desde
-    while dia <= hasta:
-        if dia.weekday() in dias_semana and dia not in existentes:
-            nuevas.append(Sesion(
-                rama=rama, fecha=dia, hora_inicio=hora_inicio, hora_fin=hora_fin, lugar=lugar, creado_por=actor.id,
-            ))
-        dia += timedelta(days=1)
-    if not nuevas:
-        raise Conflicto("No hay fechas nuevas para programar: ya existen o no coinciden con los días elegidos.")
-    db.add_all(nuevas)
+    if fecha < fechas.hoy():
+        raise ErrorNegocio("No se pueden crear sesiones en fechas pasadas.")
+    if db.scalar(select(Sesion.id).where(Sesion.fecha == fecha, Sesion.hora_inicio == hora_inicio)):
+        raise Conflicto("Ya hay una sesión ese día a esa hora.")
+    sesion = Sesion(fecha=fecha, hora_inicio=hora_inicio, hora_fin=hora_fin, lugar=lugar, creado_por=actor.id)
+    db.add(sesion)
     db.flush()
     _auditar(
-        db, "sesion.programar", "sesion", nuevas[0].id, actor.id, ip,
-        despues={
-            "rama": rama, "desde": desde.isoformat(), "hasta": hasta.isoformat(), "dias_semana": sorted(dias_semana),
-            "hora_inicio": _hhmm(hora_inicio), "hora_fin": _hhmm(hora_fin), "creadas": len(nuevas),
-        },
+        db, "sesion.crear", "sesion", sesion.id, actor.id, ip,
+        despues={"fecha": fecha.isoformat(), "hora_inicio": _hhmm(hora_inicio), "hora_fin": _hhmm(hora_fin)},
     )
-    return nuevas
+    return sesion
 
 
 def cancelar(db: Session, sesion: Sesion, *, motivo: str, actor: Usuario, ip: str | None) -> Sesion:
-    _verificar_rama(actor, sesion.rama)
+    """Cancelación a mano (otro evento del club). Festivos y torneos los cancela la programación automática."""
     if sesion.cancelada:
         raise Conflicto("La sesión ya estaba cancelada.")
-    sesion.cancelada, sesion.motivo_cancelacion = True, motivo
+    sesion.cancelada, sesion.causa_cancelacion, sesion.motivo_cancelacion = True, "manual", motivo
     # Si ya se había cerrado, las multas pendientes de esa sesión dejan de tener sentido.
     for multa in db.scalars(select(Multa).where(Multa.sesion_id == sesion.id, Multa.estado == "pendiente")):
         multas.anular_si_pendiente(
@@ -189,13 +157,8 @@ class FilaPlanilla:
 
 
 def planilla(db: Session, usuario: Usuario, sesion: Sesion) -> list[FilaPlanilla]:
-    """Estado de cada alumno esperado. El Miembro solo ve sus propias filas."""
-    lista = esperados(db, sesion)
-    if "alumnos.ver_todos" not in usuario.permisos_codigos and not (
-        "alumnos.ver_rama" in usuario.permisos_codigos and usuario.rama == sesion.rama
-    ):
-        propios = set(db.scalars(select(Alumno.id).where(alumnos.filtro_propios(usuario))))
-        lista = [a for a in lista if a.id in propios]
+    """Estado de cada alumno esperado que el usuario puede ver (Entrenador: su rama; Miembro: los suyos)."""
+    lista = esperados_visibles(db, usuario, sesion)
     asistencias = {a.alumno_id: a.estado for a in db.scalars(select(Asistencia).where(Asistencia.sesion_id == sesion.id))}
     justificaciones: dict[uuid.UUID, str] = {}
     for j in db.scalars(select(Justificacion).where(Justificacion.sesion_id == sesion.id).order_by(Justificacion.creado_en)):
@@ -211,14 +174,13 @@ def planilla(db: Session, usuario: Usuario, sesion: Sesion) -> list[FilaPlanilla
 def marcar_grupo(
     db: Session, sesion: Sesion, *, marcas: list[tuple[uuid.UUID, str]], actor: Usuario, ip: str | None
 ) -> None:
-    _verificar_rama(actor, sesion.rama)
     _verificar_abierta(sesion)
     if sesion.fecha > fechas.hoy():
         raise ErrorNegocio("No se puede marcar la asistencia de una sesión futura.")
-    ids = {a.id for a in esperados(db, sesion)}
+    ids = {a.id for a in esperados_visibles(db, actor, sesion)}  # el Entrenador, solo su rama
     ajenos = [str(alumno_id) for alumno_id, _ in marcas if alumno_id not in ids]
     if ajenos:
-        raise ErrorNegocio(f"Estos alumnos no están inscritos en la rama de esta sesión: {', '.join(ajenos)}")
+        raise ErrorNegocio(f"Estos alumnos no están en la planilla que puedes marcar: {', '.join(ajenos)}")
     for alumno_id, estado in marcas:
         _fijar_asistencia(db, sesion, alumno_id, estado, "grupo", actor.id)
     _auditar(

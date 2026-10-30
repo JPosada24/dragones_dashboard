@@ -6,11 +6,12 @@ import { filter, map, startWith, tap } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { NOMBRE_ROL } from '../core/modelos';
 import { NotificacionesService } from '../core/notificaciones.service';
+import { Campana } from './campana/campana';
 import { GRUPOS, PESTANAS_MOVIL, Seccion, seccionesVisibles } from '../core/secciones';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Campana],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -20,6 +20,7 @@ DEFAULTS: dict[str, tuple[Any, str]] = {
     "dias_aviso_mora": (15, "Días antes de entrar en mora en que se avisa a la familia"),
     "hora_cierre_asistencia": ("23:59", "Hora de cierre diario de la asistencia (HH:MM)"),
     "minutos_marcar_antes": (30, "Minutos antes del inicio desde los que el alumno puede marcar su asistencia"),
+    "dias_programacion_anticipada": (60, "Días hacia adelante en que se crean los entrenamientos del horario"),
     "dias_para_justificar": (3, "Días después de la sesión para enviar una justificación"),
     "inasistencias_consecutivas_aviso": (4, "Inasistencias seguidas que avisan al staff"),
     "recordatorios_dias_antes": ([7, 1], "Días antes del vencimiento en que se envía recordatorio"),

@@ -23,7 +23,7 @@ from app.core import fechas
 from app.core.config import get_settings
 from app.core.correo import get_correo
 from app.db.session import SessionLocal
-from app.services import asistencia, inscripciones, mora, notificaciones
+from app.services import asistencia, inscripciones, mora, notificaciones, programacion
 
 log = logging.getLogger("dragones.worker")
 LATIDO = Path("/tmp/worker_latido")  # lo revisa el healthcheck de Docker
@@ -66,6 +66,13 @@ def _enviar_correos(db: Session) -> str | None:
     return f"{enviados} correos enviados, {fallidos} fallidos definitivamente"
 
 
+def _programar_sesiones(db: Session) -> str | None:
+    r = programacion.generar(db)
+    if not r.hubo_cambios:
+        return None
+    return f"{r.creadas} sesiones creadas, {r.canceladas} canceladas, {r.reactivadas} reactivadas"
+
+
 def _revisar_mora(db: Session) -> str | None:
     r = mora.revisar(db)
     if not (r.a_expulsar or r.expulsados or r.al_dia or r.avisos):
@@ -79,6 +86,7 @@ def tareas() -> list[Tarea]:
         Tarea("cierre_asistencia", 7301, s.worker_cierre_segundos, _cerrar_sesiones),
         Tarea("vencer_inscripciones", 7302, s.worker_vencer_segundos, _vencer_inscripciones),
         Tarea("mora", 7305, s.worker_mora_segundos, _revisar_mora),
+        Tarea("programar_sesiones", 7306, s.worker_programacion_segundos, _programar_sesiones),
         Tarea("avisos_programados", 7303, s.worker_notificaciones_segundos, _avisos_programados),
         Tarea("enviar_correos", 7304, s.worker_correos_segundos, _enviar_correos),
     ]

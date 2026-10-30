@@ -10,7 +10,7 @@ from app.core import fechas
 from app.core.fechas import formato_fecha, formato_pesos
 from app.models.acceso import Usuario
 from app.models.torneos import OCUPAN_CUPO, EquipoTorneo, PagoEquipo, Torneo
-from app.services import auditoria, configuracion
+from app.services import auditoria, configuracion, programacion
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado
 
 
@@ -65,6 +65,7 @@ def crear(db: Session, *, datos: dict[str, Any], actor: Usuario, ip: str | None)
             "cupo": torneo.cupo_equipos, "valor": torneo.valor_inscripcion,
         },
     )
+    programacion.generar(db)  # los entrenamientos de esos días se cancelan
     return torneo
 
 
@@ -75,6 +76,7 @@ def cancelar(db: Session, torneo: Torneo, *, motivo: str, actor: Usuario, ip: st
     db.flush()
     # Lo ya pagado queda registrado: la devolución a cada club se hace por fuera del sistema.
     _auditar(db, "torneo.cancelar", "torneo", torneo.id, actor.id, ip, despues={"motivo": motivo})
+    programacion.generar(db)  # y vuelven los entrenamientos que había cancelado
     return torneo
 
 

@@ -13,6 +13,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 
 ## Decisiones de negocio (ya acordadas)
 - Deporte: voleibol. **Solo dos ramas: masculina y femenina** (no hay categorías).
+- **Entrenamiento general** (ambas ramas juntas), programado **automáticamente** desde el horario semanal
+  (hoy: lunes, miércoles y sábado; editable). Solo se cancela por **festivo** (Colombia), **torneo** u otro evento
+  del club (a mano, con motivo). Sesiones extra a mano para reponer.
 - Multa por inasistencia: **$2.000 COP**, se genera al cierre del día (11:59 pm) si no marcó ni justificó.
 - Inscripción: pago máximo a **30 días**; solo Admin/SuperAdmin concede prórroga (con motivo, queda en auditoría).
   Valor $90.000 (configurable). **Se aceptan abonos parciales**; activa al completar el valor dentro del plazo.
@@ -145,7 +148,18 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   `/programar`), justificaciones por revisar (rechazo exige comentario) y racha de inasistencias. La familia ve
   solo sus filas: "Marcar presente" (hoy) y "Justificar", e historial de sus justificaciones. Compartidos nuevos:
   `compartido/fechas.ts`, `compartido/errores.ts` (`mensajeError`: detalle de la API, nunca trazas) y estilos
-  globales `.control`, `.mensaje`, `.boton.chico`. 20 pruebas frontend.
+  globales `.control`, `.mensaje`, `.boton.chico`.
+- HECHO (entrenamiento general, 2026-10-29): migración 0010 (sesiones sin `rama`, `automatica`,
+  `causa_cancelacion` festivo|torneo|horario|manual, única por fecha+hora; tabla `horario_entrenamiento`, sembrada
+  L/X 18–20 y S 16–18). `core/festivos.py` (Ley Emiliani + Pascua). `services/programacion.py`: `generar` crea
+  desde **mañana** hasta `dias_programacion_anticipada` (60) días; festivo → creada cancelada; torneo programado →
+  cancela y, si el torneo se cancela, reactiva (lo llaman torneos.crear/cancelar y el worker cada hora, tarea
+  `programar_sesiones`); solo toca las automáticas. `PUT /sesiones/horario` (`sesiones.gestionar`, ya NO lo tiene
+  el Entrenador): ajusta/borra/cancela (si tiene registros) las futuras y regenera. `POST /sesiones` = sesión extra.
+  Esperados = ambas ramas; la planilla se limita con `filtro_visibles` (Entrenador marca solo su rama).
+  Frontend: formularios en **popups** (`compartido/dialogo.ts`, `<dialog>` modal; el error de la API se muestra
+  dentro del popup) — las marcas P/A siguen en la lista por rapidez. Avisos: **campana desplegable**
+  (`layout/campana/`), ya no hay página `/notificaciones`. 179 pruebas backend, 24 frontend.
 - SIGUIENTE (frontend): Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).

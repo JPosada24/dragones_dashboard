@@ -14,7 +14,7 @@ PERMISOS: dict[str, str] = {
     "inscripciones.abonar": "Registrar abonos de inscripción (el Entrenador, solo de su rama)",
     "prorroga.conceder": "Conceder prórrogas de pago",
     "expulsion.confirmar": "Confirmar una expulsión",
-    "sesiones.gestionar": "Programar y cancelar sesiones de entrenamiento (el Entrenador, solo de su rama)",
+    "sesiones.gestionar": "Cambiar el horario de entrenamiento, crear sesiones extra y cancelar sesiones",
     "asistencia.marcar_propia": "Marcar asistencia o justificar la propia (o la de sus hijos)",
     "asistencia.marcar_grupo": "Marcar asistencia de un grupo (el Entrenador, solo de su rama)",
     "asistencia.corregir": "Corregir asistencia ya cerrada",
@@ -52,7 +52,7 @@ ROLES_PERMISOS: dict[str, set[str]] = {
     # El Entrenador hace todo el proceso de inscripción de su rama (alumno, acudiente, documentos, inscripción).
     "ENTRENADOR": {
         "alumnos.ver_rama", "alumnos.editar", "inscripciones.crear", "inscripciones.abonar",
-        "sesiones.gestionar", "asistencia.marcar_grupo", "agente.usar",
+        "asistencia.marcar_grupo", "agente.usar",
     },
     "MIEMBRO": {
         # Solo consulta: ningún alumno ni acudiente se inscribe por su cuenta.

@@ -10,11 +10,11 @@ from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.asistencia import Sesion
 from app.schemas.asistencia import (
-    AlertaOut, CancelarIn, CierreOut, CorreccionIn, FilaPlanillaOut, JustificacionOut, JustificarIn, MarcarGrupoIn,
-    MarcarPropiaIn, SesionCrear, SesionOut, SesionProgramar,
+    AlertaOut, CancelarIn, CierreOut, CorreccionIn, DiaHorarioOut, FilaPlanillaOut, HorarioActualizadoOut, HorarioIn,
+    HorarioOut, JustificacionOut, JustificarIn, MarcarGrupoIn, MarcarPropiaIn, SesionCrear, SesionOut,
 )
-from app.schemas.comunes import Rama
 from app.services import asistencia as servicio
+from app.services import configuracion, programacion
 
 router = APIRouter(prefix="/sesiones", tags=["asistencia"])
 
@@ -23,14 +23,15 @@ VER = requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.ver_prop
 
 def sesion_a_out(s: Sesion) -> SesionOut:
     return SesionOut(
-        id=s.id, rama=s.rama, fecha=s.fecha, hora_inicio=s.hora_inicio, hora_fin=s.hora_fin, lugar=s.lugar,
-        cancelada=s.cancelada, motivo_cancelacion=s.motivo_cancelacion, cerrada=s.cerrada_en is not None,
+        id=s.id, fecha=s.fecha, hora_inicio=s.hora_inicio, hora_fin=s.hora_fin, lugar=s.lugar, automatica=s.automatica,
+        cancelada=s.cancelada, causa_cancelacion=s.causa_cancelacion, motivo_cancelacion=s.motivo_cancelacion,
+        cerrada=s.cerrada_en is not None,
     )
 
 
 def justificacion_a_out(j) -> JustificacionOut:
     return JustificacionOut(
-        id=j.id, sesion_id=j.sesion_id, fecha_sesion=j.sesion.fecha, rama=j.sesion.rama, alumno_id=j.alumno_id,
+        id=j.id, sesion_id=j.sesion_id, fecha_sesion=j.sesion.fecha, rama=j.alumno.rama, alumno_id=j.alumno_id,
         alumno_nombre=f"{j.alumno.nombres} {j.alumno.apellidos}", motivo=j.motivo, estado=j.estado,
         comentario=j.comentario, creado_en=j.creado_en, revisada_en=j.revisada_en,
     )
@@ -40,13 +41,12 @@ def justificacion_a_out(j) -> JustificacionOut:
 def listar(
     desde: date | None = None,
     hasta: date | None = None,
-    rama: Rama | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     usuario: Usuario = Depends(VER),
     db: Session = Depends(get_db),
 ) -> list[SesionOut]:
-    filas = servicio.listar(db, usuario, desde=desde, hasta=hasta, rama=rama, skip=skip, limit=limit)
+    filas = servicio.listar(db, usuario, desde=desde, hasta=hasta, skip=skip, limit=limit)
     return [sesion_a_out(s) for s in filas]
 
 
@@ -57,27 +57,44 @@ def crear(
     actor: Usuario = Depends(requiere("sesiones.gestionar")),
     db: Session = Depends(get_db),
 ) -> SesionOut:
-    [sesion] = servicio.programar(
-        db, rama=datos.rama, desde=datos.fecha, hasta=datos.fecha, dias_semana=[datos.fecha.weekday()],
-        hora_inicio=datos.hora_inicio, hora_fin=datos.hora_fin, lugar=datos.lugar, actor=actor, ip=ip_cliente(request),
+    """Sesión extra (las del horario semanal se crean solas)."""
+    sesion = servicio.crear_extra(
+        db, fecha=datos.fecha, hora_inicio=datos.hora_inicio, hora_fin=datos.hora_fin, lugar=datos.lugar,
+        actor=actor, ip=ip_cliente(request),
     )
     db.commit()
     return sesion_a_out(sesion)
 
 
-@router.post("/programar", response_model=list[SesionOut], status_code=status.HTTP_201_CREATED)
-def programar(
-    datos: SesionProgramar,
+def _horario_out(db: Session) -> HorarioOut:
+    return HorarioOut(
+        dias=[DiaHorarioOut(dia_semana=h.dia_semana, hora_inicio=h.hora_inicio, hora_fin=h.hora_fin, lugar=h.lugar)
+              for h in programacion.horario(db)],
+        dias_anticipacion=configuracion.obtener(db, "dias_programacion_anticipada"),
+    )
+
+
+@router.get("/horario", response_model=HorarioOut)
+def ver_horario(usuario: Usuario = Depends(VER), db: Session = Depends(get_db)) -> HorarioOut:
+    return _horario_out(db)
+
+
+@router.put("/horario", response_model=HorarioActualizadoOut)
+def cambiar_horario(
+    datos: HorarioIn,
     request: Request,
     actor: Usuario = Depends(requiere("sesiones.gestionar")),
     db: Session = Depends(get_db),
-) -> list[SesionOut]:
-    sesiones = servicio.programar(
-        db, rama=datos.rama, desde=datos.desde, hasta=datos.hasta, dias_semana=datos.dias_semana,
-        hora_inicio=datos.hora_inicio, hora_fin=datos.hora_fin, lugar=datos.lugar, actor=actor, ip=ip_cliente(request),
+) -> HorarioActualizadoOut:
+    """Reemplaza los días de entrenamiento y reprograma las sesiones automáticas desde mañana."""
+    r = programacion.actualizar_horario(
+        db, dias=[programacion.DiaHorario(d.dia_semana, d.hora_inicio, d.hora_fin, d.lugar) for d in datos.dias],
+        actor=actor, ip=ip_cliente(request),
     )
     db.commit()
-    return [sesion_a_out(s) for s in sesiones]
+    return HorarioActualizadoOut(
+        **_horario_out(db).model_dump(), creadas=r.creadas, eliminadas=r.eliminadas, canceladas=r.canceladas,
+    )
 
 
 @router.post("/cerrar", response_model=CierreOut)
@@ -132,7 +149,7 @@ def planilla(
     sesion = servicio.obtener_visible(db, usuario, sesion_id)
     return [
         FilaPlanillaOut(
-            alumno_id=f.alumno.id, alumno_nombre=f"{f.alumno.nombres} {f.alumno.apellidos}",
+            alumno_id=f.alumno.id, alumno_nombre=f"{f.alumno.nombres} {f.alumno.apellidos}", rama=f.alumno.rama,
             asistencia=f.asistencia, justificacion=f.justificacion, multa=f.multa,
         )
         for f in servicio.planilla(db, usuario, sesion)

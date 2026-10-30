@@ -49,12 +49,7 @@
         <div class="barra-movil-titulo">{{ encabezado().titulo }}</div>
         <div class="barra-movil-sub">{{ encabezado().subtitulo }}</div>
       </div>
-      <a class="campana" routerLink="/notificaciones" aria-label="Avisos">
-        <span class="icono" aria-hidden="true">notifications</span>
-        @if (avisos.noLeidas() > 0) {
-          <span class="campana-conteo">{{ avisos.noLeidas() }}</span>
-        }
-      </a>
+      <app-campana />
     </header>
 
     <!-- Escritorio: barra superior -->
@@ -63,12 +58,7 @@
         <h1 class="titulo">{{ encabezado().titulo }}</h1>
         <p class="subtitulo">{{ encabezado().subtitulo }}</p>
       </div>
-      <a class="avisos" routerLink="/notificaciones">
-        Avisos
-        @if (avisos.noLeidas() > 0) {
-          <span class="mono">{{ avisos.noLeidas() }}</span>
-        }
-      </a>
+      <app-campana />
     </header>
 
     <main class="contenido">

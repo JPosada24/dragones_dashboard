@@ -94,7 +94,7 @@
           @for (s of r.hoy; track s.id) {
             <div class="sesion">
               <div class="fila-base sesion-fila">
-                <span>Rama {{ s.rama }} · {{ s.horario }}</span>
+                <span>{{ s.horario }}@if (s.lugar) { · {{ s.lugar }} }</span>
                 <span class="mono">{{ s.presentes + s.justificados }}/{{ s.esperados }}</span>
               </div>
               <div class="barra apilada" role="img"
@@ -192,7 +192,7 @@
             <div class="cartera-fila">
               <div>
                 <div class="cartera-concepto">{{ s.fecha | date: 'EEEE d MMM' }}</div>
-                <div class="cartera-nota">Rama {{ s.rama }}@if (s.lugar) { · {{ s.lugar }} }</div>
+                <div class="cartera-nota">Entrenamiento@if (s.lugar) { · {{ s.lugar }} }</div>
               </div>
               <span class="mono">{{ s.hora_inicio.slice(0, 5) }}–{{ s.hora_fin.slice(0, 5) }}</span>
             </div>

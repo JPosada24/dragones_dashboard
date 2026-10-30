@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     worker_notificaciones_segundos: int = 3600
     worker_correos_segundos: int = 60
     worker_mora_segundos: int = 3600
+    worker_programacion_segundos: int = 3600
 
     # Correo. "registro" = no envía nada (solo lo anota). "smtp" = envía con la cuenta de abajo.
     club_nombre: str = "Club Dragones"

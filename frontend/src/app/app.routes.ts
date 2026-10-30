@@ -34,12 +34,6 @@ export const routes: Routes = [
         data: { permisos: s.permisos, titulo: s.titulo, subtitulo: s.subtitulo, descripcion: s.descripcion },
         loadComponent: PANTALLAS[s.ruta] ?? enConstruccion,
       })),
-      {
-        path: 'notificaciones',
-        title: 'Avisos · Dragones',
-        data: { titulo: 'Avisos', subtitulo: 'Tus notificaciones del club' },
-        loadComponent: () => import('./paginas/notificaciones/notificaciones').then((m) => m.NotificacionesPage),
-      },
     ],
   },
   { path: '**', redirectTo: '' },

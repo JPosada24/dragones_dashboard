@@ -150,7 +150,8 @@ frontend/        Angular 22 (ver frontend/README.md)
 - [x] Mora automática por deudas sin pagar
 - [x] Frontend F1 — ingreso, marco con menú por permisos, avisos
 - [x] Frontend: Resumen (tablero del staff y vista de las familias)
-- [x] Frontend: Asistencia (planilla, correcciones, justificaciones, programar sesiones)
+- [x] Programación automática de entrenamientos (horario semanal, festivos de Colombia y torneos)
+- [x] Frontend: Asistencia (planilla, correcciones, justificaciones, horario) con formularios en ventanas emergentes
 - [ ] Frontend: Alumnos, Inscripciones, Dinero, Torneos, Configuración…
 - [ ] Sitio público del club · asistente con IA · despliegue
 

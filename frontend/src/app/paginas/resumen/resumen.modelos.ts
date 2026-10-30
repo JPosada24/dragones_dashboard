@@ -10,7 +10,7 @@ export interface ResumenStaff {
   alertas: { tipo: string; titulo: string; detalle: string; cuando: string; ruta: string }[];
   hoy: {
     id: string;
-    rama: string;
+    lugar: string | null;
     horario: string;
     cerrada: boolean;
     esperados: number;
@@ -56,7 +56,6 @@ export interface EstadoCuenta {
 
 export interface SesionBasica {
   id: string;
-  rama: string;
   fecha: string;
   hora_inicio: string;
   hora_fin: string;

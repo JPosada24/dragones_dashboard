@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.comunes import Rama
 
 
 class _Entrada(BaseModel):
@@ -24,22 +23,41 @@ class _Horario(_Entrada):
 
 
 class SesionCrear(_Horario):
-    rama: Rama
+    """Sesión extra, fuera del horario semanal."""
     fecha: date
 
 
-class SesionProgramar(_Horario):
-    rama: Rama
-    desde: date
-    hasta: date
-    dias_semana: list[int] = Field(min_length=1, max_length=7, description="0 = lunes … 6 = domingo")
+class DiaHorarioIn(_Horario):
+    dia_semana: int = Field(ge=0, le=6, description="0 = lunes … 6 = domingo")
 
-    @field_validator("dias_semana")
+
+class HorarioIn(_Entrada):
+    dias: list[DiaHorarioIn] = Field(max_length=7)
+
+    @field_validator("dias")
     @classmethod
-    def _dias(cls, v: list[int]) -> list[int]:
-        if any(d < 0 or d > 6 for d in v) or len(set(v)) != len(v):
-            raise ValueError("Días de la semana inválidos (0 = lunes … 6 = domingo, sin repetir)")
+    def _sin_repetidos(cls, v: list[DiaHorarioIn]) -> list[DiaHorarioIn]:
+        if len({d.dia_semana for d in v}) != len(v):
+            raise ValueError("Hay un día repetido en el horario")
         return v
+
+
+class DiaHorarioOut(BaseModel):
+    dia_semana: int
+    hora_inicio: time
+    hora_fin: time
+    lugar: str | None
+
+
+class HorarioOut(BaseModel):
+    dias: list[DiaHorarioOut]
+    dias_anticipacion: int
+
+
+class HorarioActualizadoOut(HorarioOut):
+    creadas: int
+    eliminadas: int
+    canceladas: int
 
 
 class CancelarIn(_Entrada):
@@ -48,12 +66,13 @@ class CancelarIn(_Entrada):
 
 class SesionOut(BaseModel):
     id: uuid.UUID
-    rama: str
     fecha: date
     hora_inicio: time
     hora_fin: time
     lugar: str | None
+    automatica: bool
     cancelada: bool
+    causa_cancelacion: str | None
     motivo_cancelacion: str | None
     cerrada: bool
 
@@ -86,6 +105,7 @@ class CorreccionIn(_Entrada):
 class FilaPlanillaOut(BaseModel):
     alumno_id: uuid.UUID
     alumno_nombre: str
+    rama: str
     asistencia: str | None
     justificacion: str | None
     multa: str | None

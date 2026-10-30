@@ -24,7 +24,7 @@ const RESUMEN: ResumenStaff = {
     multas_pendientes: 3, multas_saldo: 6000, alertas: 1,
   },
   alertas: [{ tipo: 'expulsion', titulo: 'Kevin · marcado para expulsión', detalle: 'Mora', cuando: '', ruta: '/inscripciones' }],
-  hoy: [{ id: 's', rama: 'femenina', horario: '18:00–20:00', cerrada: false, esperados: 10, presentes: 6,
+  hoy: [{ id: 's', lugar: 'Coliseo', horario: '18:00–20:00', cerrada: false, esperados: 10, presentes: 6,
           justificados: 1, ausentes: 1, sin_marcar: 2 }],
   rifas: [],
   cartera: [{ concepto: 'Multas sin pagar', nota: '3 multas', monto: 6000 }],

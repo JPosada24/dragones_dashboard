@@ -42,8 +42,8 @@ def h_admin(crear_usuario, auth_header, reloj):
     return auth_header("adm@club.com")
 
 
-def _sesion(client, h, dia=LUNES, rama="femenina", inicio="18:00", fin="20:00"):
-    r = client.post(S, json={"rama": rama, "fecha": dia.isoformat(), "hora_inicio": inicio, "hora_fin": fin}, headers=h)
+def _sesion(client, h, dia=LUNES, inicio="18:00", fin="20:00"):
+    r = client.post(S, json={"fecha": dia.isoformat(), "hora_inicio": inicio, "hora_fin": fin}, headers=h)
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -80,50 +80,49 @@ def familia(client, h_admin, crear_usuario, auth_header):
     return {"hija": hija, "h": auth_header("padre@club.com")}
 
 
-# ---------- Programación de sesiones ----------
-def test_programar_crea_solo_los_dias_elegidos_y_no_duplica(client, h_admin):
-    cuerpo = {
-        "rama": "femenina", "desde": LUNES.isoformat(), "hasta": (LUNES + timedelta(days=13)).isoformat(),
-        "dias_semana": [0, 2, 4], "hora_inicio": "18:00", "hora_fin": "20:00", "lugar": "Coliseo",
-    }
-    r = client.post(f"{S}/programar", json=cuerpo, headers=h_admin)
-    assert r.status_code == 201 and len(r.json()) == 6
-    assert {date.fromisoformat(s["fecha"]).weekday() for s in r.json()} == {0, 2, 4}
-    assert client.post(f"{S}/programar", json=cuerpo, headers=h_admin).status_code == 409  # ya existen
-
-
-def test_no_se_programan_sesiones_en_el_pasado_ni_con_horario_invalido(client, h_admin):
-    assert client.post(S, json={"rama": "femenina", "fecha": (LUNES - timedelta(days=1)).isoformat(),
+# ---------- Sesiones extra (las del horario las crea la programación automática) ----------
+def test_sesion_extra_no_en_el_pasado_ni_con_horario_invalido_ni_duplicada(client, h_admin):
+    assert client.post(S, json={"fecha": (LUNES - timedelta(days=1)).isoformat(),
                                 "hora_inicio": "18:00", "hora_fin": "20:00"}, headers=h_admin).status_code == 422
-    assert client.post(S, json={"rama": "femenina", "fecha": LUNES.isoformat(),
+    assert client.post(S, json={"fecha": LUNES.isoformat(),
                                 "hora_inicio": "20:00", "hora_fin": "18:00"}, headers=h_admin).status_code == 422
+    _sesion(client, h_admin)
+    assert client.post(S, json={"fecha": LUNES.isoformat(), "hora_inicio": "18:00",
+                                "hora_fin": "19:00"}, headers=h_admin).status_code == 409
 
 
-def test_entrenador_programa_y_ve_solo_su_rama(client, h_admin, crear_usuario, auth_header):
-    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
-    h = auth_header("coach@club.com")
-    propia = _sesion(client, h)
-    r = client.post(S, json={"rama": "masculina", "fecha": LUNES.isoformat(), "hora_inicio": "18:00",
-                             "hora_fin": "20:00"}, headers=h)
-    assert r.status_code == 403
-    ajena = _sesion(client, h_admin, rama="masculina")
-    assert [s["id"] for s in client.get(S, headers=h).json()] == [propia["id"]]
-    assert client.get(f"{S}/{ajena['id']}", headers=h).status_code == 404
-
-
-def test_miembro_no_programa_sesiones(client, familia):
-    r = client.post(S, json={"rama": "femenina", "fecha": LUNES.isoformat(), "hora_inicio": "18:00",
-                             "hora_fin": "20:00"}, headers=familia["h"])
-    assert r.status_code == 403
+def test_entrenador_y_miembro_ven_las_sesiones_pero_no_las_gestionan(client, h_admin, familia, crear_usuario,
+                                                                    auth_header):
+    sesion = _sesion(client, h_admin)
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="masculina")
+    for h in (auth_header("coach@club.com"), familia["h"]):
+        assert [s["id"] for s in client.get(S, headers=h).json()] == [sesion["id"]]  # el entrenamiento es general
+        assert client.post(S, json={"fecha": LUNES.isoformat(), "hora_inicio": "08:00", "hora_fin": "09:00"},
+                           headers=h).status_code == 403
+        assert client.post(f"{S}/{sesion['id']}/cancelar", json={"motivo": "Otro evento"},
+                           headers=h).status_code == 403
 
 
 # ---------- Planilla y marcación del grupo ----------
-def test_planilla_incluye_solo_inscritos_vigentes_de_la_rama(client, h_admin):
+def test_planilla_incluye_a_los_inscritos_vigentes_de_ambas_ramas(client, h_admin):
     inscrita = _alumno_inscrito(client, h_admin)
     crear_alumno(client, h_admin, documento="2000000001")  # sin inscripción
-    _alumno_inscrito(client, h_admin, documento="2000000002", rama="masculina")
+    inscrito = _alumno_inscrito(client, h_admin, documento="2000000002", rama="masculina")
     sesion = _sesion(client, h_admin)
-    assert list(_planilla(client, h_admin, sesion["id"])) == [inscrita["id"]]
+    planilla = _planilla(client, h_admin, sesion["id"])
+    assert set(planilla) == {inscrita["id"], inscrito["id"]}
+    assert planilla[inscrito["id"]]["rama"] == "masculina"
+
+
+def test_entrenador_ve_y_marca_solo_su_rama_en_la_sesion_general(client, h_admin, crear_usuario, auth_header):
+    alumna = _alumno_inscrito(client, h_admin)
+    alumno = _alumno_inscrito(client, h_admin, documento="2000000002", rama="masculina")
+    sesion = _sesion(client, h_admin)
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    h = auth_header("coach@club.com")
+    assert list(_planilla(client, h, sesion["id"])) == [alumna["id"]]
+    assert _marcar(client, h, sesion["id"], (alumno["id"], "presente")).status_code == 422
+    assert _planilla(client, h_admin, sesion["id"])[alumno["id"]]["asistencia"] is None
 
 
 def test_entrenador_marca_su_grupo(client, h_admin, crear_usuario, auth_header):
@@ -139,7 +138,7 @@ def test_entrenador_marca_su_grupo(client, h_admin, crear_usuario, auth_header):
 
 
 def test_no_se_marca_a_quien_no_es_de_la_sesion_ni_una_sesion_futura(client, h_admin):
-    ajeno = _alumno_inscrito(client, h_admin, documento="2000000002", rama="masculina")
+    ajeno = crear_alumno(client, h_admin, documento="2000000002")  # sin inscripción
     hoy_ = _sesion(client, h_admin)
     assert _marcar(client, h_admin, hoy_["id"], (ajeno["id"], "presente")).status_code == 422
     alumna = _alumno_inscrito(client, h_admin)
@@ -378,10 +377,8 @@ def test_pago_de_multa_con_fecha_futura_se_rechaza(client, h_admin, multa):
 def test_alerta_con_cuatro_ausencias_seguidas_y_la_justificada_rompe_la_racha(client, h_admin, reloj):
     faltona = _alumno_inscrito(client, h_admin)
     juiciosa = _alumno_inscrito(client, h_admin, documento="2000000003")
-    client.post(f"{S}/programar", json={
-        "rama": "femenina", "desde": LUNES.isoformat(), "hasta": (LUNES + timedelta(days=3)).isoformat(),
-        "dias_semana": [0, 1, 2, 3], "hora_inicio": "18:00", "hora_fin": "20:00",
-    }, headers=h_admin)
+    for n in range(4):
+        _sesion(client, h_admin, dia=LUNES + timedelta(days=n))
     sesiones = client.get(S, headers=h_admin).json()
     # La "juiciosa" justifica la última; la "faltona" no hace nada.
     _justificar(client, h_admin, sesiones[-1]["id"], juiciosa["id"])

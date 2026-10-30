@@ -10,6 +10,7 @@ ESTADOS_VIGENTES = ("pendiente_pago", "activo", "a_expulsar")
 
 ESTADOS_ASISTENCIA = ("presente", "ausente", "justificado")
 ORIGENES_ASISTENCIA = ("propia", "grupo", "cierre", "correccion", "justificacion")
+CAUSAS_CANCELACION = ("festivo", "torneo", "horario", "manual")
 ESTADOS_JUSTIFICACION = ("pendiente", "aprobada", "rechazada")
 ESTADOS_MULTA = ("pendiente", "pagada", "anulada")
 

@@ -23,7 +23,7 @@ def test_indicadores_cartera_y_entrenamiento_de_hoy(client, h_admin, reloj):
     assert ind["alumnos_activos"] == 3 and ind["inscripciones_pendientes"] == 3
     assert ind["inscripciones_vencen_pronto"] == 0  # el plazo es de 30 días
     [hoy] = r["hoy"]
-    assert (hoy["rama"], hoy["esperados"], hoy["presentes"], hoy["sin_marcar"]) == ("femenina", 2, 1, 1)
+    assert (hoy["esperados"], hoy["presentes"], hoy["sin_marcar"]) == (3, 1, 2)  # general: ambas ramas
     cartera = {c["concepto"]: c["monto"] for c in r["cartera"]}
     assert cartera["Inscripciones por cobrar"] == 3 * 90000
     assert cartera["Rifas por cobrar"] == 3 * 40000
@@ -52,12 +52,12 @@ def test_alertas_que_requieren_decision(client, h_admin, h_root, familia, reloj)
 def test_entrenador_ve_solo_su_rama_y_sin_torneos(client, h_admin, crear_usuario, auth_header):
     _alumno_inscrito(client, h_admin)
     _alumno_inscrito(client, h_admin, documento="2000000004", rama="masculina")
-    _sesion(client, h_admin, rama="masculina")
+    _sesion(client, h_admin)
     _torneo(client, h_admin)
     crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
     r = client.get(RES, headers=auth_header("coach@club.com")).json()
     assert r["indicadores"]["alumnos_activos"] == 1
-    assert r["hoy"] == [] and r["proximo_torneo"] is None
+    assert r["hoy"][0]["esperados"] == 1 and r["proximo_torneo"] is None  # la sesión es general; cuenta su rama
     assert "Torneos por cobrar" not in {c["concepto"] for c in r["cartera"]}
 
 
