@@ -389,3 +389,33 @@ def test_historial_del_alumno_con_multas_y_alcance(client, h_admin, reloj, famil
     h_coach = auth_header("coach@club.com")
     assert client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=h_coach).status_code == 404
     assert client.get(f"/api/v1/alumnos/{hija['id']}/asistencia", headers=h_coach).status_code == 200
+
+
+def test_pago_de_varias_multas_es_todo_o_nada(client, h_admin, familia, reloj, crear_usuario, auth_header):
+    otra = alumno_inscrito(client, h_admin, documento="2000000005", rama="masculina")
+    for dia in (LUNES, LUNES + timedelta(days=2)):
+        crear_sesion(client, h_admin, dia=dia)
+        reloj(en_hora(dia, 23, 59))
+        cerrar_dia(client, h_admin)
+    reloj(en_hora(LUNES + timedelta(days=3), 9))
+    multas = client.get(M, params={"estado": "pendiente"}, headers=h_admin).json()
+    assert len(multas) == 4 and {m["rama"] for m in multas} == {"femenina", "masculina"}
+    de_la_hija = [m["id"] for m in multas if m["alumno_id"] == familia["hija"]["id"]]
+    hoy_ = (LUNES + timedelta(days=3)).isoformat()
+
+    # Si una ya está pagada, no se cobra ninguna (todo o nada).
+    assert client.post(f"{M}/{de_la_hija[0]}/pago", json={"fecha_pago": hoy_}, headers=h_admin).status_code == 200
+    r = client.post(f"{M}/pagos", json={"multa_ids": de_la_hija, "fecha_pago": hoy_}, headers=h_admin)
+    assert r.status_code == 409
+    assert client.get(f"{M}", params={"estado": "pendiente", "alumno_id": familia["hija"]["id"]},
+                      headers=h_admin).json()[0]["id"] == de_la_hija[1]
+
+    # El entrenador no cobra multas (403); el Admin cobra las de varios alumnos en un solo paso.
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    r = client.post(f"{M}/pagos", json={"multa_ids": [de_la_hija[1]], "fecha_pago": hoy_},
+                    headers=auth_header("coach@club.com"))
+    assert r.status_code == 403
+    de_otra = [m["id"] for m in multas if m["alumno_id"] == otra["id"]]
+    r = client.post(f"{M}/pagos", json={"multa_ids": [*de_otra, de_la_hija[1]], "fecha_pago": hoy_}, headers=h_admin)
+    assert r.status_code == 200 and {m["estado"] for m in r.json()} == {"pagada"} and len(r.json()) == 3
+    assert client.post(f"{M}/pagos", json={"multa_ids": [], "fecha_pago": hoy_}, headers=h_admin).status_code == 422

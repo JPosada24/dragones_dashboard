@@ -1,0 +1,190 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<section class="controles" aria-label="Filtros">
+  <div class="filtros" role="group" aria-label="Estado de las multas">
+    <button type="button" class="filtro" [attr.aria-pressed]="estado() === 'pendiente'" (click)="cambiarEstado('pendiente')">Por cobrar</button>
+    <button type="button" class="filtro" [attr.aria-pressed]="estado() === 'pagada'" (click)="cambiarEstado('pagada')">Pagadas</button>
+    <button type="button" class="filtro" [attr.aria-pressed]="estado() === 'anulada'" (click)="cambiarEstado('anulada')">Anuladas</button>
+  </div>
+  @if (veTodasLasRamas()) {
+    <div class="filtros" role="group" aria-label="Filtrar por rama">
+      <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === ''" (click)="filtroRama.set('')">Ambas ramas</button>
+      <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'femenina'" (click)="filtroRama.set('femenina')">Femenina</button>
+      <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'masculina'" (click)="filtroRama.set('masculina')">Masculina</button>
+    </div>
+  }
+</section>
+
+@if (esStaff()) {
+  @let k = indicadores();
+  <section class="kpis" aria-label="Indicadores">
+    <div class="kpi">
+      <div class="etiqueta">Multas por cobrar</div>
+      <div class="kpi-valor">{{ estado() === 'pendiente' ? k.pendientes : '—' }}</div>
+      <div class="kpi-nota" [class.oro]="k.porCobrar > 0">{{ k.porCobrar | pesos }}</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Alumnos con multas</div>
+      <div class="kpi-valor">{{ estado() === 'pendiente' ? k.alumnos : '—' }}</div>
+      <div class="kpi-nota">con al menos una pendiente</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">En riesgo de mora</div>
+      <div class="kpi-valor" [class.oro]="k.riesgo > 0">{{ k.riesgo }}</div>
+      <div class="kpi-nota">deuda vencida, aún sin mora</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">En mora</div>
+      <div class="kpi-valor" [class.rojo]="k.enMora > 0">{{ k.enMora }}</div>
+      <div class="kpi-nota">más de 3 meses sin pagar</div>
+    </div>
+  </section>
+}
+
+<div class="columnas" [class.una]="!esStaff()">
+  <!-- ---------- Multas ---------- -->
+  <section class="panel" aria-label="Multas">
+    <div class="panel-cabecera">
+      <h2>{{ estado() === 'pendiente' ? 'Multas por cobrar' : estado() === 'pagada' ? 'Multas pagadas' : 'Multas anuladas' }}</h2>
+    </div>
+
+    @if (errorCarga()) {
+      <p class="vacio" role="alert">No se pudieron cargar las multas. Recarga la página.</p>
+    } @else if (multas() === null) {
+      <p class="vacio">Cargando…</p>
+    } @else if (estado() === 'pendiente') {
+      @for (g of grupos(); track g.alumno_id) {
+        <div class="grupo">
+          <div class="grupo-cabecera">
+            <div class="grupo-textos">
+              <a class="grupo-nombre" [routerLink]="['/alumnos']" [queryParams]="{ id: g.alumno_id }">{{ g.alumno_nombre }}</a>
+              <span class="nota-chica capital">{{ g.rama }} · {{ g.multas.length }} {{ g.multas.length === 1 ? 'multa' : 'multas' }}</span>
+            </div>
+            <span class="mono oro">{{ g.total | pesos }}</span>
+            @if (puedeCobrar()) {
+              <button type="button" class="boton chico" (click)="abrirCobro(g.multas)">
+                {{ g.multas.length === 1 ? 'Cobrar' : 'Cobrar todo' }}
+              </button>
+            }
+          </div>
+          @for (m of g.multas; track m.id) {
+            <div class="multa">
+              <span class="mono chico capital">{{ m.fecha_sesion | date: 'EEE d MMM y' }}</span>
+              <span class="mono chico">{{ m.valor | pesos }}</span>
+              <span class="multa-acciones">
+                @if (puedeCobrar() && g.multas.length > 1) {
+                  <button type="button" class="enlace" (click)="abrirCobro([m])">Cobrar esta</button>
+                }
+                @if (puedeAnular()) {
+                  <button type="button" class="enlace-rojo" (click)="abrirAnular(m)">Anular</button>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="vacio">No hay multas por cobrar. 🐉</p>
+      }
+    } @else {
+      <ul class="historial">
+        @for (m of visibles(); track m.id) {
+          <li class="multa">
+            <span class="historial-alumno">
+              <span>{{ m.alumno_nombre }}</span>
+              <span class="nota-chica capital">{{ m.fecha_sesion | date: 'EEE d MMM y' }}</span>
+            </span>
+            <span class="mono chico">{{ m.valor | pesos }}</span>
+            <span class="nota-chica historial-detalle">
+              @if (m.estado === 'pagada') { Pagada el {{ m.fecha_pago | date: 'd MMM y' }} } @else { {{ m.motivo_anulacion }} }
+            </span>
+          </li>
+        } @empty {
+          <li class="vacio">{{ estado() === 'pagada' ? 'Aún no hay multas pagadas.' : 'No hay multas anuladas.' }}</li>
+        }
+      </ul>
+      @if ((multas()?.length ?? 0) >= limite) {
+        <p class="nota-chica relleno-nota">Se muestran las {{ limite }} más recientes.</p>
+      }
+    }
+  </section>
+
+  <!-- ---------- Mora (staff) ---------- -->
+  @if (esStaff()) {
+    <section class="panel" aria-label="Mora">
+      <div class="panel-cabecera">
+        <h2>Riesgo de mora</h2>
+        <p class="nota-chica">Deudas vencidas (multas y talonarios). Entran en mora a los 3 meses.</p>
+      </div>
+      @if (mora() === null) {
+        <p class="vacio">Cargando…</p>
+      } @else {
+        @for (s of moraVisible(); track s.alumno_id) {
+          <div class="situacion" [class.en-mora]="s.en_mora">
+            <div class="situacion-cabecera">
+              <div class="grupo-textos">
+                <a class="grupo-nombre" [routerLink]="['/alumnos']" [queryParams]="{ id: s.alumno_id }">{{ s.alumno_nombre }}</a>
+                <span class="nota-chica">vencida desde el {{ s.vencida_desde | date: 'd MMM y' }}</span>
+              </div>
+              <span class="mono" [class.rojo]="s.en_mora" [class.oro]="!s.en_mora">{{ s.total_vencido | pesos }}</span>
+            </div>
+            <div class="situacion-estado">
+              @if (s.en_mora) {
+                <span class="chip-mora">En mora</span>
+                <span class="nota-chica">desde el {{ s.entra_en_mora | date: 'd MMM y' }}: la inscripción pasa a revisión</span>
+              } @else {
+                <span class="chip-riesgo">Entra en mora {{ cuando(s.entra_en_mora) }}</span>
+                <span class="nota-chica">el {{ s.entra_en_mora | date: 'd MMM y' }}</span>
+              }
+            </div>
+            <ul class="deudas">
+              @for (d of s.deudas; track $index) {
+                <li><span>{{ d.concepto }}</span><span class="mono chico">{{ d.monto | pesos }}</span></li>
+              }
+            </ul>
+          </div>
+        } @empty {
+          <p class="vacio">Nadie tiene deudas vencidas. 🎉</p>
+        }
+      }
+    </section>
+  }
+</div>
+
+<!-- ---------- Cobro ---------- -->
+@if (cobrando(); as lista) {
+  <app-dialogo [titulo]="lista.length === 1 ? 'Cobrar multa' : 'Cobrar ' + lista.length + ' multas'"
+               [descripcion]="(lista[0]?.alumno_nombre ?? '') + ' · total ' + (totalCobro() | pesos)" (cerrar)="cobrando.set(null)">
+    <form class="formulario" [formGroup]="formCobro" (ngSubmit)="guardarCobro()">
+      <ul class="deudas">
+        @for (m of lista; track m.id) {
+          <li><span class="capital">Inasistencia {{ m.fecha_sesion | date: 'EEE d MMM' }}</span><span class="mono chico">{{ m.valor | pesos }}</span></li>
+        }
+      </ul>
+      <label class="campo"><span class="etiqueta">Fecha del pago</span>
+        <input class="control" type="date" formControlName="fecha_pago" [min]="minimoPago(lista)" [max]="hoy" /></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="cobrando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Registrar pago de {{ totalCobro() | pesos }}</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Anulación ---------- -->
+@if (anulando(); as m) {
+  <app-dialogo titulo="Anular multa" [descripcion]="m.alumno_nombre + ' · ' + (m.valor | pesos)" (cerrar)="anulando.set(null)">
+    <form class="formulario" [formGroup]="formAnular" (ngSubmit)="guardarAnulacion()">
+      <p>La multa deja de cobrarse y queda en el historial con el motivo.</p>
+      <label class="campo"><span class="etiqueta">Motivo</span>
+        <textarea class="control" formControlName="motivo" maxlength="255" placeholder="Ej.: estaba con la selección departamental"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="anulando.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Anular multa</button>
+      </div>
+    </form>
+  </app-dialogo>
+}

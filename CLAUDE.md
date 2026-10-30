@@ -201,7 +201,14 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   "Renovar inscripción" si no tiene vigente; en la pestaña de inscripciones "Renovar alumno existente". Pestañas
   móviles: Resumen, Asistencia, Alumnos, Multas. Estilos de formularios de popups (`.formulario`, `.rejilla`,
   `.campo`, `.casilla`, `.acciones`…) ahora globales. La explicación de la regla va en un modal (botón "?" junto al título). 189 pruebas backend, 46 frontend.
-- SIGUIENTE (frontend): Multas y mora, Rifas, Torneos, Avisos, Configuración,
+- HECHO (ayuda + Multas y mora, 2026-10-30): botón "?" en el encabezado de **todas** las vistas
+  (`compartido/ayuda.ts`; el texto de cada una en `core/ayudas.ts`, por ruta; cada paso puede limitarse por
+  permisos). Pantalla `paginas/multas/`: por cobrar agrupadas por alumno (quien más debe primero, "Cobrar todo" o
+  una), pagadas y anuladas (historial), anular con motivo (`multas.anular`), panel "Riesgo de mora" (`GET /mora`,
+  en mora primero, "entra en mora en N d") e indicadores. Backend: `POST /multas/pagos` cobra varias en una
+  transacción (todas o ninguna, filas bloqueadas en orden), `MultaOut.rama`, y `obtener_visible` bloquea la multa
+  (`with_for_update`). Estilos globales nuevos: `.filtros/.filtro`, `.enlace-rojo`. 190 pruebas backend, 53 frontend.
+- SIGUIENTE (frontend): Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.

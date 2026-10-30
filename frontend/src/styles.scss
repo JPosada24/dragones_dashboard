@@ -450,6 +450,55 @@ a.kpi-nota {
   gap: 8px;
 }
 
+/* Filtros en forma de píldora (estado, rama…) */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--borde-fuerte);
+  background: transparent;
+  color: var(--texto-2);
+  font: 600 10.5px var(--f-texto);
+  cursor: pointer;
+
+  .mono {
+    color: var(--texto-3);
+  }
+
+  &[aria-pressed='true'] {
+    background: var(--naranja-tenue);
+    border-color: var(--naranja);
+    color: var(--naranja);
+
+    .mono {
+      color: inherit;
+    }
+  }
+}
+
+/* Acción destructiva pequeña (anular, quitar…) */
+.enlace-rojo {
+  background: none;
+  border: 1px solid rgba(255, 122, 92, 0.4);
+  color: var(--rojo);
+  font: 600 10.5px var(--f-texto);
+  padding: 4px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--rojo-tenue);
+  }
+}
+
 /* Mensajes de resultado */
 .mensaje {
   margin: 0;

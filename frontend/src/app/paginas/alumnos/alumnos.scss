@@ -91,28 +91,6 @@ h2 {
   }
 }
 
-.filtros {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.filtro {
-  padding: 4px 9px;
-  border-radius: 12px;
-  border: 1px solid var(--borde-fuerte);
-  background: transparent;
-  color: var(--texto-2);
-  font: 600 10px var(--f-texto);
-  cursor: pointer;
-
-  &[aria-pressed='true'] {
-    background: var(--naranja-tenue);
-    border-color: var(--naranja);
-    color: var(--naranja);
-  }
-}
-
 .items {
   margin: 0;
   padding: 0;

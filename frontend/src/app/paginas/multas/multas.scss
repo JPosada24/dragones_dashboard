@@ -1,0 +1,248 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.capital {
+  text-transform: capitalize;
+}
+
+.chico {
+  font-size: 10.5px;
+}
+
+.oro {
+  color: var(--oro);
+}
+
+.rojo {
+  color: var(--rojo);
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+  list-style: none;
+}
+
+.nota-chica {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.relleno-nota {
+  padding: 10px 18px;
+}
+
+.enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--oro);
+  font: 600 10.5px var(--f-texto);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ---------- Columnas ---------- */
+.columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+
+  &.una {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  > .panel {
+    overflow: hidden;
+  }
+}
+
+.panel-cabecera {
+  display: grid;
+  gap: 4px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--borde);
+}
+
+/* ---------- Multas agrupadas por alumno ---------- */
+.grupo {
+  border-bottom: 1px solid var(--borde);
+}
+
+.grupo-cabecera,
+.situacion-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.grupo-cabecera {
+  padding: 12px 18px 8px;
+}
+
+.grupo-textos {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.grupo-nombre {
+  font: 600 12.5px var(--f-texto);
+  color: var(--texto);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--oro);
+  }
+}
+
+.multa {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 80px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 18px 6px 30px;
+  font-size: 12px;
+  color: var(--texto-2);
+
+  &:last-child {
+    padding-bottom: 12px;
+  }
+}
+
+.multa-acciones {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- Pagadas / anuladas ---------- */
+.historial {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  .multa {
+    grid-template-columns: minmax(140px, 1fr) 80px minmax(0, 1fr);
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--borde-suave);
+  }
+}
+
+.historial-alumno {
+  display: grid;
+  gap: 2px;
+  color: var(--texto);
+}
+
+.historial-detalle {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Mora ---------- */
+.situacion {
+  display: grid;
+  gap: 8px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--borde-suave);
+  border-left: 2px solid var(--oro);
+
+  &.en-mora {
+    border-left-color: var(--rojo);
+    background: color-mix(in srgb, var(--rojo-oscuro) 6%, transparent);
+  }
+}
+
+.situacion-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip-mora,
+.chip-riesgo {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font: 600 10.5px var(--f-texto);
+}
+
+.chip-mora {
+  background: var(--rojo-tenue);
+  color: var(--rojo);
+}
+
+.chip-riesgo {
+  background: var(--oro-tenue);
+  color: var(--oro);
+}
+
+.deudas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--texto-2);
+  }
+}
+
+@media (max-width: 999px) {
+  .columnas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  .multa {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-left: 18px;
+
+    .multa-acciones {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+    }
+  }
+
+  .historial .multa {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    .historial-detalle {
+      grid-column: 1 / -1;
+    }
+  }
+}

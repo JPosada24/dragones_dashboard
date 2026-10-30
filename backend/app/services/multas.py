@@ -77,8 +77,10 @@ def listar(
 
 
 def obtener_visible(db: Session, usuario: Usuario, multa_id: uuid.UUID) -> Multa:
+    """La multa bloqueada hasta el fin de la transacción: dos cobros a la vez no la pagan dos veces."""
     multa = db.scalar(
         select(Multa).join(Multa.alumno).where(Multa.id == multa_id, alumnos.filtro_visibles(usuario))
+        .with_for_update(of=Multa)
     )
     if multa is None:
         raise NoEncontrado("Multa no encontrada.")
@@ -100,6 +102,22 @@ def pagar(db: Session, m: Multa, *, fecha_pago: date, actor: Usuario, ip: str | 
         antes={"estado": "pendiente"}, despues={"estado": "pagada", "fecha_pago": fecha_pago.isoformat()},
     )
     return m
+
+
+def pagar_varias(
+    db: Session, usuario: Usuario, *, multa_ids: list[uuid.UUID], fecha_pago: date, actor: Usuario, ip: str | None
+) -> list[Multa]:
+    """Cobra varias multas de una vez (p. ej. todo lo que debe un alumno). Todas o ninguna."""
+    multas = list(db.scalars(
+        select(Multa).join(Multa.alumno)
+        .where(Multa.id.in_(multa_ids), alumnos.filtro_visibles(usuario))
+        .order_by(Multa.id).with_for_update(of=Multa)  # orden fijo: evita bloqueos cruzados
+    ).unique())
+    if len(multas) != len(set(multa_ids)):
+        raise NoEncontrado("Alguna de las multas no existe.")
+    for m in multas:
+        pagar(db, m, fecha_pago=fecha_pago, actor=actor, ip=ip)
+    return multas
 
 
 def anular(db: Session, m: Multa, *, motivo: str, actor: Usuario, ip: str | None) -> Multa:

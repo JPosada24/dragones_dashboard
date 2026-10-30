@@ -166,6 +166,7 @@ class MultaOut(BaseModel):
     id: uuid.UUID
     alumno_id: uuid.UUID
     alumno_nombre: str
+    rama: str
     sesion_id: uuid.UUID
     fecha_sesion: date
     valor: int
@@ -175,6 +176,11 @@ class MultaOut(BaseModel):
 
 
 class MultaPagoIn(_Entrada):
+    fecha_pago: date
+
+
+class MultasPagoIn(_Entrada):
+    multa_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
     fecha_pago: date
 
 

@@ -75,20 +75,6 @@ h2 {
   border-radius: 4px;
 }
 
-.enlace-rojo {
-  background: none;
-  border: 1px solid rgba(255, 122, 92, 0.4);
-  color: var(--rojo);
-  font: 600 11px var(--f-texto);
-  padding: 6px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--rojo-tenue);
-  }
-}
-
 /* ---------- Controles ---------- */
 .controles {
   display: flex;
@@ -256,28 +242,6 @@ h2 {
   }
 }
 
-.filtros {
-  display: flex;
-  gap: 6px;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--borde-suave);
-}
-
-.filtro {
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--borde-fuerte);
-  background: transparent;
-  color: var(--texto-2);
-  font: 600 10.5px var(--f-texto);
-  cursor: pointer;
-
-  &[aria-pressed='true'] {
-    background: var(--naranja-tenue);
-    border-color: var(--naranja);
-    color: var(--naranja);
-  }
-}
 .planilla {
   overflow: hidden;
 }
@@ -507,4 +471,10 @@ h2 {
       display: none;
     }
   }
+}
+
+/* Filtro de rama dentro de la planilla */
+.planilla .filtros {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--borde-suave);
 }

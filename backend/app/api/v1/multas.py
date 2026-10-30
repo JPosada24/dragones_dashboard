@@ -7,7 +7,7 @@ from app.api.deps import ip_cliente, requiere, requiere_alguno
 from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.asistencia import Multa
-from app.schemas.asistencia import MultaAnularIn, MultaOut, MultaPagoIn
+from app.schemas.asistencia import MultaAnularIn, MultaOut, MultaPagoIn, MultasPagoIn
 from app.schemas.comunes import Rama
 from app.services import multas as servicio
 
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/multas", tags=["multas"])
 def multa_a_out(m: Multa) -> MultaOut:
     return MultaOut(
         id=m.id, alumno_id=m.alumno_id, alumno_nombre=f"{m.alumno.nombres} {m.alumno.apellidos}",
-        sesion_id=m.sesion_id, fecha_sesion=m.sesion.fecha, valor=m.valor, estado=m.estado,
+        rama=m.alumno.rama, sesion_id=m.sesion_id, fecha_sesion=m.sesion.fecha, valor=m.valor, estado=m.estado,
         fecha_pago=m.fecha_pago, motivo_anulacion=m.motivo_anulacion,
     )
 
@@ -33,6 +33,21 @@ def listar(
     db: Session = Depends(get_db),
 ) -> list[MultaOut]:
     filas = servicio.listar(db, usuario, estado=estado, alumno_id=alumno_id, rama=rama, skip=skip, limit=limit)
+    return [multa_a_out(m) for m in filas]
+
+
+@router.post("/pagos", response_model=list[MultaOut])
+def pagar_varias(
+    datos: MultasPagoIn,
+    request: Request,
+    actor: Usuario = Depends(requiere("pagos.registrar")),
+    db: Session = Depends(get_db),
+) -> list[MultaOut]:
+    """Cobra varias multas a la vez (todas o ninguna)."""
+    filas = servicio.pagar_varias(
+        db, actor, multa_ids=datos.multa_ids, fecha_pago=datos.fecha_pago, actor=actor, ip=ip_cliente(request)
+    )
+    db.commit()
     return [multa_a_out(m) for m in filas]
 
 
