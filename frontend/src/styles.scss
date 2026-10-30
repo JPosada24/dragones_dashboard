@@ -191,6 +191,10 @@ button {
   font-size: 11px;
 }
 
+.boton.peligro {
+  background: var(--rojo-oscuro);
+}
+
 /* Campos de formulario */
 .control {
   width: 100%;

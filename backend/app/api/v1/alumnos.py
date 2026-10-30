@@ -13,9 +13,10 @@ from app.schemas.alumnos import (
     AcudienteVinculadoOut, AlumnoActualizar, AlumnoCrear, AlumnoOut, DocumentoIdentidadOut, DocumentoOut,
     TipoArchivo, VinculoIn,
 )
+from app.schemas.asistencia import HistorialOut
 from app.schemas.rifas import DeudaRifaOut, EstadoCuentaOut
 from app.schemas.comunes import Rama
-from app.services import alumnos as servicio, configuracion, documentos, estado_cuenta
+from app.services import alumnos as servicio, asistencia, configuracion, documentos, estado_cuenta
 from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/alumnos", tags=["alumnos"])
@@ -24,7 +25,7 @@ VER_ALUMNOS = requiere_alguno("alumnos.ver_todos", "alumnos.ver_rama", "alumnos.
 VER_DOCUMENTOS = requiere_alguno("alumnos.editar", "alumnos.ver_propios")
 
 
-def alumno_a_out(alumno: Alumno, edad_mayoria: int) -> AlumnoOut:
+def alumno_a_out(alumno: Alumno, edad_mayoria: int, inscripcion_estado: str | None) -> AlumnoOut:
     anios = edad(alumno.fecha_nacimiento, hoy())
     return AlumnoOut(
         id=alumno.id,
@@ -42,6 +43,7 @@ def alumno_a_out(alumno: Alumno, edad_mayoria: int) -> AlumnoOut:
         eps=alumno.eps,
         usuario_id=alumno.usuario_id,
         activo=alumno.activo,
+        inscripcion_estado=inscripcion_estado,
         acudientes=[
             AcudienteVinculadoOut(
                 acudiente_id=v.acudiente.id, nombres=v.acudiente.nombres, apellidos=v.acudiente.apellidos,
@@ -53,21 +55,25 @@ def alumno_a_out(alumno: Alumno, edad_mayoria: int) -> AlumnoOut:
 
 
 def _out(db: Session, alumno: Alumno) -> AlumnoOut:
-    return alumno_a_out(alumno, configuracion.obtener(db, "edad_mayoria"))
+    estado = servicio.estados_inscripcion(db, [alumno.id], hoy().year).get(alumno.id)
+    return alumno_a_out(alumno, configuracion.obtener(db, "edad_mayoria"), estado)
 
 
 @router.get("", response_model=list[AlumnoOut])
 def listar(
     rama: Rama | None = None,
     buscar: str | None = Query(None, min_length=2, max_length=80),
+    activo: bool | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     usuario: Usuario = Depends(VER_ALUMNOS),
     db: Session = Depends(get_db),
 ) -> list[AlumnoOut]:
+    """Busca por nombre o apellido (parcial) o por número de documento (completo, exacto)."""
     edad_mayoria = configuracion.obtener(db, "edad_mayoria")
-    filas = servicio.listar(db, usuario, rama=rama, buscar=buscar, skip=skip, limit=limit)
-    return [alumno_a_out(a, edad_mayoria) for a in filas]
+    filas = servicio.listar(db, usuario, rama=rama, buscar=buscar, activo=activo, skip=skip, limit=limit)
+    estados = servicio.estados_inscripcion(db, [a.id for a in filas], hoy().year)
+    return [alumno_a_out(a, edad_mayoria, estados.get(a.id)) for a in filas]
 
 
 @router.post("", response_model=AlumnoOut, status_code=status.HTTP_201_CREATED)
@@ -118,6 +124,18 @@ def ver_estado_cuenta(
         rifas=[DeudaRifaOut(rifa=r.rifa, saldo=r.saldo) for r in e.rifas], total=e.total, al_dia=e.al_dia,
         en_mora=e.en_mora, entra_en_mora=e.entra_en_mora,
     )
+
+
+@router.get("/{alumno_id}/asistencia", response_model=list[HistorialOut])
+def historial_asistencia(
+    alumno_id: uuid.UUID,
+    limit: int = Query(30, ge=1, le=200),
+    usuario: Usuario = Depends(VER_ALUMNOS),
+    db: Session = Depends(get_db),
+) -> list[HistorialOut]:
+    """Últimas asistencias del alumno y la multa de cada una (si la hubo)."""
+    alumno = servicio.obtener_visible(db, usuario, alumno_id)
+    return [HistorialOut(**vars(r)) for r in asistencia.historial_alumno(db, alumno, limit=limit)]
 
 
 @router.get("/{alumno_id}/documento-identidad", response_model=DocumentoIdentidadOut)

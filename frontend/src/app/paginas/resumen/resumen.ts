@@ -5,18 +5,11 @@ import { RouterLink } from '@angular/router';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 
 import { isoLocal, sumarDias } from '../../compartido/fechas';
+import { ESTADO_INSCRIPCION } from '../../compartido/estados';
 import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
 import { AlumnoBasico, EstadoCuenta, ResumenStaff, SesionBasica } from './resumen.modelos';
-
-const ESTADO_INSCRIPCION: Record<string, string> = {
-  pendiente_pago: 'Pendiente de pago',
-  activo: 'Activa',
-  a_expulsar: 'En revisión',
-  expulsado: 'Expulsado',
-  rechazado: 'Rechazada',
-};
 
 @Component({
   selector: 'app-resumen',

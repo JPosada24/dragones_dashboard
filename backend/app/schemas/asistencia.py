@@ -111,6 +111,15 @@ class FilaPlanillaOut(BaseModel):
     multa: str | None
 
 
+class HistorialOut(BaseModel):
+    sesion_id: uuid.UUID
+    fecha: date
+    hora_inicio: time
+    estado: str
+    multa_valor: int | None
+    multa_estado: str | None
+
+
 class JustificarIn(_Entrada):
     alumno_id: uuid.UUID
     motivo: str = Field(min_length=10, max_length=500)

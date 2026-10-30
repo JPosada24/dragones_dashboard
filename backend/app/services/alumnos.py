@@ -1,7 +1,7 @@
 """Alumnos y acudientes: alta, edición, vínculos y qué alumnos puede ver cada rol."""
 import uuid
 from datetime import date
-from typing import Any
+from typing import Any, get_args
 
 from sqlalchemy import ColumnElement, false, or_, select, true
 from sqlalchemy.orm import Session
@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from app.core import cifrado
 from app.core.fechas import edad, hoy
 from app.models.acceso import Usuario
-from app.models.alumnos import Acudiente, Alumno, AlumnoAcudiente
+from app.models.alumnos import Acudiente, Alumno, AlumnoAcudiente, Inscripcion
+from app.models.dominio import ESTADOS_VIGENTES
+from app.schemas.comunes import TipoDocumento, normalizar_documento
 from app.services import auditoria, configuracion
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
 
@@ -136,17 +138,48 @@ def es_propio(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> bool:
     return db.scalar(select(Alumno.id).where(Alumno.id == alumno_id, filtro_propios(usuario))) is not None
 
 
+def _indices_documento(texto: str) -> list[str]:
+    """Índices ciegos del texto como número de documento completo, en cada tipo (búsqueda exacta, nunca parcial)."""
+    try:
+        numero = normalizar_documento(texto)
+    except ValueError:
+        return []
+    return [cifrado.indice_ciego(f"{tipo}:{numero}") for tipo in get_args(TipoDocumento)]
+
+
 def listar(
-    db: Session, usuario: Usuario, *, rama: str | None, buscar: str | None, skip: int, limit: int
+    db: Session, usuario: Usuario, *, rama: str | None, buscar: str | None, activo: bool | None = None,
+    skip: int, limit: int,
 ) -> list[Alumno]:
     q = select(Alumno).where(filtro_visibles(usuario))
     if rama:
         q = q.where(Alumno.rama == rama)
+    if activo is not None:
+        q = q.where(Alumno.activo.is_(activo))
     if buscar:
-        q = q.where(or_(
-            Alumno.nombres.icontains(buscar, autoescape=True), Alumno.apellidos.icontains(buscar, autoescape=True)
-        ))
+        condiciones = [
+            Alumno.nombres.icontains(buscar, autoescape=True), Alumno.apellidos.icontains(buscar, autoescape=True),
+        ]
+        if indices := _indices_documento(buscar):
+            condiciones.append(Alumno.documento_indice.in_(indices))
+        q = q.where(or_(*condiciones))
     return list(db.scalars(q.order_by(Alumno.apellidos, Alumno.nombres).offset(skip).limit(limit)))
+
+
+def estados_inscripcion(db: Session, alumno_ids: list[uuid.UUID], anio: int) -> dict[uuid.UUID, str]:
+    """Estado de la inscripción de cada alumno en el año: la vigente si la hay; si no, la más reciente."""
+    if not alumno_ids:
+        return {}
+    filas = db.execute(
+        select(Inscripcion.alumno_id, Inscripcion.estado)
+        .where(Inscripcion.alumno_id.in_(alumno_ids), Inscripcion.anio == anio)
+        .order_by(Inscripcion.creado_en)
+    ).all()
+    estados: dict[uuid.UUID, str] = {}
+    for alumno_id, estado in filas:
+        if estados.get(alumno_id) not in ESTADOS_VIGENTES:
+            estados[alumno_id] = estado
+    return estados
 
 
 # ---------- Alumnos ----------

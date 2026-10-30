@@ -424,3 +424,28 @@ def test_alerta_con_cuatro_ausencias_seguidas_y_la_justificada_rompe_la_racha(cl
     assert _cerrar(client, h_admin)["sesiones"] == 4
     alertas = client.get(f"{S}/alertas", headers=h_admin).json()
     assert [(a["alumno_id"], a["inasistencias_seguidas"]) for a in alertas] == [(faltona["id"], 4)]
+
+
+# ---------- Historial por alumno ----------
+def test_historial_del_alumno_con_multas_y_alcance(client, h_admin, reloj, familia, crear_usuario, auth_header):
+    hija = familia["hija"]
+    otra = _alumno_inscrito(client, h_admin, documento="2000000009", rama="masculina")
+    sesion = _sesion(client, h_admin)
+    _marcar(client, h_admin, sesion["id"], (otra["id"], "presente"))
+    reloj(_en(LUNES, 23, 59))
+    _cerrar(client, h_admin)
+
+    r = client.get(f"/api/v1/alumnos/{hija['id']}/asistencia", headers=familia["h"])
+    assert r.status_code == 200, r.text
+    assert [(f["fecha"], f["estado"], f["multa_valor"], f["multa_estado"]) for f in r.json()] == [
+        (LUNES.isoformat(), "ausente", 2000, "pendiente")
+    ]
+    presente = client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=h_admin).json()
+    assert [(f["estado"], f["multa_valor"]) for f in presente] == [("presente", None)]
+
+    # La familia no ve el historial de otro alumno, ni un entrenador el de otra rama: 404.
+    assert client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=familia["h"]).status_code == 404
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    h_coach = auth_header("coach@club.com")
+    assert client.get(f"/api/v1/alumnos/{otra['id']}/asistencia", headers=h_coach).status_code == 404
+    assert client.get(f"/api/v1/alumnos/{hija['id']}/asistencia", headers=h_coach).status_code == 200

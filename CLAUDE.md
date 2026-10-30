@@ -165,7 +165,16 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   del cierre de esa sesión (si no, el cierre multaría a todos); las de torneo/horario no (las maneja la
   programación). Botón "Deshacer cancelación" / "Entrenar este festivo". Avisos: **campana desplegable**
   (`layout/campana/`), ya no hay página `/notificaciones`. 181 pruebas backend, 28 frontend.
-- SIGUIENTE (frontend): Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
+- HECHO (Alumnos, 2026-10-30): pantalla `paginas/alumnos/` como el prototipo: lista (búsqueda con espera de 300 ms,
+  filtros de rama solo con `alumnos.ver_todos`, "Inactivos"; punto de color por inscripción) y ficha (`?id=` en la
+  URL): datos, acudientes, estado de cuenta, historial de asistencia con multas y documentos (subir/descargar con
+  token/eliminar). Popups: nuevo/editar alumno, agregar acudiente (se busca por documento completo y se reutiliza;
+  si no existe se crea, y un reintento no lo duplica), quitar acudiente, subir/eliminar documento. "Ver completo"
+  del documento solo Admin/SA (auditado). La familia ve solo lo suyo, sin botones de edición. En celular: lista o ficha.
+  Backend: `GET /alumnos` acepta `activo` y busca también por documento **completo** (índice ciego en cada tipo;
+  nunca parcial) y trae `inscripcion_estado` del año; `GET /alumnos/{id}/asistencia` (historial + multa, mismo
+  alcance que la ficha). Compartidos: `compartido/estados.ts`, `.boton.peligro` global. 184 pruebas backend, 34 frontend.
+- SIGUIENTE (frontend): Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.

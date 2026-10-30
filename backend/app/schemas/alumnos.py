@@ -146,6 +146,7 @@ class AlumnoOut(BaseModel):
     eps: str | None
     usuario_id: uuid.UUID | None
     activo: bool
+    inscripcion_estado: str | None  # del año en curso
     acudientes: list[AcudienteVinculadoOut]
 
 

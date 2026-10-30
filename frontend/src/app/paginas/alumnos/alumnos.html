@@ -1,0 +1,412 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<div class="columnas" [class.con-ficha]="seleccionadoId()">
+  <!-- ---------- Lista ---------- -->
+  <section class="panel lista" aria-label="Lista de alumnos">
+    <div class="lista-cabecera">
+      @if (esStaff()) {
+        <div class="fila-busqueda">
+          <label class="solo-lectores" for="buscar-alumno">Buscar alumno</label>
+          <input id="buscar-alumno" class="control" type="search" placeholder="Buscar por nombre o documento…"
+                 maxlength="80" [value]="buscar()" (input)="escribirBusqueda($any($event.target).value)" />
+          @if (puedeEditar()) {
+            <button type="button" class="boton chico" (click)="abrirNuevo()" aria-label="Nuevo alumno" title="Nuevo alumno">
+              <span class="icono" aria-hidden="true">person_add</span>
+            </button>
+          }
+        </div>
+        <div class="filtros" role="group" aria-label="Filtros">
+          @if (veTodasLasRamas()) {
+            <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === ''" (click)="cambiarRama('')">Todos</button>
+            <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'femenina'" (click)="cambiarRama('femenina')">Femenina</button>
+            <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'masculina'" (click)="cambiarRama('masculina')">Masculina</button>
+          }
+          <button type="button" class="filtro" [attr.aria-pressed]="verInactivos()" (click)="alternarInactivos()">Inactivos</button>
+        </div>
+      } @else {
+        <h2>Mis alumnos</h2>
+      }
+    </div>
+
+    @if (errorLista()) {
+      <p class="vacio" role="alert">No se pudo cargar la lista. Recarga la página.</p>
+    } @else if (alumnos(); as lista) {
+      <ul class="items">
+        @for (a of lista; track a.id) {
+          <li>
+            <button type="button" class="item" [class.activa]="a.id === seleccionadoId()"
+                    [attr.aria-current]="a.id === seleccionadoId() ? 'true' : null" (click)="seleccionar(a.id)">
+              <span class="avatar" aria-hidden="true">{{ iniciales(a) }}</span>
+              <span class="item-textos">
+                <span class="item-nombre">{{ a.nombres }} {{ a.apellidos }}</span>
+                <span class="item-nota mono">{{ a.rama }} · {{ a.edad }} años</span>
+              </span>
+              <span class="punto" [attr.data-tono]="tono(a)" role="img"
+                    [attr.aria-label]="a.activo ? (a.inscripcion_estado ? estadoInscripcion[a.inscripcion_estado] : 'Sin inscripción este año') : 'Inactivo'"></span>
+            </button>
+          </li>
+        } @empty {
+          <li class="vacio">{{ buscar().trim().length >= 2 ? 'Nadie coincide con la búsqueda.' : 'No hay alumnos para mostrar.' }}</li>
+        }
+      </ul>
+      <p class="pie-lista">
+        {{ lista.length }} {{ lista.length === 1 ? 'alumno' : 'alumnos' }}{{ verInactivos() ? ' inactivos' : '' }}
+        @if (lista.length >= limiteLista) { · usa la búsqueda para ver más }
+      </p>
+    } @else {
+      <p class="vacio">Cargando…</p>
+    }
+  </section>
+
+  <!-- ---------- Ficha ---------- -->
+  <div class="ficha">
+    @if (seleccionadoId()) {
+      <button type="button" class="boton secundario chico volver" (click)="volverALista()">
+        <span class="icono" aria-hidden="true">arrow_back</span> Lista
+      </button>
+    }
+
+    @if (errorFicha()) {
+      <p class="panel vacio" role="alert">No se pudo cargar la ficha del alumno.</p>
+    } @else if (alumno(); as a) {
+      <!-- Encabezado -->
+      <section class="panel encabezado">
+        <span class="foto" aria-hidden="true">{{ iniciales(a) }}</span>
+        <div class="encabezado-textos">
+          <div class="encabezado-fila">
+            <div class="nombre-bloque">
+              <h2 class="nombre">{{ a.nombres }} {{ a.apellidos }}</h2>
+              <div class="meta">
+                <span class="chip-rama">{{ a.rama }}</span>
+                <span>{{ a.edad }} años{{ a.es_menor ? ' · menor de edad' : '' }}</span>
+                <span class="mono apagado">
+                  {{ a.tipo_documento }} {{ documentoCompleto() ?? a.documento }}
+                </span>
+                @if (veTodasLasRamas()) {
+                  @if (documentoCompleto()) {
+                    <button type="button" class="enlace" (click)="documentoCompleto.set(null)">Ocultar</button>
+                  } @else {
+                    <button type="button" class="enlace" [disabled]="ocupado()" (click)="verDocumento(a)"
+                            title="Queda registrado en la auditoría">Ver completo</button>
+                  }
+                }
+              </div>
+            </div>
+            @if (puedeEditar()) {
+              <button type="button" class="boton secundario chico" (click)="abrirEditar(a)">
+                <span class="icono" aria-hidden="true">edit</span> Editar
+              </button>
+            }
+          </div>
+          <div class="estados">
+            @if (!a.activo) {
+              <span class="estado" data-tono="mal"><i></i>Inactivo</span>
+            }
+            <span class="estado" [attr.data-tono]="tono(a)">
+              <i></i>Inscripción {{ hoy.slice(0, 4) }}:
+              <b>{{ a.inscripcion_estado ? estadoInscripcion[a.inscripcion_estado] : 'sin inscripción' }}</b>
+            </span>
+            @if (cuenta(); as c) {
+              <span class="estado" [attr.data-tono]="c.en_mora ? 'mal' : c.al_dia ? 'ok' : 'pendiente'">
+                <i></i>{{ c.en_mora ? 'En mora' : c.al_dia ? 'A paz y salvo' : 'Con saldo' }}
+                @if (!c.al_dia) { <b class="mono">{{ c.total | pesos }}</b> }
+              </span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <div class="rejilla-ficha">
+        <div class="columna">
+          <!-- Datos personales -->
+          <section class="panel relleno">
+            <h2>Datos personales</h2>
+            <dl class="datos">
+              <div><dt>Nacimiento</dt><dd>{{ a.fecha_nacimiento | date: 'd MMM y' }}</dd></div>
+              <div><dt>Teléfono</dt><dd class="mono">{{ a.telefono || '—' }}</dd></div>
+              <div><dt>Correo</dt><dd>{{ a.email || '—' }}</dd></div>
+              <div><dt>Dirección</dt><dd>{{ a.direccion || '—' }}</dd></div>
+              <div><dt>EPS</dt><dd>{{ a.eps || '—' }}</dd></div>
+            </dl>
+          </section>
+
+          <!-- Acudientes -->
+          <section class="panel relleno">
+            <div class="fila-base">
+              <h2>Acudientes</h2>
+              @if (puedeEditar()) {
+                <button type="button" class="boton secundario chico" (click)="abrirAgregarAcudiente()">
+                  <span class="icono" aria-hidden="true">add</span> Agregar
+                </button>
+              }
+            </div>
+            @for (v of a.acudientes; track v.acudiente_id) {
+              <div class="acudiente">
+                <div class="acudiente-textos">
+                  <div class="acudiente-nombre">
+                    {{ v.nombres }} {{ v.apellidos }}
+                    @if (v.principal) { <span class="chip-principal">principal</span> }
+                  </div>
+                  <div class="nota-chica"><span class="capital">{{ v.parentesco }}</span> · <span class="mono">{{ v.telefono }}</span></div>
+                </div>
+                @if (puedeEditar()) {
+                  <button type="button" class="boton-icono" (click)="abrirQuitarAcudiente(v)"
+                          [attr.aria-label]="'Quitar a ' + v.nombres + ' ' + v.apellidos">
+                    <span class="icono" aria-hidden="true">link_off</span>
+                  </button>
+                }
+              </div>
+            } @empty {
+              <p class="nota-chica">
+                {{ a.es_menor ? 'Sin acudientes: un menor de edad debe tener al menos uno.'
+                  : 'Mayor de edad: no requiere acudiente. Los avisos de pagos y multas le llegan directamente.' }}
+              </p>
+            }
+          </section>
+
+          <!-- Estado de cuenta -->
+          @if (cuenta(); as c) {
+            <section class="panel relleno">
+              <h2>Estado de cuenta</h2>
+              <div class="cuenta-fila"><span>Inscripción</span><span class="mono">{{ c.inscripcion_saldo | pesos }}</span></div>
+              <div class="cuenta-fila"><span>Multas ({{ c.multas_pendientes }})</span><span class="mono">{{ c.multas_saldo | pesos }}</span></div>
+              @for (r of c.rifas; track r.rifa) {
+                <div class="cuenta-fila"><span>{{ r.rifa }}</span><span class="mono">{{ r.saldo | pesos }}</span></div>
+              }
+              <div class="cuenta-fila total">
+                <span>Total por pagar</span><span class="mono" [class.oro]="c.total > 0">{{ c.total | pesos }}</span>
+              </div>
+              @if (c.entra_en_mora && !c.al_dia && !c.en_mora) {
+                <p class="nota-chica">Si no paga antes del {{ c.entra_en_mora | date: 'd MMM y' }}, la inscripción pasa a revisión por mora.</p>
+              }
+            </section>
+          }
+        </div>
+
+        <div class="columna">
+          <!-- Historial de asistencia -->
+          <section class="panel relleno">
+            <div class="fila-base">
+              <h2>Historial de asistencia</h2>
+              @if (asistenciaResumen().total) {
+                <span class="mono chico apagado">asistió {{ asistenciaResumen().asistio }}/{{ asistenciaResumen().total }}</span>
+              }
+            </div>
+            @for (h of historial(); track h.sesion_id) {
+              <div class="historial" [attr.data-estado]="h.estado">
+                <span class="mono historial-fecha">{{ h.fecha | date: 'EEE d MMM' }}</span>
+                <span class="historial-estado">{{ estadoAsistencia[h.estado] }}</span>
+                @if (h.multa_valor !== null) {
+                  <span class="mono chico" [class.tachado]="h.multa_estado === 'anulada'"
+                        [class.oro]="h.multa_estado === 'pendiente'">
+                    multa {{ h.multa_valor | pesos }} · {{ h.multa_estado }}
+                  </span>
+                }
+              </div>
+            } @empty {
+              <p class="nota-chica">Aún no hay entrenamientos registrados.</p>
+            }
+          </section>
+
+          <!-- Documentos -->
+          <section class="panel relleno">
+            <div class="fila-base">
+              <h2>Documentos</h2>
+              @if (puedeEditar()) {
+                <button type="button" class="boton secundario chico" (click)="abrirSubir()">
+                  <span class="icono" aria-hidden="true">upload</span> Subir
+                </button>
+              }
+            </div>
+            @for (d of documentos(); track d.id) {
+              <div class="documento">
+                <span class="icono doc-icono" aria-hidden="true">{{ d.mime === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</span>
+                <div class="documento-textos">
+                  <div class="documento-tipo">{{ textoArchivo(d.tipo) }}</div>
+                  <div class="nota-chica documento-nombre">{{ d.nombre_original }} · {{ tamano(d.tamano) }} · {{ d.creado_en | date: 'd MMM y' }}</div>
+                </div>
+                <button type="button" class="boton-icono" [disabled]="ocupado()" (click)="descargar(d)"
+                        [attr.aria-label]="'Descargar ' + d.nombre_original">
+                  <span class="icono" aria-hidden="true">download</span>
+                </button>
+                @if (puedeEditar()) {
+                  <button type="button" class="boton-icono peligro" (click)="abrirEliminarDocumento(d)"
+                          [attr.aria-label]="'Eliminar ' + d.nombre_original">
+                    <span class="icono" aria-hidden="true">delete</span>
+                  </button>
+                }
+              </div>
+            } @empty {
+              <p class="nota-chica">Sin documentos.</p>
+            }
+          </section>
+        </div>
+      </div>
+    } @else if (seleccionadoId()) {
+      <p class="panel vacio">Cargando…</p>
+    } @else {
+      <div class="panel vacio sin-seleccion">
+        <span class="icono" aria-hidden="true">badge</span>
+        <p>Elige un alumno de la lista para ver su ficha.</p>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- ---------- Ventanas emergentes ---------- -->
+@if (editandoAlumno(); as modo) {
+  <app-dialogo [titulo]="modo === 'nuevo' ? 'Nuevo alumno' : 'Editar alumno'" ancho="ancho"
+               [descripcion]="modo === 'nuevo' ? 'Los menores de edad necesitan un acudiente.' : ''"
+               (cerrar)="editandoAlumno.set(null)">
+    <form class="formulario" [formGroup]="formAlumno" (ngSubmit)="guardarAlumno()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombres</span>
+          <input class="control" formControlName="nombres" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Apellidos</span>
+          <input class="control" formControlName="apellidos" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Tipo de documento</span>
+          <select class="control" formControlName="tipo_documento">
+            @for (t of tiposDocumento; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
+          </select></label>
+        <label class="campo"><span class="etiqueta">Número de documento</span>
+          <input class="control" formControlName="documento" autocomplete="off"
+                 [placeholder]="modo === 'editar' ? 'Déjalo vacío para no cambiarlo' : ''" /></label>
+        <label class="campo"><span class="etiqueta">Fecha de nacimiento</span>
+          <input class="control" type="date" formControlName="fecha_nacimiento" [max]="hoy" /></label>
+        <label class="campo"><span class="etiqueta">Rama</span>
+          @if (ramaPropia(); as r) {
+            <input class="control capital" [value]="r" disabled />
+          } @else {
+            <select class="control" formControlName="rama">
+              <option value="femenina">Femenina</option>
+              <option value="masculina">Masculina</option>
+            </select>
+          }
+        </label>
+        <label class="campo"><span class="etiqueta">Teléfono (opcional)</span>
+          <input class="control" type="tel" formControlName="telefono" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Correo (opcional)</span>
+          <input class="control" type="email" formControlName="email" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Dirección (opcional)</span>
+          <input class="control" formControlName="direccion" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">EPS (opcional)</span>
+          <input class="control" formControlName="eps" autocomplete="off" /></label>
+      </div>
+      @if (modo === 'editar') {
+        <label class="casilla">
+          <input type="checkbox" formControlName="activo" />
+          <span>Alumno activo <span class="nota-chica">(desmárcalo si dejó el club; su historial se conserva)</span></span>
+        </label>
+      } @else {
+        <fieldset class="grupo-acudiente">
+          <legend>Acudiente <span class="nota-chica">(obligatorio si es menor de edad)</span></legend>
+          <ng-container *ngTemplateOutlet="acudienteCampos" />
+        </fieldset>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editandoAlumno.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">{{ modo === 'nuevo' ? 'Registrar alumno' : 'Guardar cambios' }}</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (agregandoAcudiente()) {
+  <app-dialogo titulo="Agregar acudiente" descripcion="Búscalo por documento: si ya está registrado (por ejemplo, de un hermano) se reutiliza."
+               (cerrar)="agregandoAcudiente.set(false)">
+    <form class="formulario" [formGroup]="formAcudiente" (ngSubmit)="vincularAcudiente()">
+      <ng-container *ngTemplateOutlet="acudienteCampos" />
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="agregandoAcudiente.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado() || busquedaAcudiente() === null">Vincular</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- Campos del acudiente (en "Nuevo alumno" y en "Agregar acudiente") -->
+<ng-template #acudienteCampos>
+  <div class="formulario" [formGroup]="formAcudiente">
+    <div class="rejilla">
+      <label class="campo"><span class="etiqueta">Tipo de documento</span>
+        <select class="control" formControlName="tipo_documento" (change)="documentoAcudienteCambio()">
+          @for (t of tiposDocumento; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
+        </select></label>
+      <label class="campo"><span class="etiqueta">Número de documento</span>
+        <span class="con-boton">
+          <input class="control" formControlName="documento" autocomplete="off" (input)="documentoAcudienteCambio()"
+                 (keydown.enter)="$event.preventDefault(); buscarAcudiente()" />
+          <button type="button" class="boton secundario chico" (click)="buscarAcudiente()">Buscar</button>
+        </span></label>
+    </div>
+    @if (acudienteEncontrado(busquedaAcudiente()); as encontrado) {
+      <p class="encontrado"><span class="icono" aria-hidden="true">check_circle</span>
+        Ya registrado: <b>{{ encontrado.nombres }} {{ encontrado.apellidos }}</b> · <span class="mono">{{ encontrado.telefono }}</span></p>
+    }
+    @if (esAcudienteNuevo(busquedaAcudiente())) {
+      <p class="nota-chica">No está registrado: completa sus datos y se creará al guardar.</p>
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombres</span><input class="control" formControlName="nombres" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Apellidos</span><input class="control" formControlName="apellidos" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Teléfono</span><input class="control" type="tel" formControlName="telefono" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Correo (opcional)</span><input class="control" type="email" formControlName="email" autocomplete="off" /></label>
+      </div>
+    }
+    @if (busquedaAcudiente() !== null) {
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Parentesco</span>
+          <input class="control" formControlName="parentesco" placeholder="Madre, padre, tía…" autocomplete="off" /></label>
+        <label class="casilla alineada"><input type="checkbox" formControlName="principal" /><span>Acudiente principal</span></label>
+      </div>
+    }
+  </div>
+</ng-template>
+
+@if (quitandoAcudiente(); as v) {
+  <app-dialogo titulo="Quitar acudiente" (cerrar)="quitandoAcudiente.set(null)">
+    <div class="formulario">
+      <p>¿Quitar a <b>{{ v.nombres }} {{ v.apellidos }}</b> como acudiente? Sus datos se conservan; solo se desvincula de este alumno.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="quitandoAcudiente.set(null)">Volver</button>
+        <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="quitarAcudiente()">Quitar</button>
+      </div>
+    </div>
+  </app-dialogo>
+}
+
+@if (subiendoDocumento()) {
+  <app-dialogo titulo="Subir documento" descripcion="PDF, JPG o PNG. El archivo se guarda cifrado." (cerrar)="subiendoDocumento.set(false)">
+    <form class="formulario" [formGroup]="formDocumento" (ngSubmit)="subirDocumento()">
+      <label class="campo"><span class="etiqueta">Tipo</span>
+        <select class="control" formControlName="tipo">
+          @for (t of tiposArchivo; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
+        </select></label>
+      <label class="campo"><span class="etiqueta">Archivo</span>
+        <input class="control" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+               (change)="elegirArchivo($event)" /></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="subiendoDocumento.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado() || !archivo()">Subir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (eliminandoDocumento(); as d) {
+  <app-dialogo titulo="Eliminar documento" (cerrar)="eliminandoDocumento.set(null)">
+    <div class="formulario">
+      <p>¿Eliminar <b>{{ d.nombre_original }}</b> ({{ textoArchivo(d.tipo) }})? No se puede deshacer.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="eliminandoDocumento.set(null)">Volver</button>
+        <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="eliminarDocumento()">Eliminar</button>
+      </div>
+    </div>
+  </app-dialogo>
+}

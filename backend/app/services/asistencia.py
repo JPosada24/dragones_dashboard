@@ -432,3 +432,27 @@ def alertas(db: Session, usuario: Usuario | None) -> list[Alerta]:
         if racha >= minimo:
             resultado.append(Alerta(alumno, racha, desde))
     return resultado
+
+
+# ---------- Historial de un alumno ----------
+@dataclass
+class RegistroHistorial:
+    sesion_id: uuid.UUID
+    fecha: date
+    hora_inicio: time
+    estado: str
+    multa_valor: int | None
+    multa_estado: str | None
+
+
+def historial_alumno(db: Session, alumno: Alumno, *, limit: int) -> list[RegistroHistorial]:
+    """Últimas asistencias registradas del alumno (sesiones no canceladas), con su multa si la hubo."""
+    filas = db.execute(
+        select(Sesion.id, Sesion.fecha, Sesion.hora_inicio, Asistencia.estado, Multa.valor, Multa.estado)
+        .join(Asistencia, Asistencia.sesion_id == Sesion.id)
+        .outerjoin(Multa, (Multa.sesion_id == Sesion.id) & (Multa.alumno_id == Asistencia.alumno_id))
+        .where(Asistencia.alumno_id == alumno.id, Sesion.cancelada.is_(False))
+        .order_by(Sesion.fecha.desc(), Sesion.hora_inicio.desc())
+        .limit(limit)
+    ).all()
+    return [RegistroHistorial(*f) for f in filas]

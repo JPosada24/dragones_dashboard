@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core import cifrado
 from app.models.alumnos import Alumno
 from app.models.sistema import Auditoria
-from tests.fabrica import A, AC, crear_acudiente, crear_alumno, crear_menor, datos_alumno
+from tests.fabrica import A, AC, crear_acudiente, crear_alumno, crear_menor, datos_alumno, inscribir
 
 
 @pytest.fixture
@@ -202,3 +202,32 @@ def test_editar_alumno_queda_en_auditoria_con_antes_y_despues(client, h_admin, d
     fila = db.scalar(select(Auditoria).where(Auditoria.accion == "alumno.actualizar"))
     assert fila.antes["rama"] == "femenina" and fila.despues["rama"] == "masculina"
     assert fila.entidad_id == alumno["id"] and db.get(Alumno, fila.entidad_id) is not None
+
+
+# ---------- Listado: búsqueda, filtros y estado de inscripción ----------
+def test_buscar_por_documento_completo_y_filtrar_activos(client, h_admin):
+    laura = crear_alumno(client, h_admin, documento="1234567890")
+    crear_alumno(client, h_admin, documento="2222222222", nombres="Sara", apellidos="Ríos")
+
+    def nombres(**params):
+        r = client.get(A, params=params, headers=h_admin)
+        assert r.status_code == 200, r.text
+        return [a["nombres"] for a in r.json()]
+
+    assert nombres(buscar="1.234.567.890") == ["Laura"]  # documento completo, con puntos
+    assert nombres(buscar="4567") == []  # nunca por partes: no sirve para adivinar documentos
+    assert nombres(buscar="Ríos") == ["Sara"]
+
+    assert client.patch(f"{A}/{laura['id']}", json={"activo": False}, headers=h_admin).status_code == 200
+    assert nombres(activo="true") == ["Sara"]
+    assert nombres(activo="false") == ["Laura"]
+
+
+def test_la_lista_trae_el_estado_de_la_inscripcion_del_anio(client, h_admin):
+    inscrito = crear_alumno(client, h_admin)
+    sin_inscripcion = crear_alumno(client, h_admin, documento="2222222222", nombres="Sara")
+    assert inscribir(client, h_admin, inscrito["id"]).status_code == 201
+    estados = {a["id"]: a["inscripcion_estado"] for a in client.get(A, headers=h_admin).json()}
+    assert estados == {inscrito["id"]: "pendiente_pago", sin_inscripcion["id"]: None}
+    detalle = client.get(f"{A}/{inscrito['id']}", headers=h_admin).json()
+    assert detalle["inscripcion_estado"] == "pendiente_pago"
