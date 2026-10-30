@@ -142,6 +142,20 @@ def cancelar(
     return sesion_a_out(sesion)
 
 
+@router.post("/{sesion_id}/reactivar", response_model=SesionOut)
+def reactivar(
+    sesion_id: uuid.UUID,
+    request: Request,
+    actor: Usuario = Depends(requiere("sesiones.gestionar")),
+    db: Session = Depends(get_db),
+) -> SesionOut:
+    """Deshace la cancelación de una sesión (antes de su cierre)."""
+    sesion = servicio.obtener_visible(db, actor, sesion_id)
+    servicio.reactivar(db, sesion, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return sesion_a_out(sesion)
+
+
 @router.get("/{sesion_id}/asistencia", response_model=list[FilaPlanillaOut])
 def planilla(
     sesion_id: uuid.UUID, usuario: Usuario = Depends(VER), db: Session = Depends(get_db)

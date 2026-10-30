@@ -2,9 +2,10 @@ import json
 from datetime import date, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core import fechas
+from app.models.asistencia import Sesion
 from app.models.sistema import Auditoria
 from tests.fabrica import crear_acudiente, crear_alumno, crear_menor, inscribir
 
@@ -326,6 +327,40 @@ def test_cancelar_una_sesion_cerrada_anula_sus_multas_y_una_cancelada_no_multa(c
     r = client.post(f"{S}/{cerrada['id']}/cancelar", json={"motivo": "Se suspendió por lluvia"}, headers=h_admin)
     assert r.status_code == 200 and r.json()["cancelada"] is True
     assert [m["estado"] for m in client.get(M, headers=h_admin).json()] == ["anulada"]
+
+
+def test_deshacer_una_cancelacion_antes_del_cierre(client, h_admin, familia, crear_usuario, auth_header, reloj, db):
+    sesion = _sesion(client, h_admin)
+    url = f"{S}/{sesion['id']}/reactivar"
+    assert client.post(url, headers=h_admin).status_code == 409  # no está cancelada
+    client.post(f"{S}/{sesion['id']}/cancelar", json={"motivo": "Cancelada por error"}, headers=h_admin)
+
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    for h in (auth_header("coach@club.com"), familia["h"]):
+        assert client.post(url, headers=h).status_code == 403
+    r = client.post(url, headers=h_admin)
+    assert r.status_code == 200
+    assert (r.json()["cancelada"], r.json()["causa_cancelacion"], r.json()["motivo_cancelacion"]) == (False, None, None)
+    accion = db.scalars(select(Auditoria).where(Auditoria.accion == "sesion.reactivar")).one()
+    assert accion.antes["motivo"] == "Cancelada por error"
+    # Vuelve a contar: al cierre genera la ausencia y la multa.
+    reloj(_en(LUNES, 23, 59))
+    assert _cerrar(client, h_admin)["multas"] == 1
+
+
+def test_no_se_deshace_tras_el_cierre_ni_si_la_cancelo_un_torneo(client, h_admin, reloj, db):
+    sesion = _sesion(client, h_admin)
+    client.post(f"{S}/{sesion['id']}/cancelar", json={"motivo": "Lluvia fuerte"}, headers=h_admin)
+    reloj(_en(LUNES, 23, 59))
+    r = client.post(f"{S}/{sesion['id']}/reactivar", headers=h_admin)
+    assert r.status_code == 422 and "cierre" in r.json()["detail"]
+
+    otra = _sesion(client, h_admin, dia=LUNES + timedelta(days=2))
+    db.execute(update(Sesion).where(Sesion.id == otra["id"]).values(
+        cancelada=True, causa_cancelacion="torneo", motivo_cancelacion="Torneo: Copa"))
+    db.commit()
+    r = client.post(f"{S}/{otra['id']}/reactivar", headers=h_admin)
+    assert r.status_code == 422 and "torneo" in r.json()["detail"]
 
 
 # ---------- Multas: pago y anulación ----------

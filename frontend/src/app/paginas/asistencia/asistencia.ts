@@ -350,6 +350,23 @@ export class AsistenciaPage implements OnInit {
     }, true);
   }
 
+  /** Se puede deshacer una cancelación manual o por festivo, mientras no haya pasado el día (el servidor
+   * además exige que no haya pasado la hora de cierre). Torneos y cambios de horario se manejan solos. */
+  protected reactivable(s: Sesion): boolean {
+    return (
+      this.puedeGestionar() && s.cancelada && !s.cerrada && s.fecha >= this.hoy &&
+      (s.causa_cancelacion === 'manual' || s.causa_cancelacion === 'festivo')
+    );
+  }
+
+  protected reactivar(s: Sesion): void {
+    this.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/reactivar`, {}), (actualizada) => {
+      this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
+      this.recargarPlanilla();
+      this.avisar(null, 'Cancelación deshecha: el entrenamiento vuelve a estar activo.');
+    });
+  }
+
   protected abrirCorregir(f: FilaPlanilla): void {
     this.formCorregir.reset({ estado: f.asistencia === 'presente' ? 'ausente' : 'presente', motivo: '' });
     this.abrir(() => this.corrigiendo.set(f));

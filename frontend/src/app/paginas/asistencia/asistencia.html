@@ -57,10 +57,15 @@
         </div>
 
         @if (s.cancelada) {
-          <p class="cancelada-aviso">
+          <div class="cancelada-aviso">
             <span class="icono" aria-hidden="true">event_busy</span>
-            {{ s.motivo_cancelacion || 'Sesión cancelada' }}. No se toma asistencia ni se generan multas.
-          </p>
+            <p>{{ s.motivo_cancelacion || 'Sesión cancelada' }}. No se toma asistencia ni se generan multas.</p>
+            @if (reactivable(s)) {
+              <button type="button" class="boton secundario chico" [disabled]="ocupado()" (click)="reactivar(s)">
+                <span class="icono" aria-hidden="true">undo</span> {{ s.causa_cancelacion === 'festivo' ? 'Entrenar este festivo' : 'Deshacer cancelación' }}
+              </button>
+            }
+          </div>
         } @else if (planilla(); as todas) {
           @if (veTodasLasRamas() && todas.length) {
             <div class="filtros" role="group" aria-label="Filtrar por rama">

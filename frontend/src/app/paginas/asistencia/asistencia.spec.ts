@@ -139,6 +139,22 @@ describe('AsistenciaPage', () => {
     expect(el().querySelector('.sesion-chip')?.textContent).toContain('festivo');
   });
 
+  it('deshace una cancelación hecha por error', async () => {
+    await cargarStaff([sesion({ cancelada: true, causa_cancelacion: 'manual', motivo_cancelacion: 'Por error' })], null);
+    boton('undo Deshacer cancelación')!.click();
+    backend.expectOne(`${API}/sesiones/s1/reactivar`).flush(sesion());
+    backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez')]);
+    await estable();
+    expect(texto()).toContain('Cancelación deshecha');
+    expect(texto()).toContain('Laura Pérez');
+    expect(el().querySelector('.marca')).not.toBeNull();
+  });
+
+  it('no ofrece deshacer las canceladas por torneo', async () => {
+    await cargarStaff([sesion({ cancelada: true, causa_cancelacion: 'torneo', motivo_cancelacion: 'Torneo: Copa' })], null);
+    expect(texto()).not.toContain('Deshacer cancelación');
+  });
+
   it('el horario se edita en un popup y se envía completo', async () => {
     await cargarStaff([], null);
     expect(dialogo()).toBeNull();

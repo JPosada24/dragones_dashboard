@@ -265,11 +265,16 @@ h2 {
 /* ---------- Planilla ---------- */
 .cancelada-aviso {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 0;
   padding: 18px;
   color: var(--texto-2);
+
+  p {
+    flex: 1 1 220px;
+    margin: 0;
+  }
 
   .icono {
     color: var(--oro);

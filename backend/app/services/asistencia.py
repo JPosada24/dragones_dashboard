@@ -147,6 +147,27 @@ def cancelar(db: Session, sesion: Sesion, *, motivo: str, actor: Usuario, ip: st
     return sesion
 
 
+def reactivar(db: Session, sesion: Sesion, *, actor: Usuario, ip: str | None) -> Sesion:
+    """Deshace una cancelación (hecha por error, o para entrenar un festivo).
+
+    Solo antes del cierre de esa sesión: después, el cierre multaría a todos sin haber podido marcar.
+    Las de torneo o cambio de horario no: la programación automática las volvería a cancelar.
+    """
+    if not sesion.cancelada:
+        raise Conflicto("La sesión no está cancelada.")
+    if sesion.causa_cancelacion == "torneo":
+        raise ErrorNegocio("Esta sesión se canceló por un torneo: cancela el torneo o crea una sesión extra.")
+    if sesion.causa_cancelacion == "horario":
+        raise ErrorNegocio("Ese día ya no está en el horario de entrenamiento: crea una sesión extra.")
+    if sesion.cerrada_en is not None or fechas.ahora() >= momento_cierre(db, sesion):
+        raise ErrorNegocio("Ya pasó el cierre de esa sesión: no se puede reactivar.")
+    antes = {"causa": sesion.causa_cancelacion, "motivo": sesion.motivo_cancelacion}
+    sesion.cancelada, sesion.causa_cancelacion, sesion.motivo_cancelacion = False, None, None
+    db.flush()
+    _auditar(db, "sesion.reactivar", "sesion", sesion.id, actor.id, ip, antes=antes)
+    return sesion
+
+
 # ---------- Planilla ----------
 @dataclass
 class FilaPlanilla:

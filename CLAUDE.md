@@ -158,8 +158,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   el Entrenador): ajusta/borra/cancela (si tiene registros) las futuras y regenera. `POST /sesiones` = sesión extra.
   Esperados = ambas ramas; la planilla se limita con `filtro_visibles` (Entrenador marca solo su rama).
   Frontend: formularios en **popups** (`compartido/dialogo.ts`, `<dialog>` modal; el error de la API se muestra
-  dentro del popup) — las marcas P/A siguen en la lista por rapidez. Avisos: **campana desplegable**
-  (`layout/campana/`), ya no hay página `/notificaciones`. 179 pruebas backend, 24 frontend.
+  dentro del popup) — las marcas P/A siguen en la lista por rapidez.
+  `POST /sesiones/{id}/reactivar` (`sesiones.gestionar`): deshace una cancelación manual o por festivo, solo antes
+  del cierre de esa sesión (si no, el cierre multaría a todos); las de torneo/horario no (las maneja la
+  programación). Botón "Deshacer cancelación" / "Entrenar este festivo". Avisos: **campana desplegable**
+  (`layout/campana/`), ya no hay página `/notificaciones`. 181 pruebas backend, 26 frontend.
 - SIGUIENTE (frontend): Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
