@@ -387,52 +387,6 @@ tbody th {
   }
 }
 
-/* ---------- Sorteo y acta ---------- */
-.urna,
-.ganador {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 18px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  background: var(--panel-hundido);
-  text-align: center;
-}
-
-.urna-valor,
-.ganador-numero {
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 600;
-  color: var(--oro);
-}
-
-.ganador-nombre {
-  font: 600 15px var(--f-titulo);
-  color: var(--texto-blanco);
-}
-
-.ganador.recien {
-  border-color: var(--oro);
-  animation: brillo 1.2s ease-out 1;
-}
-
-@keyframes brillo {
-  from {
-    box-shadow: 0 0 0 0 var(--oro-tenue);
-  }
-
-  to {
-    box-shadow: 0 0 0 18px transparent;
-  }
-}
-
-.huella {
-  font-size: 10px;
-  overflow-wrap: anywhere;
-}
-
 @media (max-width: 599px) {
   .movimiento {
     grid-template-columns: auto auto minmax(0, 1fr);

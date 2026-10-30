@@ -2,22 +2,25 @@ import { DatePipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Observable, forkJoin } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
+import { PESTANAS_RIFAS, Pestanas } from '../../compartido/pestanas';
 import { mensajeError } from '../../compartido/errores';
 import { diasEntre, isoLocal } from '../../compartido/fechas';
 import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
-import { Acta, FilaPazYSalvo, PagoPuesto, Puesto, Rifa, Talonario } from './rifas.modelos';
+import { boleta } from './boleta';
+import { FilaPazYSalvo, PagoPuesto, Puesto, Rifa, Talonario } from './rifas.modelos';
 
 const rifaUrl = (id: string) => `${API}/rifas/${encodeURIComponent(id)}`;
 
 @Component({
   selector: 'app-rifas',
-  imports: [DatePipe, ReactiveFormsModule, Aviso, Dialogo, PesosPipe],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, Pestanas],
   templateUrl: './rifas.html',
   styleUrl: './rifas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +30,7 @@ export class RifasPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder).nonNullable;
   private readonly pesos = new PesosPipe();
+  protected readonly pestanas = PESTANAS_RIFAS;
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
   protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
@@ -58,8 +62,6 @@ export class RifasPage implements OnInit {
   protected readonly pagandoTalonario = signal(false);
   protected readonly puestoAbierto = signal<number | null>(null);
   protected readonly anulandoPago = signal<{ numero: number; pago: PagoPuesto } | null>(null);
-  protected readonly sorteando = signal<Rifa | null>(null);
-  protected readonly acta = signal<{ rifa: Rifa; acta: Acta; recien: boolean } | null>(null);
 
   protected readonly formRifa = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
@@ -107,7 +109,7 @@ export class RifasPage implements OnInit {
     rifas.forEach((r, i) => {
       for (const t of porRifa[r.id] ?? []) {
         const f = filas.get(t.alumno_id) ?? {
-          alumno_id: t.alumno_id, alumno_nombre: t.alumno_nombre, rama: t.rama,
+          alumno_id: t.alumno_id, codigo: t.codigo, alumno_nombre: t.alumno_nombre, rama: t.rama,
           celdas: rifas.map(() => null), deuda: 0,
         };
         f.celdas[i] = t;
@@ -175,8 +177,13 @@ export class RifasPage implements OnInit {
     return d > 0 ? `en ${d} d` : `hace ${-d} d`;
   }
 
-  protected numeroPuesto(n: number): string {
-    return String(n).padStart(3, '0');
+  protected readonly boleta = boleta;
+
+  /** Boleta (F012-07) de un puesto del talonario abierto. */
+  protected boletaDe(numero: number): string {
+    const t = this.talonario();
+    const p = t?.puestos.find((x) => x.numero === numero);
+    return t && p ? boleta(t.codigo, p.boleta) : String(numero);
   }
 
   protected sorteable(r: Rifa): boolean {
@@ -303,7 +310,7 @@ export class RifasPage implements OnInit {
     const cuerpo = { nombre: f.nombre.trim() || null, telefono: f.telefono.trim() || null };
     this.ejecutar(this.http.patch<Talonario>(`${rifaUrl(a.rifa.id)}/puestos/${n}`, cuerpo), (r) => {
       this.actualizarTalonario(a.rifa, r);
-      this.avisar(`Puesto ${this.numeroPuesto(n)}: comprador guardado.`);
+      this.avisar(`Boleta ${this.boletaDe(n)}: comprador guardado.`);
     });
   }
 
@@ -316,7 +323,7 @@ export class RifasPage implements OnInit {
       this.actualizarTalonario(a.rifa, r);
       const p = r.puestos.find((x) => x.numero === n);
       this.formPago.reset({ monto: p?.saldo ?? 0, fecha: this.hoy });
-      this.avisar(`Pago del puesto ${this.numeroPuesto(n)} registrado.`);
+      this.avisar(`Pago de la boleta ${this.boletaDe(n)} registrado.`);
     });
   }
 
@@ -336,29 +343,6 @@ export class RifasPage implements OnInit {
       this.anulandoPago.set(null);
       this.actualizarTalonario(a.rifa, r);
       this.avisar('Pago anulado: queda en el historial como un movimiento en negativo.');
-    });
-  }
-
-  // ---------- Sorteo ----------
-  protected abrirSorteo(r: Rifa): void {
-    this.abrir(() => this.sorteando.set(r));
-  }
-
-  protected jugar(): void {
-    const r = this.sorteando();
-    if (!r) return;
-    this.ejecutar(this.http.post<Acta>(`${rifaUrl(r.id)}/sorteo`, {}), (acta) => {
-      this.sorteando.set(null);
-      this.acta.set({ rifa: r, acta, recien: true });
-      this.refrescarRifa(r.id);
-    });
-  }
-
-  protected verActa(r: Rifa): void {
-    this.mensaje.set(null);
-    this.http.get<Acta>(`${rifaUrl(r.id)}/acta`).subscribe({
-      next: (acta) => this.acta.set({ rifa: r, acta, recien: false }),
-      error: (e) => this.mensaje.set({ error: true, texto: mensajeError(e) }),
     });
   }
 

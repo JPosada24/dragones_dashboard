@@ -14,6 +14,7 @@ export interface AcudienteVinculado {
 
 export interface Alumno {
   id: string;
+  codigo: string; // F001 / M001 (lo asigna el sistema)
   nombres: string;
   apellidos: string;
   tipo_documento: string;

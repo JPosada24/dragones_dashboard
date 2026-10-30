@@ -231,3 +231,31 @@ def test_la_lista_trae_el_estado_de_la_inscripcion_del_anio(client, h_admin):
     assert estados == {inscrito["id"]: "pendiente_pago", sin_inscripcion["id"]: None}
     detalle = client.get(f"{A}/{inscrito['id']}", headers=h_admin).json()
     assert detalle["inscripcion_estado"] == "pendiente_pago"
+
+
+# ---------- Código del alumno (F001 / M001) ----------
+def test_cada_alumno_recibe_un_codigo_consecutivo_por_rama(client, h_admin):
+    f1 = crear_alumno(client, h_admin, documento="1000000011")
+    f2 = crear_alumno(client, h_admin, documento="1000000012")
+    m1 = crear_alumno(client, h_admin, documento="1000000013", rama="masculina")
+    assert (f1["codigo"], f2["codigo"], m1["codigo"]) == ("F001", "F002", "M001")
+
+    # Se busca por código (sin importar mayúsculas).
+    assert [a["id"] for a in client.get(A, params={"buscar": "f002"}, headers=h_admin).json()] == [f2["id"]]
+
+    # Al corregir la rama recibe el siguiente código de la otra; el suyo no se reutiliza.
+    r = client.patch(f"{A}/{f1['id']}", json={"rama": "masculina"}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["codigo"] == "M002"
+    f3 = crear_alumno(client, h_admin, documento="1000000014")
+    assert f3["codigo"] == "F003"
+    # Cambiar otros datos no toca el código.
+    assert client.patch(f"{A}/{f2['id']}", json={"eps": "Sura"}, headers=h_admin).json()["codigo"] == "F002"
+
+
+def test_el_codigo_lo_pone_el_sistema(client, h_admin, db):
+    r = client.post(A, json=datos_alumno(codigo="F999"), headers=h_admin)
+    assert r.status_code == 422  # no se acepta en la entrada
+    crear_alumno(client, h_admin)
+    with pytest.raises(IntegrityError):  # y la base de datos solo admite el formato F001 / M001
+        db.execute(text("UPDATE alumnos SET codigo = 'X1'"))
+    db.rollback()

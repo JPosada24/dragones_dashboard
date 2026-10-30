@@ -60,6 +60,16 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Sorteo', texto: 'Desde la fecha del sorteo. Solo participan los puestos de talonarios pagados al 100 %; el ganador sale al azar y queda un acta que no se puede modificar.' },
     ],
   },
+  'rifas/sorteo': {
+    titulo: 'Cómo funciona el sorteo',
+    pasos: [
+      { titulo: 'La urna', texto: 'Solo entran las boletas de los talonarios pagados al 100 %. Cada talonario aporta todas sus boletas (por defecto 20).' },
+      { titulo: 'La boleta', texto: 'Se lee como código del alumno y número de boleta: F012-07 es la boleta 7 del talonario de F012. El código lo asigna el sistema al registrar al alumno (F femenina, M masculina).' },
+      { titulo: 'Jugar', texto: 'Desde la fecha del sorteo, el SuperAdmin presiona «Jugar la rifa». El servidor elige al azar; la pantalla solo muestra el giro.', permisos: ['sorteo.jugar'] },
+      { titulo: 'Acta', texto: 'Queda guardada con la boleta ganadora, el comprador, cuántas boletas había y una huella que prueba que la lista no cambió. No se puede modificar ni repetir.' },
+      { titulo: 'Aviso', texto: 'Si el puesto tiene el teléfono del comprador, «Avisar por WhatsApp» abre el mensaje listo para enviar desde el número del club.' },
+    ],
+  },
   multas: {
     titulo: 'Cómo funcionan las multas y la mora',
     pasos: [

@@ -1,3 +1,5 @@
+<app-pestanas [pestanas]="pestanas" etiqueta="Vistas de rifas" />
+
 @if (mensaje(); as m) {
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
@@ -77,14 +79,14 @@
           </dl>
           <div class="tarjeta-acciones">
             @if (r.estado === 'sorteada') {
-              <button type="button" class="boton chico" (click)="verActa(r)">
+              <a class="boton chico" routerLink="/rifas/sorteo" [queryParams]="{ rifa: r.id }">
                 <span class="icono" aria-hidden="true">workspace_premium</span> Ver acta
-              </button>
+              </a>
             }
             @if (sorteable(r)) {
-              <button type="button" class="boton chico" (click)="abrirSorteo(r)">
-                <span class="icono" aria-hidden="true">casino</span> Jugar sorteo
-              </button>
+              <a class="boton chico" routerLink="/rifas/sorteo" [queryParams]="{ rifa: r.id }">
+                <span class="icono" aria-hidden="true">casino</span> Ir al sorteo
+              </a>
             }
             @if (puedeGestionar() && r.estado === 'abierta') {
               <button type="button" class="boton secundario chico" [disabled]="ocupado()" (click)="asignar(r)"
@@ -136,7 +138,7 @@
               <tr>
                 <th scope="row">
                   <span class="alumno-nombre">{{ f.alumno_nombre }}</span>
-                  <span class="nota-chica capital">{{ f.rama }}</span>
+                  <span class="nota-chica capital"><b class="mono">{{ f.codigo }}</b> · {{ f.rama }}</span>
                 </th>
                 @for (t of f.celdas; track $index) {
                   <td class="centro">
@@ -203,7 +205,7 @@
 @if (abierto(); as a) {
   @if (talonario(); as t) {
     <app-dialogo [titulo]="'Talonario de ' + t.alumno_nombre" ancho="ancho"
-                 [descripcion]="a.rifa.nombre + ' · puestos ' + numeroPuesto(t.desde) + '–' + numeroPuesto(t.hasta)"
+                 [descripcion]="a.rifa.nombre + ' · talonario ' + t.codigo + ' · boletas ' + boleta(t.codigo, 1) + ' a ' + boleta(t.codigo, t.puestos.length)"
                  (cerrar)="abierto.set(null)">
       <div class="talonario">
         <div class="talonario-resumen">
@@ -242,8 +244,8 @@
           @for (p of t.puestos; track p.numero) {
             <li>
               <button type="button" class="puesto" [class.pagado]="p.saldo === 0" [class.parcial]="p.saldo > 0 && p.monto_pagado > 0"
-                      (click)="abrirPuesto(p)" [attr.aria-label]="'Puesto ' + numeroPuesto(p.numero) + (p.comprador_nombre ? ', ' + p.comprador_nombre : ', sin comprador') + (p.saldo === 0 ? ', pagado' : '')">
-                <span class="mono puesto-numero">{{ numeroPuesto(p.numero) }}</span>
+                      (click)="abrirPuesto(p)" [attr.aria-label]="'Boleta ' + boleta(t.codigo, p.boleta) + (p.comprador_nombre ? ', ' + p.comprador_nombre : ', sin comprador') + (p.saldo === 0 ? ', pagado' : '')">
+                <span class="mono puesto-numero">{{ p.boleta < 10 ? '0' + p.boleta : p.boleta }}</span>
                 <span class="puesto-comprador">{{ p.comprador_nombre || 'Sin comprador' }}</span>
                 <span class="mono puesto-estado">
                   @if (p.saldo === 0) { <span class="icono" aria-hidden="true">check</span> } @else { {{ p.monto_pagado | pesos }} }
@@ -260,7 +262,7 @@
 <!-- ---------- Puesto ---------- -->
 @if (puesto(); as p) {
   @let a = abierto()!;
-  <app-dialogo [titulo]="'Puesto ' + numeroPuesto(p.numero)" [descripcion]="a.rifa.nombre + ' · ' + (p.saldo === 0 ? 'pagado' : 'saldo ' + (p.saldo | pesos))"
+  <app-dialogo [titulo]="'Boleta ' + boletaDe(p.numero)" [descripcion]="a.rifa.nombre + ' · ' + (p.saldo === 0 ? 'pagado' : 'saldo ' + (p.saldo | pesos))"
                (cerrar)="puestoAbierto.set(null)">
     <div class="formulario">
       @if (puedeGestionar() && a.rifa.estado === 'abierta') {
@@ -311,7 +313,7 @@
 
 <!-- ---------- Anular pago de un puesto ---------- -->
 @if (anulandoPago(); as x) {
-  <app-dialogo titulo="Anular pago" [descripcion]="'Puesto ' + numeroPuesto(x.numero) + ' · ' + (x.pago.monto | pesos)" (cerrar)="anulandoPago.set(null)">
+  <app-dialogo titulo="Anular pago" [descripcion]="'Boleta ' + boletaDe(x.numero) + ' · ' + (x.pago.monto | pesos)" (cerrar)="anulandoPago.set(null)">
     <form class="formulario" [formGroup]="formAnular" (ngSubmit)="guardarAnulacion()">
       <p>El pago no se borra: se registra un movimiento en negativo que lo revierte.</p>
       <label class="campo"><span class="etiqueta">Motivo</span><textarea class="control" formControlName="motivo" maxlength="500"></textarea></label>
@@ -321,46 +323,5 @@
         <button type="submit" class="boton peligro" [disabled]="ocupado()">Anular pago</button>
       </div>
     </form>
-  </app-dialogo>
-}
-
-<!-- ---------- Sorteo ---------- -->
-@if (sorteando(); as r) {
-  <app-dialogo [titulo]="'Sorteo · ' + r.nombre" [descripcion]="'Premio: ' + r.premio" (cerrar)="sorteando.set(null)">
-    <div class="formulario">
-      <div class="urna">
-        <span class="etiqueta">Puestos en la urna</span>
-        <span class="urna-valor mono">{{ r.talonarios_pagados * r.puestos_por_talonario }}</span>
-        <span class="nota-chica">{{ r.talonarios_pagados }} de {{ r.talonarios }} talonarios pagados al 100 %</span>
-      </div>
-      <p>Solo participan los talonarios pagados por completo. El ganador sale al azar y queda un acta que no se puede modificar. El sorteo no se repite.</p>
-      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-      <div class="acciones">
-        <button type="button" class="boton secundario" (click)="sorteando.set(null)">Todavía no</button>
-        <button type="button" class="boton" [disabled]="ocupado() || !r.talonarios_pagados" (click)="jugar()">
-          <span class="icono" aria-hidden="true">casino</span> Jugar sorteo
-        </button>
-      </div>
-    </div>
-  </app-dialogo>
-}
-
-<!-- ---------- Acta ---------- -->
-@if (acta(); as x) {
-  <app-dialogo [titulo]="'Acta del sorteo · ' + x.rifa.nombre" [descripcion]="'Premio: ' + x.rifa.premio" (cerrar)="acta.set(null)">
-    <div class="formulario">
-      <div class="ganador" [class.recien]="x.recien">
-        <span class="etiqueta">Puesto ganador</span>
-        <span class="ganador-numero mono">{{ numeroPuesto(x.acta.numero_ganador) }}</span>
-        <span class="ganador-nombre">{{ x.acta.comprador_nombre || 'Sin comprador registrado' }}</span>
-        <span class="nota-chica">Talonario de {{ x.acta.alumno_nombre }}</span>
-      </div>
-      <dl class="datos">
-        <div><dt>Jugado</dt><dd>{{ x.acta.jugado_en | date: 'd MMM y, h:mm a' }}</dd></div>
-        <div><dt>Participantes</dt><dd class="mono">{{ x.acta.total_participantes }} puestos</dd></div>
-        <div><dt>Huella (SHA-256)</dt><dd class="mono huella" title="Huella de la lista de participantes: prueba que no se modificó">{{ x.acta.huella }}</dd></div>
-      </dl>
-      <div class="acciones"><button type="button" class="boton chico" (click)="acta.set(null)">Cerrar</button></div>
-    </div>
   </app-dialogo>
 }

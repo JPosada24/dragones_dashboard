@@ -26,6 +26,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - **No hay mensualidad.** Mora = **cualquier deuda sin pagar** (multas, talonarios) con **3 meses** → "A expulsar";
   confirmación del SuperAdmin por defecto (`expulsion_automatica` la hace directa). La inscripción no cuenta
   (tiene su propio plazo y vencimiento).
+- **Código del alumno**: `F001…` (femenina) / `M001…` (masculina), consecutivo por rama, lo asigna el sistema al
+  crear y nunca se reutiliza; si se corrige la rama recibe uno nuevo de la otra. Cada talonario guarda el código
+  con el que se entregó. La boleta se lee **código-número** (`F012-07` = boleta 7 del talonario de F012).
 - Rifas: 4 por año; **1 talonario por alumno por rifa, 20 puestos × $2.000 = $40.000**. Cada puesto guarda comprador,
   teléfono y monto. Paz y salvo = talonario pagado al 100 %. El sorteo solo incluye talonarios pagados; guarda acta inmutable.
 - Torneos: los organiza el club y se inscriben **clubes externos** (no jugadores); cada equipo paga inscripción
@@ -215,6 +218,15 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   popup por puesto: comprador (`rifas.gestionar`), pago (`pagos.registrar`), historial y anular (`pagos.anular`).
   Sorteo: puestos en la urna y acta (ganador, comprador, participantes, huella SHA-256). Sin cambios en backend.
   190 pruebas backend, 60 frontend.
+- HECHO (código del alumno + vista Sorteo, 2026-10-30): migración 0011 (`alumnos.codigo` único con check
+  `^[FM][0-9]{3,5}$`, relleno por rama en orden de creación; `talonarios.codigo`). `alumnos.siguiente_codigo`
+  con `pg_advisory_xact_lock(7311)` (sin choques entre altas simultáneas). Búsqueda por código. API: `codigo` en
+  AlumnoOut/TalonarioOut, `boleta` (1…20) en PuestoOut, `codigo`/`boleta`/`rama` en ActaOut. Frontend: pestañas
+  genéricas `compartido/pestanas.ts` (Alumnos y Rifas), pestaña **Sorteo** (`/rifas/sorteo`, `?rifa=`): KPIs,
+  pantalla grande código · boleta que gira (solo visual: el ganador lo elige el servidor; respeta
+  `prefers-reduced-motion`), confirmación antes de jugar, tarjeta del ganador con acta y "Avisar por WhatsApp"
+  (wa.me al teléfono del comprador, `numeroWhatsApp`), talonarios por código con filtros, avance por rama e
+  historial de sorteos del año. 192 pruebas backend, 65 frontend.
 - SIGUIENTE (frontend): Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).

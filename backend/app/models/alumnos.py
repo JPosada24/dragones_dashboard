@@ -27,8 +27,11 @@ class Alumno(UUIDMixin, TiempoMixin, Base):
     __table_args__ = (
         CheckConstraint(en("rama", RAMAS), name="ck_alumnos_rama"),
         CheckConstraint(en("tipo_documento", TIPOS_DOCUMENTO), name="ck_alumnos_tipo_documento"),
+        CheckConstraint("codigo ~ '^[FM][0-9]{3,5}$'", name="ck_alumnos_codigo"),
     )
 
+    # F001, F002… (femenina) o M001… (masculina). Lo asigna el sistema; identifica el talonario en el sorteo.
+    codigo: Mapped[str] = mapped_column(String(8), unique=True)
     nombres: Mapped[str] = mapped_column(String(80))
     apellidos: Mapped[str] = mapped_column(String(80))
     tipo_documento: Mapped[str] = mapped_column(String(5))

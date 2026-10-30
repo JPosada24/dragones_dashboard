@@ -28,7 +28,8 @@ export interface PagoPuesto {
 }
 
 export interface Puesto {
-  numero: number;
+  numero: number; // número interno del puesto en la rifa (el que usa la API)
+  boleta: number; // 1…20 dentro del talonario
   comprador_nombre: string | null;
   comprador_telefono: string | null;
   monto_pagado: number;
@@ -41,6 +42,7 @@ export interface Talonario {
   alumno_id: string;
   alumno_nombre: string;
   rama: string;
+  codigo: string; // F012: con el número de boleta forma la boleta F012-07
   desde: number;
   hasta: number;
   recaudado: number;
@@ -52,8 +54,11 @@ export interface Talonario {
 export interface Acta {
   rifa_id: string;
   numero_ganador: number;
+  codigo: string;
+  boleta: number;
   alumno_id: string;
   alumno_nombre: string;
+  rama: string;
   comprador_nombre: string | null;
   total_participantes: number;
   participantes: number[];
@@ -64,6 +69,7 @@ export interface Acta {
 /** Fila de la matriz de paz y salvo: un alumno y su talonario en cada rifa del año. */
 export interface FilaPazYSalvo {
   alumno_id: string;
+  codigo: string;
   alumno_nombre: string;
   rama: string;
   celdas: (Talonario | null)[]; // en el orden de las rifas; null = sin talonario en esa rifa

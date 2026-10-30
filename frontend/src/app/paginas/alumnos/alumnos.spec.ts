@@ -24,7 +24,7 @@ const inscripcion = (extra: Record<string, unknown> = {}) => ({
 });
 
 const alumno = (id: string, extra: Partial<Alumno> = {}): Alumno => ({
-  id, nombres: 'Laura', apellidos: 'Pérez', tipo_documento: 'TI', documento: '****4321', fecha_nacimiento: '2013-05-04',
+  id, codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', tipo_documento: 'TI', documento: '****4321', fecha_nacimiento: '2013-05-04',
   edad: 13, es_menor: true, rama: 'femenina', telefono: null, email: null, direccion: null, eps: 'Sura',
   usuario_id: null, activo: true, inscripcion_estado: 'activo',
   acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '3001234567', parentesco: 'madre', principal: true }],

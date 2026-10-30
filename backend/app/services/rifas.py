@@ -97,7 +97,7 @@ def asignar_pendientes(db: Session, rifa: Rifa, *, actor: Usuario, ip: str | Non
     indice = 0 if ultimo is None else ultimo + 1  # ojo: "ultimo or -1" fallaría cuando ultimo == 0
     n = rifa.puestos_por_talonario
     for alumno in pendientes:
-        talonario = Talonario(rifa_id=rifa.id, alumno_id=alumno.id, indice=indice)
+        talonario = Talonario(rifa_id=rifa.id, alumno_id=alumno.id, indice=indice, codigo=alumno.codigo)
         db.add(talonario)
         db.flush()
         db.add_all(
@@ -271,3 +271,11 @@ def acta(db: Session, rifa: Rifa) -> ActaSorteo:
     if a is None:
         raise NoEncontrado("Esta rifa aún no se ha sorteado.")
     return a
+
+
+def talonario_de(db: Session, rifa_id: uuid.UUID, alumno_id: uuid.UUID) -> Talonario:
+    """El talonario de un alumno en una rifa (para mostrar el acta con su código y boleta)."""
+    t = db.scalar(select(Talonario).where(Talonario.rifa_id == rifa_id, Talonario.alumno_id == alumno_id))
+    if t is None:
+        raise NoEncontrado("Talonario no encontrado en esta rifa.")
+    return t

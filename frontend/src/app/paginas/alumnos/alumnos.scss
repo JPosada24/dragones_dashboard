@@ -159,6 +159,11 @@ h2 {
   font-size: 10px;
   color: var(--texto-3);
   text-transform: capitalize;
+
+  .codigo {
+    color: var(--texto-2);
+    font-weight: 600;
+  }
 }
 
 /* Tonos compartidos por el punto de la lista y las píldoras de estado. */

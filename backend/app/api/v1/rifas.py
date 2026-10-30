@@ -20,7 +20,6 @@ from app.schemas.rifas import (
     RifaOut,
     TalonarioOut,
 )
-from app.services import alumnos
 from app.services import rifas as servicio
 
 router = APIRouter(prefix="/rifas", tags=["rifas"])
@@ -41,11 +40,12 @@ def talonario_a_out(t: Talonario) -> TalonarioOut:
     precio = t.rifa.precio_puesto
     return TalonarioOut(
         id=t.id, alumno_id=t.alumno_id, alumno_nombre=f"{t.alumno.nombres} {t.alumno.apellidos}", rama=t.alumno.rama,
-        desde=t.puestos[0].numero, hasta=t.puestos[-1].numero, recaudado=t.recaudado, saldo=t.saldo,
+        codigo=t.codigo, desde=t.puestos[0].numero, hasta=t.puestos[-1].numero, recaudado=t.recaudado, saldo=t.saldo,
         pagado=t.pagado,
         puestos=[
             PuestoOut(
-                numero=p.numero, comprador_nombre=p.comprador_nombre, comprador_telefono=p.comprador_telefono,
+                numero=p.numero, boleta=p.numero - t.puestos[0].numero + 1, comprador_nombre=p.comprador_nombre,
+                comprador_telefono=p.comprador_telefono,
                 monto_pagado=p.monto_pagado, saldo=precio - p.monto_pagado,
                 pagos=[PagoPuestoOut.model_validate(x) for x in p.pagos],
             )
@@ -54,9 +54,13 @@ def talonario_a_out(t: Talonario) -> TalonarioOut:
     )
 
 
-def acta_a_out(a: ActaSorteo, alumno_nombre: str) -> ActaOut:
+def acta_a_out(db: Session, a: ActaSorteo) -> ActaOut:
+    """El ganador se muestra como código del talonario + boleta (F012-07), con el código que tenía al venderse."""
+    t = servicio.talonario_de(db, a.rifa_id, a.alumno_id)
     return ActaOut(
-        rifa_id=a.rifa_id, numero_ganador=a.numero_ganador, alumno_id=a.alumno_id, alumno_nombre=alumno_nombre,
+        rifa_id=a.rifa_id, numero_ganador=a.numero_ganador, codigo=t.codigo,
+        boleta=a.numero_ganador - t.puestos[0].numero + 1, alumno_id=a.alumno_id,
+        alumno_nombre=f"{t.alumno.nombres} {t.alumno.apellidos}", rama=t.alumno.rama,
         comprador_nombre=a.comprador_nombre, total_participantes=a.total_participantes,
         participantes=a.participantes, huella=a.huella, jugado_en=a.jugado_en,
     )
@@ -198,12 +202,10 @@ def sortear(
 ) -> ActaOut:
     a = servicio.sortear(db, servicio.obtener(db, rifa_id), actor=actor, ip=ip_cliente(request))
     db.commit()
-    ganador = alumnos.obtener_por_id(db, a.alumno_id)
-    return acta_a_out(a, f"{ganador.nombres} {ganador.apellidos}")
+    return acta_a_out(db, a)
 
 
 @router.get("/{rifa_id}/acta", response_model=ActaOut)
 def ver_acta(rifa_id: uuid.UUID, _: Usuario = Depends(VER), db: Session = Depends(get_db)) -> ActaOut:
     a = servicio.acta(db, servicio.obtener(db, rifa_id))
-    ganador = alumnos.obtener_por_id(db, a.alumno_id)
-    return acta_a_out(a, f"{ganador.nombres} {ganador.apellidos}")
+    return acta_a_out(db, a)

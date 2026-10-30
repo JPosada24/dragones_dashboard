@@ -42,7 +42,13 @@ export const SECCIONES: Seccion[] = [
     ruta: 'rifas', etiqueta: 'Rifas', icono: 'payments', grupo: 'Dinero', permisos: VER_ALUMNOS,
     titulo: 'Rifas', subtitulo: 'Talonarios, pagos y sorteo',
     descripcion: 'Rifas del año, talonarios por alumno, pagos de puestos, sorteo y acta.',
+  },  {
+    // Pestaña de Rifas (anidada bajo /rifas para que el menú marque "Rifas").
+    ruta: 'rifas/sorteo', etiqueta: 'Sorteo', icono: 'casino', grupo: 'Dinero', permisos: VER_ALUMNOS, enMenu: false,
+    titulo: 'Rifas', subtitulo: 'Sorteo: entran los talonarios pagados al 100 %',
+    descripcion: 'Sorteo de la rifa con su acta.',
   },
+
   {
     ruta: 'multas', etiqueta: 'Multas y mora', icono: 'gavel', grupo: 'Dinero', permisos: VER_ALUMNOS,
     titulo: 'Multas y mora', subtitulo: 'Deudas por cobrar',

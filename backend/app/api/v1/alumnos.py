@@ -36,6 +36,7 @@ def alumno_a_out(alumno: Alumno, edad_mayoria: int, inscripcion_estado: str | No
     anios = edad(alumno.fecha_nacimiento, hoy())
     return AlumnoOut(
         id=alumno.id,
+        codigo=alumno.codigo,
         nombres=alumno.nombres,
         apellidos=alumno.apellidos,
         tipo_documento=alumno.tipo_documento,
@@ -76,7 +77,7 @@ def listar(
     usuario: Usuario = Depends(VER_ALUMNOS),
     db: Session = Depends(get_db),
 ) -> list[AlumnoOut]:
-    """Busca por nombre o apellido (parcial) o por número de documento (completo, exacto)."""
+    """Busca por nombre o apellido (parcial), por código (F012) o por número de documento (completo, exacto)."""
     edad_mayoria = configuracion.obtener(db, "edad_mayoria")
     filas = servicio.listar(db, usuario, rama=rama, buscar=buscar, activo=activo, skip=skip, limit=limit)
     estados = servicio.estados_inscripcion(db, [a.id for a in filas], hoy().year)

@@ -4,12 +4,13 @@ import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { LOCALE_ID } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { isoLocal, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
 import { API, Usuario } from '../../core/modelos';
 import { RifasPage } from './rifas';
-import { Acta, Puesto, Rifa, Talonario } from './rifas.modelos';
+import { Puesto, Rifa, Talonario } from './rifas.modelos';
 
 registerLocaleData(localeEsCo);
 
@@ -28,13 +29,13 @@ const rifa = (id: string, extra: Partial<Rifa> = {}): Rifa => ({
 
 const puestos = (desde: number, pagados: number): Puesto[] =>
   Array.from({ length: 20 }, (_, i) => ({
-    numero: desde + i, comprador_nombre: i === 0 ? 'Doña Rosa' : null, comprador_telefono: null,
+    numero: desde + i, boleta: i + 1, comprador_nombre: i === 0 ? 'Doña Rosa' : null, comprador_telefono: null,
     monto_pagado: i < pagados ? 2000 : 0, saldo: i < pagados ? 0 : 2000,
     pagos: i < pagados ? [{ id: `p${desde + i}`, fecha: isoLocal(HOY), monto: 2000, anula_id: null, motivo: null, creado_en: '' }] : [],
   }));
 
 const talonario = (id: string, alumno: string, desde: number, pagados: number): Talonario => ({
-  id, alumno_id: `a-${alumno}`, alumno_nombre: alumno, rama: 'femenina', desde, hasta: desde + 19,
+  id, alumno_id: `a-${alumno}`, alumno_nombre: alumno, rama: 'femenina', codigo: `F00${desde / 20 + 1}`, desde, hasta: desde + 19,
   recaudado: pagados * 2000, saldo: (20 - pagados) * 2000, pagado: pagados === 20, puestos: puestos(desde, pagados),
 });
 
@@ -45,7 +46,7 @@ describe('RifasPage', () => {
   function crear(permisos: string[]) {
     TestBed.configureTestingModule({
       imports: [RifasPage],
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
     });
     const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, rama: null, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
@@ -111,7 +112,7 @@ describe('RifasPage', () => {
     await cargar(ADMIN);
     el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
     await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label^="Puesto 025"]')!.click();
+    el().querySelector<HTMLButtonElement>('[aria-label^="Boleta F002-06"]')!.click();
     await estable();
     const nombre = ultimo().querySelector<HTMLInputElement>('[formcontrolname="nombre"]')!;
     nombre.value = 'Carlos Mejía';
@@ -122,14 +123,14 @@ describe('RifasPage', () => {
     r.flush(talonario('t2', 'Sara Ríos', 20, 5));
     backend.expectOne(`${API}/rifas/1`).flush(rifa('1'));
     await estable();
-    expect(texto()).toContain('Puesto 025: comprador guardado');
+    expect(texto()).toContain('Boleta F002-06: comprador guardado');
   });
 
   it('solo el SuperAdmin anula pagos de un puesto', async () => {
     await cargar(ADMIN);
     el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
     await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label^="Puesto 020"]')!.click();
+    el().querySelector<HTMLButtonElement>('[aria-label^="Boleta F002-01"]')!.click();
     await estable();
     expect(boton('Anular', ultimo())).toBeUndefined();
     TestBed.resetTestingModule();
@@ -137,7 +138,7 @@ describe('RifasPage', () => {
     await cargar(SUPERADMIN);
     el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
     await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label^="Puesto 020"]')!.click();
+    el().querySelector<HTMLButtonElement>('[aria-label^="Boleta F002-01"]')!.click();
     await estable();
     boton('Anular', ultimo())!.click();
     await estable();
@@ -153,26 +154,12 @@ describe('RifasPage', () => {
     expect(texto()).toContain('Pago anulado');
   });
 
-  it('el sorteo se juega desde la fecha y muestra el acta', async () => {
+  it('la tarjeta lleva al sorteo cuando ya es la fecha', async () => {
     await cargar(SUPERADMIN, [rifa('1')]);
-    expect(boton('casino Jugar sorteo')).toBeUndefined(); // aún no es la fecha
+    expect(el().querySelector('.tarjeta a[href*="/rifas/sorteo"]')).toBeNull(); // aún no es la fecha
     TestBed.resetTestingModule();
-
     await cargar(SUPERADMIN, [rifa('1', { fecha_sorteo: isoLocal(HOY) })]);
-    boton('casino Jugar sorteo')!.click();
-    await estable();
-    expect(ultimo().querySelector('.urna-valor')?.textContent?.trim()).toBe('20');
-    boton('casino Jugar sorteo', ultimo())!.click();
-    const acta: Acta = {
-      rifa_id: '1', numero_ganador: 7, alumno_id: 'a-Laura Pérez', alumno_nombre: 'Laura Pérez', comprador_nombre: 'Doña Rosa',
-      total_participantes: 20, participantes: [], huella: 'abc123', jugado_en: new Date().toISOString(),
-    };
-    backend.expectOne(`${API}/rifas/1/sorteo`).flush(acta);
-    backend.expectOne(`${API}/rifas/1`).flush(rifa('1', { estado: 'sorteada' }));
-    await estable();
-    expect(ultimo().querySelector('.ganador-numero')?.textContent?.trim()).toBe('007');
-    expect(ultimo().textContent).toContain('Doña Rosa');
-    expect(ultimo().textContent).toContain('abc123');
+    expect(el().querySelector('a[href="/rifas/sorteo?rifa=1"]')?.textContent).toContain('Ir al sorteo');
   });
 
   it('la familia ve su talonario sin botones de cobro ni gestión', async () => {

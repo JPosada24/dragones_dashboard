@@ -1,0 +1,329 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.capital {
+  text-transform: capitalize;
+}
+
+.chico {
+  font-size: 10.5px;
+}
+
+.oro {
+  color: var(--oro);
+}
+
+.centro {
+  text-align: center;
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+  list-style: none;
+}
+
+.nota-chica {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.fila-base {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.relleno {
+  padding: 17px 18px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.kpi-de {
+  font-size: 16px;
+  color: var(--texto-3);
+}
+
+.barra {
+  display: block;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--naranja);
+  }
+}
+
+/* ---------- Escenario ---------- */
+.escenario {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  padding: 18px 18px 22px;
+}
+
+.escenario-cabecera {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.escenario-accion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.en-urna {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+
+  .mono {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--texto-blanco);
+  }
+}
+
+.pantalla {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 28px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--panel-hundido);
+
+  &.ganadora {
+    border-color: color-mix(in srgb, var(--oro) 55%, transparent);
+
+    .pantalla-valor {
+      color: var(--oro);
+    }
+  }
+
+  &.girando .pantalla-valor {
+    color: var(--texto-blanco);
+  }
+}
+
+.pantalla-bloque {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.pantalla-valor {
+  font-size: clamp(36px, 8vw, 64px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--texto-3);
+  min-width: 2ch;
+  text-align: center;
+}
+
+.pantalla-separador {
+  font-size: 40px;
+  color: var(--texto-3);
+}
+
+.ganador {
+  width: min(100%, 640px);
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--oro) 40%, transparent);
+  border-radius: var(--radio);
+  background: var(--oro-tenue);
+
+  &.recien {
+    animation: brillo 1.4s ease-out 1;
+  }
+}
+
+.ganador-textos {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.ganador-nombre {
+  font: 600 20px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.acta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+
+  div {
+    display: grid;
+    gap: 3px;
+  }
+
+  dt {
+    font-size: 10.5px;
+    color: var(--texto-3);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--texto);
+    overflow-wrap: anywhere;
+  }
+}
+
+.ganador-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+@keyframes brillo {
+  from {
+    box-shadow: 0 0 0 0 var(--oro-tenue);
+  }
+
+  to {
+    box-shadow: 0 0 0 22px transparent;
+  }
+}
+
+/* ---------- Talonarios, ramas e historial ---------- */
+.columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+
+  > .panel {
+    overflow: hidden;
+  }
+}
+
+.lateral {
+  display: grid;
+  gap: 18px;
+}
+
+.panel-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.talonarios {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.talonario {
+  --tono: var(--oro);
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 84px 84px;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 12px;
+
+  &.pagado {
+    --tono: var(--naranja);
+    background: color-mix(in srgb, var(--naranja) 4%, transparent);
+  }
+}
+
+.codigo {
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.integrante {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  color: var(--texto);
+}
+
+.estado {
+  font: 600 10px var(--f-texto);
+  color: var(--tono);
+}
+
+.recaudo {
+  text-align: right;
+  color: var(--texto-2);
+}
+
+.rama,
+.historial {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.historial {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+@media (max-width: 999px) {
+  .columnas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  .pantalla {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .talonario {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+
+    .recaudo {
+      display: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ganador.recien {
+    animation: none;
+  }
+}

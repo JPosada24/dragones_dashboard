@@ -7,6 +7,7 @@ import { Observable, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
+import { PESTANAS_ALUMNOS, Pestanas } from '../../compartido/pestanas';
 import { mensajeError } from '../../compartido/errores';
 import { ESTADO_INSCRIPCION, TIPOS_DOCUMENTO } from '../../compartido/estados';
 import { isoLocal } from '../../compartido/fechas';
@@ -16,7 +17,6 @@ import { API } from '../../core/modelos';
 import {
   Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial,
 } from './alumnos.modelos';
-import { PestanasAlumnos } from './pestanas-alumnos';
 import { FormaPago, inscribirConPago, inscripcionUrl, problemaPago, resumenPago } from '../inscripciones/inscribir';
 import { Inscripcion } from '../inscripciones/inscripciones.modelos';
 
@@ -51,7 +51,7 @@ type BusquedaAcudiente = Acudiente | 'nuevo' | null;
 
 @Component({
   selector: 'app-alumnos',
-  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, PestanasAlumnos],
+  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, Pestanas],
   templateUrl: './alumnos.html',
   styleUrl: './alumnos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,6 +62,7 @@ export class AlumnosPage implements OnInit {
   private readonly ruta = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder).nonNullable;
+  protected readonly pestanas = PESTANAS_ALUMNOS;
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
   protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));

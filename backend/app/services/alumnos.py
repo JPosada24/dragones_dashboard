@@ -3,7 +3,7 @@ import uuid
 from datetime import date
 from typing import Any, get_args
 
-from sqlalchemy import ColumnElement, false, or_, select, true
+from sqlalchemy import ColumnElement, Integer, cast, false, func, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.core import cifrado
@@ -84,7 +84,7 @@ def _verificar_rama_permitida(actor: Usuario, rama: str) -> None:
 def _resumen_alumno(a: Alumno) -> dict[str, Any]:
     """Foto del alumno para la auditoría. El documento va enmascarado: nunca en claro en la bitácora."""
     return {
-        "nombres": a.nombres, "apellidos": a.apellidos, "tipo_documento": a.tipo_documento,
+        "codigo": a.codigo, "nombres": a.nombres, "apellidos": a.apellidos, "tipo_documento": a.tipo_documento,
         "documento": enmascarar(a.documento_ultimos), "fecha_nacimiento": a.fecha_nacimiento.isoformat(),
         "rama": a.rama, "telefono": a.telefono, "email": a.email, "direccion": a.direccion, "eps": a.eps,
         "usuario_id": str(a.usuario_id) if a.usuario_id else None, "activo": a.activo,
@@ -159,6 +159,7 @@ def listar(
     if buscar:
         condiciones = [
             Alumno.nombres.icontains(buscar, autoescape=True), Alumno.apellidos.icontains(buscar, autoescape=True),
+            Alumno.codigo == buscar.strip().upper(),
         ]
         if indices := _indices_documento(buscar):
             condiciones.append(Alumno.documento_indice.in_(indices))
@@ -196,6 +197,20 @@ def _vincular(db: Session, alumno: Alumno, *, acudiente_id: uuid.UUID, parentesc
     alumno.vinculos.append(AlumnoAcudiente(acudiente=acudiente, parentesco=parentesco, principal=principal))
 
 
+# Candado de la transacción para asignar códigos: dos altas a la vez no reciben el mismo consecutivo.
+_CANDADO_CODIGOS = 7311
+
+
+def siguiente_codigo(db: Session, rama: str) -> str:
+    """El consecutivo siguiente de la rama: F001, F002… o M001… (nunca se reutiliza uno ya dado)."""
+    db.execute(select(func.pg_advisory_xact_lock(_CANDADO_CODIGOS)))
+    letra = "F" if rama == "femenina" else "M"
+    ultimo = db.scalar(
+        select(func.max(cast(func.substr(Alumno.codigo, 2), Integer))).where(Alumno.codigo.like(f"{letra}%"))
+    )
+    return f"{letra}{(ultimo or 0) + 1:03d}"
+
+
 def crear_alumno(
     db: Session, *, datos: dict[str, Any], vinculos: list[dict[str, Any]], actor: Usuario, ip: str | None
 ) -> Alumno:
@@ -203,7 +218,7 @@ def crear_alumno(
     _aplicar_documento(datos)
     _verificar_documento_libre(db, Alumno, datos)
     _verificar_usuario(db, Alumno, datos)
-    alumno = Alumno(**datos)
+    alumno = Alumno(**datos, codigo=siguiente_codigo(db, datos["rama"]))
     db.add(alumno)
     for v in vinculos:
         _vincular(db, alumno, **v)
@@ -226,6 +241,9 @@ def actualizar_alumno(
     _aplicar_documento(cambios, alumno)
     _verificar_documento_libre(db, Alumno, cambios, alumno.id)
     _verificar_usuario(db, Alumno, cambios, alumno.id)
+    if "rama" in cambios and cambios["rama"] != alumno.rama:
+        # Al corregir la rama recibe un código de la otra (los talonarios ya entregados conservan el suyo).
+        cambios["codigo"] = siguiente_codigo(db, cambios["rama"])
     for campo, valor in cambios.items():
         setattr(alumno, campo, valor)
     if es_menor(db, alumno.fecha_nacimiento) and not alumno.vinculos:

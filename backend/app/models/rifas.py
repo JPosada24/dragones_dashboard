@@ -60,6 +60,8 @@ class Talonario(UUIDMixin, TiempoMixin, Base):
     rifa_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("rifas.id"), index=True)
     alumno_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("alumnos.id"), index=True)
     indice: Mapped[int] = mapped_column(Integer)
+    # Código del alumno al entregarle el talonario (no cambia aunque luego se corrija su rama).
+    codigo: Mapped[str] = mapped_column(String(8))
 
     rifa: Mapped[Rifa] = relationship(lazy="joined")
     alumno: Mapped[Alumno] = relationship(lazy="joined")

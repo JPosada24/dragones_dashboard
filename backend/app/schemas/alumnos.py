@@ -135,6 +135,7 @@ class AcudienteVinculadoOut(BaseModel):
 
 class AlumnoOut(BaseModel):
     id: uuid.UUID
+    codigo: str  # F001 / M001
     nombres: str
     apellidos: str
     tipo_documento: str

@@ -74,7 +74,8 @@ class PagoPuestoOut(BaseModel):
 
 
 class PuestoOut(BaseModel):
-    numero: int
+    numero: int  # número interno del puesto en la rifa (el que usa la API)
+    boleta: int  # número de la boleta dentro del talonario: 1…20
     comprador_nombre: str | None
     comprador_telefono: str | None
     monto_pagado: int
@@ -87,6 +88,7 @@ class TalonarioOut(BaseModel):
     alumno_id: uuid.UUID
     alumno_nombre: str
     rama: str
+    codigo: str  # código del alumno cuando recibió el talonario (F012)
     desde: int
     hasta: int
     recaudado: int
@@ -98,8 +100,11 @@ class TalonarioOut(BaseModel):
 class ActaOut(BaseModel):
     rifa_id: uuid.UUID
     numero_ganador: int
+    codigo: str  # talonario ganador (F012)
+    boleta: int  # boleta dentro del talonario: la ganadora se lee F012-07
     alumno_id: uuid.UUID
     alumno_nombre: str
+    rama: str
     comprador_nombre: str | None
     total_participantes: int
     participantes: list[int]

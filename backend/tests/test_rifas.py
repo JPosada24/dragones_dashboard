@@ -162,6 +162,10 @@ def test_sorteo_solo_entre_talonarios_pagados_y_acta_inmutable(client, h_admin, 
     assert acta["participantes"] == rango and acta["total_participantes"] == 20
     assert acta["numero_ganador"] in rango and acta["alumno_id"] == pagada["id"]
     assert acta["huella"] == huella(rango)  # cualquiera puede verificar la lista
+    # El ganador se lee como código del talonario + boleta (F001-07).
+    assert acta["codigo"] == t["codigo"] == pagada["codigo"]
+    assert acta["boleta"] == acta["numero_ganador"] - t["desde"] + 1 and 1 <= acta["boleta"] <= 20
+    assert [p["boleta"] for p in t["puestos"]] == list(range(1, 21))
     assert client.get(f"{R}/{rifa['id']}/acta", headers=h_admin).json() == acta
     assert client.get(f"{R}/{rifa['id']}", headers=h_admin).json()["estado"] == "sorteada"
 

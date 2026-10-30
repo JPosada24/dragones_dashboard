@@ -1,4 +1,4 @@
-<app-pestanas-alumnos />
+<app-pestanas [pestanas]="pestanas" etiqueta="Vistas de alumnos" />
 
 @if (mensaje(); as m) {
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
