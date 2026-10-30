@@ -59,6 +59,15 @@ describe('ResumenPage', () => {
     expect(texto).toContain('7/10'); // presentes + justificados sobre esperados
   });
 
+  it('sin alertas no muestra la insignia (solo el mensaje vacío)', async () => {
+    const fixture = crear(['alumnos.ver_todos']);
+    backend.expectOne(`${API}/resumen`).flush({ ...RESUMEN, alertas: [] });
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.insignia')).toBeNull();
+    expect(el.textContent).toContain('No hay nada pendiente');
+  });
+
   it('una familia no pide el tablero del staff: ve a sus hijos', async () => {
     const fixture = crear(['alumnos.ver_propios']);
     backend.expectNone(`${API}/resumen`);

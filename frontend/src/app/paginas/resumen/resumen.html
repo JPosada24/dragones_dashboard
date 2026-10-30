@@ -39,7 +39,9 @@
               <h2>Alertas que requieren decisión</h2>
               <p class="panel-sub">Expulsiones, justificaciones, plazos por vencer, inasistencias y mora</p>
             </div>
-            <span class="insignia">{{ r.alertas.length }}</span>
+            @if (r.alertas.length) {
+              <span class="insignia" [attr.aria-label]="r.alertas.length + ' alertas'">{{ r.alertas.length }}</span>
+            }
           </div>
           @for (a of r.alertas; track $index) {
             <div class="alerta" [attr.data-tipo]="a.tipo">
