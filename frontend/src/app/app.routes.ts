@@ -10,6 +10,7 @@ const enConstruccion: Cargar = () => import('./paginas/en-construccion').then((m
 /** Pantallas ya construidas; las demás secciones muestran "en construcción". */
 const PANTALLAS: Record<string, Cargar> = {
   '': () => import('./paginas/resumen/resumen').then((m) => m.ResumenPage),
+  asistencia: () => import('./paginas/asistencia/asistencia').then((m) => m.AsistenciaPage),
 };
 
 export const routes: Routes = [

@@ -186,6 +186,48 @@ button {
   }
 }
 
+.boton.chico {
+  padding: 6px 11px;
+  font-size: 11px;
+}
+
+/* Campos de formulario */
+.control {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--panel-hundido);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio-sm);
+  color: var(--texto);
+  font: 400 12.5px var(--f-texto);
+  color-scheme: dark;
+
+  &:focus {
+    outline: none;
+    border-color: var(--naranja);
+  }
+}
+
+textarea.control {
+  resize: vertical;
+  min-height: 64px;
+}
+
+/* Mensajes de resultado */
+.mensaje {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  font-size: 12.5px;
+  background: var(--naranja-tenue);
+  color: var(--naranja);
+
+  &.error {
+    background: var(--rojo-tenue);
+    color: var(--rojo);
+  }
+}
+
 .solo-lectores {
   position: absolute;
   width: 1px;

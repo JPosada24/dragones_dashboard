@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { RouterLink } from '@angular/router';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 
+import { isoLocal, sumarDias } from '../../compartido/fechas';
 import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
@@ -16,11 +17,6 @@ const ESTADO_INSCRIPCION: Record<string, string> = {
   expulsado: 'Expulsado',
   rechazado: 'Rechazada',
 };
-
-/** Fecha local del club en formato AAAA-MM-DD (para filtrar sesiones). */
-function isoLocal(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 @Component({
   selector: 'app-resumen',
@@ -61,7 +57,7 @@ export class ResumenPage implements OnInit {
 
   private cargarFamilia(): void {
     const hoy = new Date();
-    const enUnaSemana = new Date(hoy.getTime() + 7 * 86_400_000);
+    const enUnaSemana = sumarDias(hoy, 7);
     this.http
       .get<AlumnoBasico[]>(`${API}/alumnos`)
       .pipe(

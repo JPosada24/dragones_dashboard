@@ -139,7 +139,14 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   próximo torneo (solo con `eventos.gestionar`). Pantalla Resumen: tablero del staff como el prototipo; las
   familias ven a sus hijos (estado de cuenta) y próximos entrenamientos. 173 pruebas backend, 14 frontend.
   Pipe `pesos` en `compartido/`. Pantallas construidas se registran en `PANTALLAS` de `app.routes.ts`.
-- SIGUIENTE (frontend): Asistencia, Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
+- HECHO (Asistencia, 2026-10-29): pantalla `paginas/asistencia/`. Semana navegable (+ filtro de rama con
+  `alumnos.ver_todos`), tira de sesiones, planilla P/A con "Todos presentes" (solo abierta y no futura), "Corregir"
+  con motivo tras el cierre, cancelar y programar sesiones (una fecha → `POST /sesiones`; rango + días →
+  `/programar`), justificaciones por revisar (rechazo exige comentario) y racha de inasistencias. La familia ve
+  solo sus filas: "Marcar presente" (hoy) y "Justificar", e historial de sus justificaciones. Compartidos nuevos:
+  `compartido/fechas.ts`, `compartido/errores.ts` (`mensajeError`: detalle de la API, nunca trazas) y estilos
+  globales `.control`, `.mensaje`, `.boton.chico`. 20 pruebas frontend.
+- SIGUIENTE (frontend): Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.
