@@ -18,7 +18,7 @@
 </section>
 
 @if (mensaje(); as m) {
-  <p class="mensaje" [class.error]="m.error" [attr.role]="m.error ? 'alert' : 'status'">{{ m.texto }}</p>
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
 
 @if (errorCarga()) {

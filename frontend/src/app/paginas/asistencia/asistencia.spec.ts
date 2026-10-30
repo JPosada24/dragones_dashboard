@@ -148,6 +148,10 @@ describe('AsistenciaPage', () => {
     expect(texto()).toContain('Cancelación deshecha');
     expect(texto()).toContain('Laura Pérez');
     expect(el().querySelector('.marca')).not.toBeNull();
+
+    el().querySelector<HTMLButtonElement>('button[aria-label="Cerrar mensaje"]')!.click();
+    await estable();
+    expect(texto()).not.toContain('Cancelación deshecha');
   });
 
   it('no ofrece deshacer las canceladas por torneo', async () => {

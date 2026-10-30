@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 
+import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { desdeIso, diaSemana, isoLocal, lunesDe, sumarDias } from '../../compartido/fechas';
@@ -33,7 +34,7 @@ const sesionUrl = (id: string) => `${API}/sesiones/${encodeURIComponent(id)}`;
 
 @Component({
   selector: 'app-asistencia',
-  imports: [DatePipe, ReactiveFormsModule, Dialogo],
+  imports: [DatePipe, ReactiveFormsModule, Aviso, Dialogo],
   templateUrl: './asistencia.html',
   styleUrl: './asistencia.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

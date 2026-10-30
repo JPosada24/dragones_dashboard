@@ -141,7 +141,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   indicadores, alertas ordenadas por gravedad con `ruta` del frontend, sesiones de hoy, rifas del año, cartera y
   próximo torneo (solo con `eventos.gestionar`). Pantalla Resumen: tablero del staff como el prototipo; las
   familias ven a sus hijos (estado de cuenta) y próximos entrenamientos. 173 pruebas backend, 14 frontend.
-  Pipe `pesos` en `compartido/`. Pantallas construidas se registran en `PANTALLAS` de `app.routes.ts`.
+  Pipe `pesos` en `compartido/`.
+  Mensajes de resultado con `compartido/aviso.ts` (`<app-aviso>`): X para cerrar; los de éxito se cierran solos
+  a los 6 s, los errores se quedan hasta cerrarlos. Usarlo en todas las pantallas nuevas. Pantallas construidas se registran en `PANTALLAS` de `app.routes.ts`.
 - HECHO (Asistencia, 2026-10-29): pantalla `paginas/asistencia/`. Semana navegable (+ filtro de rama con
   `alumnos.ver_todos`), tira de sesiones, planilla P/A con "Todos presentes" (solo abierta y no futura), "Corregir"
   con motivo tras el cierre, cancelar y programar sesiones (una fecha → `POST /sesiones`; rango + días →
@@ -162,7 +164,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   `POST /sesiones/{id}/reactivar` (`sesiones.gestionar`): deshace una cancelación manual o por festivo, solo antes
   del cierre de esa sesión (si no, el cierre multaría a todos); las de torneo/horario no (las maneja la
   programación). Botón "Deshacer cancelación" / "Entrenar este festivo". Avisos: **campana desplegable**
-  (`layout/campana/`), ya no hay página `/notificaciones`. 181 pruebas backend, 26 frontend.
+  (`layout/campana/`), ya no hay página `/notificaciones`. 181 pruebas backend, 28 frontend.
 - SIGUIENTE (frontend): Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
