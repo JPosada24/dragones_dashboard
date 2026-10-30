@@ -266,9 +266,13 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   cancelados, indicadores, tarjetas con fecha, cierre de inscripciones y cupos; popup de clubes (inscribir, WhatsApp
   del delegado, pagos con «Usar el saldo», retirar con promoción de la lista de espera, anular solo SA).
   `compartido/whatsapp.ts` (`numeroWhatsApp`). 196 pruebas backend, 80 frontend.
-- SIGUIENTE (frontend): Avisos, Configuración. Las alertas se notificarán en la fase de notificaciones (Redis
-  llegará ahí para colas y para el limitador de logins).
-- Después: frontend Angular, club público, IA, producción.
+- HECHO (Configuración y Avisos, 2026-10-30): `paginas/configuracion/` (parámetros agrupados y legibles; editar en
+  popup que empieza vacío con el valor actual como placeholder; solo con `config.editar`; «Probar correo»).
+  `paginas/avisos/` (`notificaciones.gestionar`): cola de WhatsApp (abrir enlace wa.me —solo si coincide con
+  `https://wa.me/<número>?text=`—, luego «Sí, enviado» o «Descartar»; el mensaje se pinta como texto) y estado de
+  correos (pendiente/enviado/fallido con intentos y error). **Frontend del panel completo.** 196 pruebas backend, 88 frontend.
+- SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), agente de IA, endurecer
+  para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);

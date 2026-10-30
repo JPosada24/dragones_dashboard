@@ -1,0 +1,123 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+  list-style: none;
+}
+
+.nota-chica {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.panel {
+  overflow: hidden;
+}
+
+.panel-cabecera {
+  display: grid;
+  gap: 8px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.avisos,
+.correos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aviso {
+  display: grid;
+  gap: 8px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.aviso-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.chip-tipo {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--naranja-tenue);
+  color: var(--naranja);
+  font: 600 10px var(--f-texto);
+}
+
+.aviso-titulo {
+  font: 600 12.5px var(--f-texto);
+  color: var(--texto);
+}
+
+.aviso-mensaje {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: var(--panel-hundido);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto-2);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.aviso-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.correo {
+  --tono: var(--oro);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--borde-suave);
+
+  &[data-estado='enviado'] {
+    --tono: var(--naranja);
+  }
+
+  &[data-estado='fallido'] {
+    --tono: var(--rojo);
+  }
+}
+
+.correo-textos {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.error-correo {
+  color: var(--rojo);
+  overflow-wrap: anywhere;
+}
+
+.estado {
+  flex: none;
+  font: 600 11px var(--f-texto);
+  color: var(--tono);
+}

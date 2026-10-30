@@ -1,0 +1,84 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<div class="filtros" role="group" aria-label="Vista">
+  <button type="button" class="filtro" [attr.aria-pressed]="vista() === 'whatsapp'" (click)="cambiarVista('whatsapp')">
+    WhatsApp por enviar @if (cola(); as c) { <span class="mono">{{ c.length }}</span> }
+  </button>
+  <button type="button" class="filtro" [attr.aria-pressed]="vista() === 'correos'" (click)="cambiarVista('correos')">Correos</button>
+</div>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudieron cargar los avisos. Recarga la página.</p>
+} @else if (vista() === 'whatsapp') {
+  <section class="panel" aria-label="WhatsApp por enviar">
+    <div class="panel-cabecera">
+      <h2>WhatsApp por enviar</h2>
+      <p class="nota-chica">Se envían desde el número del club: el botón abre WhatsApp con el mensaje escrito. Después marca si lo enviaste.</p>
+    </div>
+    @if (cola(); as lista) {
+      <ul class="avisos">
+        @for (a of lista; track a.id) {
+          <li class="aviso">
+            <div class="aviso-cabecera">
+              <span class="chip-tipo">{{ tipos[a.tipo] ?? a.tipo }}</span>
+              <span class="aviso-titulo">{{ a.titulo }}</span>
+              <span class="nota-chica mono">{{ a.telefono }}</span>
+              <span class="nota-chica">{{ a.creado_en | date: 'd MMM, h:mm a' }}</span>
+            </div>
+            <!-- El mensaje se muestra como texto: nunca se interpreta como HTML. -->
+            <p class="aviso-mensaje">{{ a.mensaje }}</p>
+            <div class="aviso-acciones">
+              @if (enlaceSeguro(a); as url) {
+                <a class="boton chico" [href]="url" target="_blank" rel="noopener noreferrer" (click)="alAbrir(a)">
+                  <span class="icono" aria-hidden="true">chat</span> Abrir WhatsApp
+                </a>
+              }
+              @if (abierto(a)) {
+                <span class="nota-chica">¿Lo enviaste?</span>
+                <button type="button" class="boton secundario chico" [disabled]="ocupado() === a.id" (click)="marcar(a, 'enviado')">Sí, enviado</button>
+              }
+              <button type="button" class="enlace-rojo" [disabled]="ocupado() === a.id" (click)="marcar(a, 'descartado')">Descartar</button>
+            </div>
+          </li>
+        } @empty {
+          <li class="vacio">No hay mensajes de WhatsApp por enviar. 🎉</li>
+        }
+      </ul>
+    } @else {
+      <p class="vacio">Cargando…</p>
+    }
+  </section>
+} @else {
+  <section class="panel" aria-label="Correos">
+    <div class="panel-cabecera">
+      <h2>Correos</h2>
+      <div class="filtros" role="group" aria-label="Estado">
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroCorreo() === ''" (click)="filtrarCorreos('')">Todos</button>
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroCorreo() === 'pendiente'" (click)="filtrarCorreos('pendiente')">Pendientes</button>
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroCorreo() === 'enviado'" (click)="filtrarCorreos('enviado')">Enviados</button>
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroCorreo() === 'fallido'" (click)="filtrarCorreos('fallido')">Fallidos</button>
+      </div>
+      <p class="nota-chica">Salen solos cada minuto; si fallan se reintentan hasta 5 veces.</p>
+    </div>
+    @if (correos(); as lista) {
+      <ul class="correos">
+        @for (c of lista; track c.id) {
+          <li class="correo" [attr.data-estado]="c.estado">
+            <span class="correo-textos">
+              <span class="aviso-titulo">{{ c.titulo }}</span>
+              <span class="nota-chica">{{ tipos[c.tipo] ?? c.tipo }} · {{ c.email }} · {{ c.creado_en | date: 'd MMM, h:mm a' }}</span>
+              @if (c.error) { <span class="nota-chica error-correo">{{ c.error }}</span> }
+            </span>
+            <span class="estado">{{ c.estado === 'enviado' ? 'Enviado' : c.estado === 'fallido' ? 'Falló' : 'Pendiente' }}@if (c.intentos > 1) { · {{ c.intentos }} intentos }</span>
+          </li>
+        } @empty {
+          <li class="vacio">No hay correos para mostrar.</li>
+        }
+      </ul>
+    } @else {
+      <p class="vacio">Cargando…</p>
+    }
+  </section>
+}
