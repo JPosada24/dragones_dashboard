@@ -1,6 +1,7 @@
 import { Route, Routes } from '@angular/router';
 
 import { requierePermiso, requiereSesion, soloInvitado } from './core/auth/guards';
+import { AYUDAS } from './core/ayudas';
 import { SECCIONES } from './core/secciones';
 
 type Cargar = NonNullable<Route['loadComponent']>;
@@ -33,7 +34,10 @@ export const routes: Routes = [
         path: s.ruta,
         pathMatch: 'full' as const,
         title: `${s.etiqueta} · Dragones`,
-        data: { permisos: s.permisos, titulo: s.titulo, subtitulo: s.subtitulo, descripcion: s.descripcion },
+        data: {
+          permisos: s.permisos, titulo: s.titulo, subtitulo: s.subtitulo, descripcion: s.descripcion,
+          ayuda: AYUDAS[s.ruta],
+        },
         loadComponent: PANTALLAS[s.ruta] ?? enConstruccion,
       })),
     ],

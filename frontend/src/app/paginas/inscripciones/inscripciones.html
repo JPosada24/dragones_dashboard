@@ -61,12 +61,7 @@
 
   <section class="panel tabla" aria-label="Inscripciones">
     <div class="panel-cabecera">
-      <div class="titulo-fila">
-        <h2>{{ esStaff() ? 'Inscripciones ' + anio() : 'Inscripciones de ' + anio() }}</h2>
-        <button type="button" class="ayuda" (click)="ayuda.set(true)" aria-label="Cómo funcionan las inscripciones" title="Cómo funciona">
-          <span class="icono" aria-hidden="true">help</span>
-        </button>
-      </div>
+      <h2>{{ esStaff() ? 'Inscripciones ' + anio() : 'Inscripciones de ' + anio() }}</h2>
       @if (esStaff()) {
         <div class="filtros" role="group" aria-label="Filtrar por estado">
           @for (f of filtros; track f.valor) {
@@ -129,28 +124,6 @@
       <p class="nota">Se muestran las primeras {{ limite }} inscripciones del año.</p>
     }
   </section>
-}
-
-<!-- ---------- Ayuda ---------- -->
-@if (ayuda()) {
-  <app-dialogo titulo="Cómo funcionan las inscripciones" descripcion="El valor, el plazo y los avisos se ajustan en Configuración."
-               (cerrar)="ayuda.set(false)">
-    <div class="formulario">
-      <ol class="pasos">
-        <li><b>Inscripción.</b> La hace el entrenador al registrar al alumno (o al renovarlo cada año); el valor y el plazo (30 días) salen de la configuración del club.</li>
-        <li><b>Abonos.</b> Se aceptan pagos parciales dentro del plazo. Al completar el valor, la inscripción queda <b>activa</b>.</li>
-        <li><b>Prórroga.</b> Solo Admin o SuperAdmin, con motivo. Reactiva una inscripción rechazada por vencimiento.</li>
-        <li><b>Vencimiento.</b> Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.</li>
-      </ol>
-      <p class="nota-chica">Un abono errado no se borra: el SuperAdmin lo anula con motivo y queda en el historial.</p>
-      <div class="acciones">
-        @if (esStaff()) {
-          <a class="boton secundario chico" routerLink="/alumnos" (click)="ayuda.set(false)">Inscribir alumno nuevo en Fichas</a>
-        }
-        <button type="button" class="boton chico" (click)="ayuda.set(false)">Entendido</button>
-      </div>
-    </div>
-  </app-dialogo>
 }
 
 <!-- ---------- Detalle ---------- -->

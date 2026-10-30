@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
@@ -51,7 +51,7 @@ type Transicion = (typeof TRANSICIONES)[number];
 
 @Component({
   selector: 'app-inscripciones',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, PestanasAlumnos],
+  imports: [DatePipe, ReactiveFormsModule, Aviso, Dialogo, PesosPipe, PestanasAlumnos],
   templateUrl: './inscripciones.html',
   styleUrl: './inscripciones.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,7 +95,6 @@ export class InscripcionesPage implements OnInit {
   protected readonly anulando = signal<{ i: Inscripcion; pago: PagoInscripcion } | null>(null);
   protected readonly cambiando = signal<{ i: Inscripcion; t: Transicion } | null>(null);
   protected readonly creando = signal(false);
-  protected readonly ayuda = signal(false);
   protected readonly candidatos = signal<Alumno[] | null>(null);
   protected readonly elegido = signal<Alumno | null>(null);
   private temporizador: ReturnType<typeof setTimeout> | undefined;

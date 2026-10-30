@@ -46,7 +46,10 @@
     <header class="barra-movil">
       <img src="escudo.png" alt="" width="34" height="34" />
       <div class="barra-movil-textos">
-        <div class="barra-movil-titulo">{{ encabezado().titulo }}</div>
+        <div class="barra-movil-titulo">
+          <span class="recorte">{{ encabezado().titulo }}</span>
+          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" /> }
+        </div>
         <div class="barra-movil-sub">{{ encabezado().subtitulo }}</div>
       </div>
       <app-campana />
@@ -55,7 +58,10 @@
     <!-- Escritorio: barra superior -->
     <header class="barra">
       <div>
-        <h1 class="titulo">{{ encabezado().titulo }}</h1>
+        <div class="titulo-fila">
+          <h1 class="titulo">{{ encabezado().titulo }}</h1>
+          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" /> }
+        </div>
         <p class="subtitulo">{{ encabezado().subtitulo }}</p>
       </div>
       <app-campana />

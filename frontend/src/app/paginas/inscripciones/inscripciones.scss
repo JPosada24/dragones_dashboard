@@ -156,35 +156,6 @@ h3 {
   }
 }
 
-/* ---------- Ayuda ---------- */
-.titulo-fila {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ayuda {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid var(--borde-fuerte);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--texto-3);
-  cursor: pointer;
-
-  .icono {
-    font-size: 16px;
-  }
-
-  &:hover {
-    border-color: var(--oro);
-    color: var(--oro);
-  }
-}
-
 /* ---------- Tabla ---------- */
 .tabla {
   overflow: hidden;
@@ -350,26 +321,6 @@ h3 {
   &:hover {
     border-color: var(--oro);
     color: var(--oro);
-  }
-}
-
-/* ---------- Regla ---------- */
-.pasos {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 9px;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--texto-2);
-
-  b {
-    color: var(--texto);
-  }
-
-  li::marker {
-    font: 600 11px var(--f-mono);
-    color: var(--naranja);
   }
 }
 

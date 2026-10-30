@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith, tap } from 'rxjs';
 
+import { Ayuda, AyudaBoton } from '../compartido/ayuda';
 import { AuthService } from '../core/auth/auth.service';
 import { NOMBRE_ROL } from '../core/modelos';
 import { NotificacionesService } from '../core/notificaciones.service';
@@ -11,7 +12,7 @@ import { GRUPOS, PESTANAS_MOVIL, Seccion, seccionesVisibles } from '../core/secc
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Campana],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Campana, AyudaBoton],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,10 +66,14 @@ export class Shell {
       map(() => {
         let r = this.ruta.snapshot;
         while (r.firstChild) r = r.firstChild;
-        return { titulo: (r.data['titulo'] as string) ?? '', subtitulo: (r.data['subtitulo'] as string) ?? '' };
+        return {
+          titulo: (r.data['titulo'] as string) ?? '',
+          subtitulo: (r.data['subtitulo'] as string) ?? '',
+          ayuda: (r.data['ayuda'] as Ayuda | undefined) ?? null,
+        };
       }),
     ),
-    { initialValue: { titulo: '', subtitulo: '' } },
+    { initialValue: { titulo: '', subtitulo: '', ayuda: null as Ayuda | null } },
   );
 
   protected enlace(s: Seccion): string {

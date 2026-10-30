@@ -231,11 +231,18 @@ $movil: 899px;
   }
 
   .barra-movil-titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font: 600 15px/1.15 var(--f-titulo);
     color: var(--texto-blanco);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+    .recorte {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   .barra-movil-sub {
@@ -316,4 +323,10 @@ $movil: 899px;
     font-size: 12px;
     color: var(--texto-3);
   }
+}
+
+.titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
