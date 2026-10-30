@@ -26,3 +26,14 @@ export function lunesDe(d: Date): Date {
 export function diaSemana(d: Date): number {
   return (d.getDay() + 6) % 7;
 }
+
+/** AAAA-MM-DD → DD/MM/AAAA (como los mensajes del backend). */
+export function formatoFecha(iso: string): string {
+  const [a, m, d] = iso.split('-');
+  return `${d}/${m}/${a}`;
+}
+
+/** Días de calendario de `desde` a `hasta` (negativo si `hasta` ya pasó). */
+export function diasEntre(desde: string, hasta: string): number {
+  return Math.round((desdeIso(hasta).getTime() - desdeIso(desde).getTime()) / 86_400_000);
+}

@@ -14,8 +14,10 @@ import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
 import {
-  Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, InscripcionBasica, Rama, RegistroHistorial,
+  Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial,
 } from './alumnos.modelos';
+import { FormaPago, inscribirConPago, problemaPago, resumenPago } from '../inscripciones/inscribir';
+import { Inscripcion } from '../inscripciones/inscripciones.modelos';
 
 const TIPOS_ARCHIVO: { valor: string; texto: string }[] = [
   { valor: 'identidad', texto: 'Documento de identidad' },
@@ -43,8 +45,6 @@ interface VinculoNuevo {
   principal: boolean;
 }
 
-type FormaPago = 'ninguno' | 'parcial' | 'completo';
-
 /** Resultado de buscar al acudiente por documento: encontrado, no existe (se crea) o sin buscar aún. */
 type BusquedaAcudiente = Acudiente | 'nuevo' | null;
 
@@ -61,7 +61,6 @@ export class AlumnosPage implements OnInit {
   private readonly ruta = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder).nonNullable;
-  private readonly pesos = new PesosPipe();
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
   protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
@@ -318,7 +317,7 @@ export class AlumnosPage implements OnInit {
         this.inscribir$(a.id).subscribe({
           next: (i) => {
             this.ocupado.set(false);
-            terminar(`${nombre} quedó registrado e inscrito. ${this.textoInscripcion(i)}`);
+            terminar(`${nombre} quedó registrado e inscrito. ${resumenPago(i)}`);
           },
           error: (e) => {
             this.ocupado.set(false);
@@ -353,36 +352,16 @@ export class AlumnosPage implements OnInit {
     this.abrir(() => this.inscribiendo.set(true));
   }
 
-  /** Qué falta en la forma de pago; null si está bien. */
   private problemaInscripcion(): string | null {
     const f = this.formInscripcion.getRawValue();
-    if (!f.inscribir || f.pago !== 'parcial') return null;
-    if (!Number.isInteger(f.monto) || f.monto < 1) return 'Escribe el valor del abono (en pesos, sin puntos).';
-    return null;
+    return f.inscribir ? problemaPago(f.pago, f.monto) : null;
   }
 
-  /** Inscribe al alumno en el año y, si se indicó, registra el primer abono con fecha de hoy. */
-  private inscribir$(alumnoId: string): Observable<InscripcionBasica> {
+  private inscribir$(alumnoId: string): Observable<Inscripcion> {
     const f = this.formInscripcion.getRawValue();
-    return this.http.post<InscripcionBasica>(`${API}/inscripciones`, { alumno_id: alumnoId }).pipe(
-      switchMap((i) => {
-        const monto = f.pago === 'completo' ? i.saldo : f.pago === 'parcial' ? f.monto : 0;
-        if (!this.puedeAbonar() || monto <= 0 || i.saldo === 0) return of(i);
-        const url = `${API}/inscripciones/${encodeURIComponent(i.id)}/pagos`;
-        return this.http.post<InscripcionBasica>(url, { fecha_pago: this.hoy, monto });
-      }),
-    );
-  }
-
-  private textoInscripcion(i: InscripcionBasica): string {
-    if (i.saldo === 0) return 'La inscripción quedó paga y activa.';
-    const pagado = i.monto_pagado ? `Abonó ${this.pesos.transform(i.monto_pagado)}; ` : '';
-    return `${pagado}saldo ${this.pesos.transform(i.saldo)} hasta el ${this.fecha(i.fecha_limite_pago)}.`;
-  }
-
-  private fecha(iso: string): string {
-    const [a, m, d] = iso.split('-');
-    return `${d}/${m}/${a}`;
+    return inscribirConPago(this.http, alumnoId, {
+      forma: f.pago, monto: f.monto, hoy: this.hoy, puedeAbonar: this.puedeAbonar(),
+    });
   }
 
   protected guardarInscripcion(): void {
@@ -394,7 +373,7 @@ export class AlumnosPage implements OnInit {
       this.inscribiendo.set(false);
       this.seleccionar(a.id);
       this.cargarLista();
-      this.avisar(null, `Inscripción registrada. ${this.textoInscripcion(i)}`);
+      this.avisar(null, `Inscripción registrada. ${resumenPago(i)}`);
     }, true);
   }
 

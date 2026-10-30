@@ -183,7 +183,15 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   Docker usa los suyos. Resumen: `alumnos_sin_inscripcion` ("registrados sin inscribir"). Alumnos: inscribir al
   crear o desde la ficha ("Inscribir <año>") con sin pago / abono parcial / pago completo (`inscripciones.crear` y
   `.abonar`); si la inscripción falla tras crear, se avisa sin reintentar el alta. 184 pruebas backend, 37 frontend.
-- SIGUIENTE (frontend): Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
+- HECHO (Inscripciones, 2026-10-30): pantalla `paginas/inscripciones/`: año navegable, filtro de rama (ver_todos),
+  indicadores (activas, por cobrar, vencen en 7 días, en revisión), filtros por estado con conteo (por defecto
+  pendientes, la más urgente primero), fila con fechas, días restantes, barra de pagado y acciones rápidas (abono con
+  el saldo prellenado, prórroga). Detalle en popup: cifras, abonos (anular con motivo: `pagos.anular`), prórrogas y
+  cambios de estado según `TRANSICIONES` (confirmar expulsión solo con `expulsion.confirmar`). "Nueva inscripción"
+  busca alumnos (deshabilita a quien ya tiene una vigente). `inscripciones/inscribir.ts` (`inscribirConPago`,
+  `problemaPago`, `resumenPago`) lo comparten Alumnos e Inscripciones. KPIs (`.kpis/.kpi`) ahora son estilos
+  globales. La familia ve las de sus hijos sin acciones. 184 pruebas backend, 44 frontend.
+- SIGUIENTE (frontend): Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.

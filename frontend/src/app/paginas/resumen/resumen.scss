@@ -59,42 +59,6 @@ h2 {
   font-size: 10.5px;
 }
 
-/* ---------- Indicadores ---------- */
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  background: var(--borde);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  overflow: hidden;
-}
-
-.kpi {
-  background: var(--panel);
-  padding: 17px 18px;
-  display: grid;
-  gap: 8px;
-}
-
-.kpi-valor {
-  font: 300 29px/1 var(--f-titulo);
-  color: var(--texto-blanco);
-}
-
-.kpi-nota {
-  font: 500 11px var(--f-texto);
-  color: var(--texto-3);
-}
-
-a.kpi-nota {
-  text-decoration: none;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
 /* ---------- Columnas ---------- */
 .columnas {
   display: grid;
@@ -359,12 +323,6 @@ a.kpi-nota {
   &.mal {
     background: var(--rojo-tenue);
     color: var(--rojo);
-  }
-}
-
-@media (max-width: 1159px) {
-  .kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

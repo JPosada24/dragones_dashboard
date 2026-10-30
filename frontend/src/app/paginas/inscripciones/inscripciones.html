@@ -1,0 +1,336 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<section class="controles" aria-label="Año y filtros">
+  <div class="anio">
+    <button type="button" class="boton secundario chico" (click)="cambiarAnio(-1)" aria-label="Año anterior">
+      <span class="icono" aria-hidden="true">chevron_left</span>
+    </button>
+    <span class="anio-texto mono" aria-live="polite">{{ anio() }}</span>
+    <button type="button" class="boton secundario chico" (click)="cambiarAnio(1)" aria-label="Año siguiente">
+      <span class="icono" aria-hidden="true">chevron_right</span>
+    </button>
+    @if (veTodasLasRamas()) {
+      <div class="filtros" role="group" aria-label="Filtrar por rama">
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === ''" (click)="filtroRama.set('')">Ambas ramas</button>
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'femenina'" (click)="filtroRama.set('femenina')">Femenina</button>
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'masculina'" (click)="filtroRama.set('masculina')">Masculina</button>
+      </div>
+    }
+  </div>
+  @if (puedeInscribir()) {
+    <button type="button" class="boton chico" (click)="abrirNueva()">
+      <span class="icono" aria-hidden="true">how_to_reg</span> Nueva inscripción
+    </button>
+  }
+</section>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudieron cargar las inscripciones. Recarga la página.</p>
+} @else if (inscripciones() === null) {
+  <p class="panel vacio">Cargando…</p>
+} @else {
+  @if (esStaff()) {
+    @let k = indicadores();
+    <section class="kpis" aria-label="Indicadores del año">
+      <div class="kpi">
+        <div class="etiqueta">Activas</div>
+        <div class="kpi-valor">{{ k.activas }}</div>
+        <div class="kpi-nota">recaudado {{ k.recaudado | pesos }}</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Pendientes de pago</div>
+        <div class="kpi-valor">{{ k.pendientes }}</div>
+        <div class="kpi-nota" [class.oro]="k.porCobrar > 0">{{ k.porCobrar | pesos }} por cobrar</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Vencen esta semana</div>
+        <div class="kpi-valor" [class.naranja]="k.pronto > 0">{{ k.pronto }}</div>
+        <div class="kpi-nota">o ya vencidas sin rechazar</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">En revisión</div>
+        <div class="kpi-valor" [class.rojo]="k.revision > 0">{{ k.revision }}</div>
+        <div class="kpi-nota">marcadas para expulsión</div>
+      </div>
+    </section>
+  }
+
+  <div class="columnas">
+    <section class="panel tabla" aria-label="Inscripciones">
+      <div class="panel-cabecera">
+        <h2>{{ esStaff() ? 'Inscripciones ' + anio() : 'Inscripciones de ' + anio() }}</h2>
+        @if (esStaff()) {
+          <div class="filtros" role="group" aria-label="Filtrar por estado">
+            @for (f of filtros; track f.valor) {
+              <button type="button" class="filtro" [attr.aria-pressed]="filtro() === f.valor" (click)="filtro.set(f.valor)">
+                {{ f.texto }} <span class="mono">{{ conteoFiltro()[f.valor] }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (filas().length) {
+        <div class="encabezados" aria-hidden="true">
+          <span>Alumno</span><span>Inscrito / límite</span><span>Restan</span><span>Pagado</span><span>Estado</span><span></span>
+        </div>
+      }
+      <ul class="filas">
+        @for (i of filas(); track i.id) {
+          <li class="fila" [attr.data-estado]="i.estado">
+            <button type="button" class="alumno" (click)="detalle.set(i)" [attr.aria-label]="'Ver la inscripción de ' + i.alumno_nombre">
+              <span class="alumno-nombre">{{ i.alumno_nombre }}</span>
+              <span class="alumno-nota capital">{{ i.rama }}</span>
+            </button>
+            <span class="mono chico fechas">
+              {{ i.fecha_inscripcion | date: 'd MMM' }} → <b>{{ i.fecha_limite_pago | date: 'd MMM' }}</b>
+              @if (i.prorrogas.length) { <span class="chip-prorroga" title="Con prórroga">prórroga</span> }
+            </span>
+            <span class="mono chico restan" [class.alerta]="i.estado === 'pendiente_pago' && restan(i) <= 7">
+              {{ i.estado === 'pendiente_pago' ? textoRestan(i) : '—' }}
+            </span>
+            <span class="pagado">
+              <span class="mono chico">{{ (i.monto_pagado ?? 0) | pesos }} / {{ i.valor | pesos }}</span>
+              <span class="barra" role="img" [attr.aria-label]="'Pagado ' + pct(i)"><span [style.width]="pct(i)"></span></span>
+            </span>
+            <span class="estado">{{ estadoTexto[i.estado] }}</span>
+            <span class="acciones-fila">
+              @if (abonable(i)) {
+                <button type="button" class="boton-icono" (click)="abrirAbono(i)" [attr.aria-label]="'Registrar abono de ' + i.alumno_nombre" title="Registrar abono">
+                  <span class="icono" aria-hidden="true">payments</span>
+                </button>
+              }
+              @if (prorrogable(i)) {
+                <button type="button" class="boton-icono" (click)="abrirProrroga(i)" [attr.aria-label]="'Conceder prórroga a ' + i.alumno_nombre" title="Conceder prórroga">
+                  <span class="icono" aria-hidden="true">event_repeat</span>
+                </button>
+              }
+            </span>
+          </li>
+        } @empty {
+          <li class="vacio">
+            @if (esStaff()) {
+              Nada en «{{ textoFiltro() }}» para {{ anio() }}.
+            } @else {
+              No hay inscripciones registradas en {{ anio() }}.
+            }
+          </li>
+        }
+      </ul>
+      @if ((inscripciones()?.length ?? 0) >= limite) {
+        <p class="nota">Se muestran las primeras {{ limite }} inscripciones del año.</p>
+      }
+    </section>
+
+    <aside class="panel relleno regla">
+      <div class="fila-base">
+        <h2>Cómo funciona</h2>
+        <span class="mono chico apagado">configurable</span>
+      </div>
+      <ol class="pasos">
+        <li><b>Inscripción.</b> La hace el entrenador; el valor y el plazo (30 días) salen de la configuración del club.</li>
+        <li><b>Abonos.</b> Se aceptan pagos parciales dentro del plazo. Al completar el valor, la inscripción queda <b>activa</b>.</li>
+        <li><b>Prórroga.</b> Solo Admin o SuperAdmin, con motivo. Reactiva una inscripción rechazada por vencimiento.</li>
+        <li><b>Vencimiento.</b> Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.</li>
+      </ol>
+      <p class="nota-chica">Un abono errado no se borra: el SuperAdmin lo anula con motivo y queda en el historial.</p>
+      @if (esStaff()) {
+        <a class="enlace" routerLink="/alumnos">Inscribir desde la ficha del alumno →</a>
+      }
+    </aside>
+  </div>
+}
+
+<!-- ---------- Detalle ---------- -->
+@if (detalle(); as i) {
+  <app-dialogo [titulo]="i.alumno_nombre" [descripcion]="'Inscripción ' + i.anio + ' · rama ' + i.rama" ancho="ancho"
+               (cerrar)="detalle.set(null)">
+    <div class="detalle">
+      <div class="detalle-estado" [attr.data-estado]="i.estado">
+        <span class="estado">{{ estadoTexto[i.estado] }}</span>
+        @if (i.motivo) { <span class="nota-chica">{{ i.motivo }}</span> }
+        @if (i.causa_expulsion === 'mora') { <span class="nota-chica">Marcada por el sistema: deuda en mora.</span> }
+      </div>
+
+      <dl class="cifras">
+        <div><dt>Valor</dt><dd class="mono">{{ i.valor | pesos }}</dd></div>
+        <div><dt>Pagado</dt><dd class="mono">{{ (i.monto_pagado ?? 0) | pesos }}</dd></div>
+        <div><dt>Saldo</dt><dd class="mono" [class.oro]="i.saldo > 0">{{ i.saldo | pesos }}</dd></div>
+        <div><dt>Inscrito</dt><dd>{{ i.fecha_inscripcion | date: 'd MMM y' }}</dd></div>
+        <div><dt>Límite de pago</dt><dd>{{ i.fecha_limite_pago | date: 'd MMM y' }}</dd></div>
+        @if (i.fecha_pago) { <div><dt>Pagada el</dt><dd>{{ i.fecha_pago | date: 'd MMM y' }}</dd></div> }
+      </dl>
+
+      <section class="bloque">
+        <h3>Abonos</h3>
+        @for (p of i.pagos; track p.id) {
+          <div class="movimiento" [class.negativo]="p.monto < 0" [class.anulado]="p.anulado">
+            <span class="mono chico">{{ p.fecha | date: 'd MMM y' }}</span>
+            <span class="mono">{{ p.monto | pesos }}</span>
+            <span class="nota-chica movimiento-nota">
+              @if (p.monto < 0) { Anulación: {{ p.motivo }} } @else if (p.anulado) { Anulado } @else { Abono }
+            </span>
+            @if (anulable(i, p)) {
+              <button type="button" class="enlace-rojo" (click)="abrirAnular(i, p)">Anular</button>
+            }
+          </div>
+        } @empty {
+          <p class="nota-chica">Aún no hay abonos.</p>
+        }
+      </section>
+
+      @if (i.prorrogas.length) {
+        <section class="bloque">
+          <h3>Prórrogas</h3>
+          @for (p of i.prorrogas; track p.creado_en) {
+            <div class="movimiento">
+              <span class="mono chico">{{ p.creado_en | date: 'd MMM y' }}</span>
+              <span class="mono chico">{{ p.limite_anterior | date: 'd MMM' }} → {{ p.limite_nuevo | date: 'd MMM' }}</span>
+              <span class="nota-chica movimiento-nota">{{ p.motivo }}</span>
+            </div>
+          }
+        </section>
+      }
+
+      @if (abonable(i) || prorrogable(i) || transiciones(i).length) {
+        <div class="acciones">
+          @for (t of transiciones(i); track t.hacia) {
+            <button type="button" class="boton secundario chico" [class.peligro-borde]="t.hacia !== 'activo'" (click)="abrirCambio(i, t)">{{ t.texto }}</button>
+          }
+          @if (prorrogable(i)) {
+            <button type="button" class="boton secundario chico" (click)="abrirProrroga(i)">Conceder prórroga</button>
+          }
+          @if (abonable(i)) {
+            <button type="button" class="boton chico" (click)="abrirAbono(i)">Registrar abono</button>
+          }
+        </div>
+      }
+    </div>
+  </app-dialogo>
+}
+
+<!-- ---------- Abono ---------- -->
+@if (abonando(); as i) {
+  <app-dialogo titulo="Registrar abono" [descripcion]="i.alumno_nombre + ' · saldo ' + (i.saldo | pesos)" (cerrar)="abonando.set(null)">
+    <form class="formulario" [formGroup]="formAbono" (ngSubmit)="guardarAbono()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Valor (pesos)</span>
+          <input class="control mono" type="number" min="1" [max]="i.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
+        <label class="campo"><span class="etiqueta">Fecha del pago</span>
+          <input class="control" type="date" formControlName="fecha_pago" [min]="i.fecha_inscripcion" [max]="hoy" /></label>
+      </div>
+      <p class="nota-chica">Viene con el saldo completo; cámbialo si es un abono parcial.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="abonando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Registrar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Prórroga ---------- -->
+@if (prorrogando(); as i) {
+  <app-dialogo titulo="Conceder prórroga" [descripcion]="i.alumno_nombre + ' · límite actual ' + (i.fecha_limite_pago | date: 'd MMM y')"
+               (cerrar)="prorrogando.set(null)">
+    <form class="formulario" [formGroup]="formProrroga" (ngSubmit)="guardarProrroga()">
+      <label class="campo"><span class="etiqueta">Nueva fecha límite</span>
+        <input class="control" type="date" formControlName="nueva_fecha_limite" [min]="minimoProrroga(i)" /></label>
+      <label class="campo"><span class="etiqueta">Motivo (queda en la auditoría)</span>
+        <textarea class="control" formControlName="motivo" maxlength="500" placeholder="Ej.: la familia paga con la prima de diciembre"></textarea></label>
+      @if (i.estado === 'rechazado') {
+        <p class="nota-chica">La inscripción está rechazada por vencimiento: con la prórroga vuelve a quedar pendiente de pago.</p>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="prorrogando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Conceder</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Anular abono ---------- -->
+@if (anulando(); as a) {
+  <app-dialogo titulo="Anular abono" [descripcion]="(a.pago.monto | pesos) + ' del ' + (a.pago.fecha | date: 'd MMM y') + ' · ' + a.i.alumno_nombre"
+               (cerrar)="anulando.set(null)">
+    <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarAnulacion()">
+      <p>El abono no se borra: se registra un movimiento en negativo que lo revierte. Si la inscripción estaba activa, vuelve a quedar pendiente de pago.</p>
+      <label class="campo"><span class="etiqueta">Motivo</span>
+        <textarea class="control" formControlName="motivo" maxlength="500" placeholder="Ej.: se registró dos veces el mismo pago"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="anulando.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Anular abono</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Cambio de estado ---------- -->
+@if (cambiando(); as c) {
+  <app-dialogo [titulo]="c.t.texto" [descripcion]="c.i.alumno_nombre" (cerrar)="cambiando.set(null)">
+    <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarCambio()">
+      @switch (c.t.hacia) {
+        @case ('rechazado') { <p>La inscripción queda rechazada. Una rechazada a mano no se puede reactivar con prórroga.</p> }
+        @case ('a_expulsar') { <p>Queda en revisión hasta que el SuperAdmin confirme la expulsión o la devuelva a activa.</p> }
+        @case ('expulsado') { <p>El alumno queda expulsado del club este año. Esta decisión es definitiva.</p> }
+        @case ('activo') { <p>La inscripción vuelve a estar activa.</p> }
+      }
+      @if (pideMotivo(c.t)) {
+        <label class="campo"><span class="etiqueta">Motivo</span>
+          <textarea class="control" formControlName="motivo" maxlength="500"></textarea></label>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="cambiando.set(null)">Volver</button>
+        <button type="submit" class="boton" [class.peligro]="c.t.hacia !== 'activo'" [disabled]="ocupado()">{{ c.t.texto }}</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Nueva inscripción ---------- -->
+@if (creando()) {
+  <app-dialogo [titulo]="'Nueva inscripción ' + hoy.slice(0, 4)" descripcion="Busca al alumno; si aún no está registrado, créalo primero en Alumnos."
+               (cerrar)="creando.set(false)">
+    <form class="formulario" [formGroup]="formNueva" (ngSubmit)="guardarNueva()">
+      <label class="campo"><span class="etiqueta">Alumno</span>
+        <input #campoBuscar class="control" type="search" formControlName="buscar" autocomplete="off"
+               placeholder="Nombre o documento completo" (input)="buscarAlumno(campoBuscar.value)" /></label>
+      @if (candidatos(); as lista) {
+        <ul class="candidatos" aria-label="Resultados">
+          @for (a of lista; track a.id) {
+            <li>
+              <button type="button" class="candidato" [class.elegido]="elegido()?.id === a.id" [disabled]="!inscribible(a)"
+                      [attr.aria-pressed]="elegido()?.id === a.id" (click)="elegido.set(a)">
+                <span>{{ a.nombres }} {{ a.apellidos }} <span class="nota-chica capital">· {{ a.rama }}</span></span>
+                <span class="nota-chica">{{ inscribible(a) ? (a.inscripcion_estado ? estadoTexto[a.inscripcion_estado] + ' antes' : 'sin inscripción') : 'ya inscrito' }}</span>
+              </button>
+            </li>
+          } @empty {
+            <li class="nota-chica">Nadie coincide.</li>
+          }
+        </ul>
+      }
+      @if (puedeAbonar()) {
+        <div class="opciones-pago" role="radiogroup" aria-label="Pago de la inscripción">
+          <label class="casilla"><input type="radio" formControlName="pago" value="ninguno" /><span>Sin pago por ahora</span></label>
+          <label class="casilla"><input type="radio" formControlName="pago" value="parcial" /><span>Abono parcial</span></label>
+          <label class="casilla"><input type="radio" formControlName="pago" value="completo" /><span>Pago completo</span></label>
+        </div>
+        @if (formNueva.controls.pago.value === 'parcial') {
+          <label class="campo monto"><span class="etiqueta">Valor del abono (pesos)</span>
+            <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" /></label>
+        }
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="creando.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado() || !elegido()">Inscribir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
