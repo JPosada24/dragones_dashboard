@@ -10,6 +10,7 @@ from app.models.acceso import Usuario
 from app.models.alumnos import Inscripcion
 from app.schemas.comunes import Rama
 from app.schemas.inscripciones import (
+    AlumnoNuevoIn,
     AnulacionIn,
     EstadoIn,
     EstadoInscripcion,
@@ -22,6 +23,7 @@ from app.schemas.inscripciones import (
     VencidasOut,
 )
 from app.services import inscripciones as servicio
+from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/inscripciones", tags=["inscripciones"])
 
@@ -87,6 +89,28 @@ def crear(
 ) -> InscripcionOut:
     i = servicio.crear(
         db, alumno_id=datos.alumno_id, fecha_inscripcion=datos.fecha_inscripcion, actor=actor, ip=ip_cliente(request)
+    )
+    db.commit()
+    return inscripcion_a_out(i)
+
+
+@router.post("/alumno-nuevo", response_model=InscripcionOut, status_code=status.HTTP_201_CREATED)
+def inscribir_alumno_nuevo(
+    datos: AlumnoNuevoIn,
+    request: Request,
+    actor: Usuario = Depends(requiere("inscripciones.crear")),
+    db: Session = Depends(get_db),
+) -> InscripcionOut:
+    """Registra a quien entra al club: ficha, inscripción del año y primer pago, todo o nada."""
+    permisos = set(actor.permisos_codigos)
+    if "alumnos.editar" not in permisos:
+        raise Prohibido("No tienes permiso para registrar alumnos.")
+    if datos.pago.forma != "ninguno" and "inscripciones.abonar" not in permisos:
+        raise Prohibido("No tienes permiso para registrar pagos de inscripción.")
+    i = servicio.inscribir_alumno_nuevo(
+        db, datos_alumno=datos.alumno.model_dump(exclude={"acudientes"}),
+        vinculos=[v.model_dump() for v in datos.alumno.acudientes], forma_pago=datos.pago.forma,
+        monto=datos.pago.monto, actor=actor, ip=ip_cliente(request),
     )
     db.commit()
     return inscripcion_a_out(i)

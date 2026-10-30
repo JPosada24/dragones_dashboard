@@ -11,6 +11,8 @@ export interface Seccion {
   titulo: string;
   subtitulo: string;
   descripcion: string; // qué tendrá la pantalla (se muestra mientras se construye)
+  /** false = tiene ruta pero no entrada propia en el menú (es una pestaña de otra sección). */
+  enMenu?: false;
 }
 
 export const SECCIONES: Seccion[] = [
@@ -26,12 +28,14 @@ export const SECCIONES: Seccion[] = [
   },
   {
     ruta: 'alumnos', etiqueta: 'Alumnos', icono: 'groups', grupo: 'Día a día', permisos: VER_ALUMNOS,
-    titulo: 'Alumnos', subtitulo: 'Fichas, acudientes y documentos',
+    titulo: 'Alumnos', subtitulo: 'Fichas, inscripciones y pagos',
     descripcion: 'Ficha del alumno con acudientes, documentos, estado de cuenta e historial.',
   },
   {
-    ruta: 'inscripciones', etiqueta: 'Inscripciones', icono: 'assignment', grupo: 'Dinero', permisos: VER_ALUMNOS,
-    titulo: 'Inscripciones', subtitulo: 'Plazo de pago y abonos',
+    // Pestaña de Alumnos: la ruta anida bajo /alumnos para que el menú marque "Alumnos".
+    ruta: 'alumnos/inscripciones', etiqueta: 'Inscripciones', icono: 'assignment', grupo: 'Día a día',
+    permisos: VER_ALUMNOS, enMenu: false,
+    titulo: 'Alumnos', subtitulo: 'Inscripciones del año: plazos, abonos y prórrogas',
     descripcion: 'Inscripciones pendientes de pago, abonos, prórrogas y cambios de estado.',
   },
   {
@@ -69,8 +73,8 @@ export const SECCIONES: Seccion[] = [
 export const GRUPOS = ['Día a día', 'Dinero', 'Club', 'Sistema'] as const;
 
 /** Pestañas fijas en el celular (las demás van en "Más"). */
-export const PESTANAS_MOVIL = ['', 'asistencia', 'alumnos', 'inscripciones'];
+export const PESTANAS_MOVIL = ['', 'asistencia', 'alumnos', 'multas'];
 
 export function seccionesVisibles(tienePermiso: (permisos: string[]) => boolean): Seccion[] {
-  return SECCIONES.filter((s) => tienePermiso(s.permisos));
+  return SECCIONES.filter((s) => s.enMenu !== false && tienePermiso(s.permisos));
 }

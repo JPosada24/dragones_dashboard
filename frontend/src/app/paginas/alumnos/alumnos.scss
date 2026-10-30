@@ -525,6 +525,50 @@ h2 {
   color: var(--texto-3);
 }
 
+/* Tarjeta de inscripción del año */
+.tarjeta-inscripcion {
+  border-color: color-mix(in srgb, var(--tono) 30%, var(--borde));
+
+  .inscribir {
+    justify-self: start;
+  }
+}
+
+.pago {
+  display: grid;
+  gap: 7px;
+}
+
+.barra {
+  display: block;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--tono);
+  }
+}
+
+.acciones-tarjeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  a.enlace {
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .acciones-ficha {
   display: flex;
   flex-wrap: wrap;
@@ -532,48 +576,10 @@ h2 {
 }
 
 /* ---------- Formularios (popups) ---------- */
-.formulario {
-  display: grid;
-  gap: 14px;
-
-  p {
-    margin: 0;
-  }
-}
-
-.rejilla {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
-}
-
-.campo {
-  display: grid;
-  gap: 5px;
-}
 
 .con-boton {
   display: flex;
   gap: 6px;
-}
-
-.casilla {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  cursor: pointer;
-
-  input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--naranja);
-  }
-
-  &.alineada {
-    align-self: end;
-    min-height: 36px;
-  }
 }
 
 .grupo-acudiente {
@@ -600,22 +606,6 @@ h2 {
     font-size: 17px;
     color: var(--naranja);
   }
-}
-
-.opciones-pago {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-}
-
-.monto {
-  max-width: 240px;
-}
-
-.acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 /* ---------- Responsive: en pantallas angostas, lista o ficha ---------- */

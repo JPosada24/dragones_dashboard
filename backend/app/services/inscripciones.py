@@ -274,3 +274,18 @@ def vencer(db: Session, *, en: date, actor_id: uuid.UUID | None = None, ip: str 
         notificaciones.inscripcion_vencida(db, i)
     db.flush()
     return len(vencidas)
+
+
+def inscribir_alumno_nuevo(
+    db: Session, *, datos_alumno: dict[str, Any], vinculos: list[dict[str, Any]], forma_pago: str,
+    monto: int | None, actor: Usuario, ip: str | None,
+) -> Inscripcion:
+    """Crea al alumno, lo inscribe hoy y registra el primer pago. Todo en la misma transacción:
+    si algo falla (documento repetido, menor sin acudiente, abono mayor al valor…) no queda nada a medias."""
+    alumno = alumnos.crear_alumno(db, datos=datos_alumno, vinculos=vinculos, actor=actor, ip=ip)
+    db.flush()
+    i = crear(db, alumno_id=alumno.id, fecha_inscripcion=None, actor=actor, ip=ip)
+    abono = i.saldo if forma_pago == "completo" else (monto or 0) if forma_pago == "parcial" else 0
+    if abono > 0 and i.saldo > 0:
+        registrar_pago(db, i, fecha_pago=hoy(), monto=abono, actor=actor, ip=ip)
+    return i

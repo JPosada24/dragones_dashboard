@@ -191,6 +191,16 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   busca alumnos (deshabilita a quien ya tiene una vigente). `inscripciones/inscribir.ts` (`inscribirConPago`,
   `problemaPago`, `resumenPago`) lo comparten Alumnos e Inscripciones. KPIs (`.kpis/.kpi`) ahora son estilos
   globales. La familia ve las de sus hijos sin acciones. 184 pruebas backend, 44 frontend.
+- HECHO (Alumnos + Inscripciones unificados, 2026-10-30): alumno (persona, dura años) e inscripción (matrícula
+  anual con pago) siguen separados en datos, pero la experiencia es una: `POST /inscripciones/alumno-nuevo`
+  (`inscripciones.crear` + `alumnos.editar`, y `.abonar` si trae pago) crea ficha + inscripción de hoy + primer
+  pago (`ninguno|parcial|completo`) en **una transacción** (si algo falla no queda nada). Menú: solo "Alumnos",
+  con pestañas `PestanasAlumnos` (Fichas `/alumnos` · Inscripciones y pagos `/alumnos/inscripciones`;
+  `/inscripciones` redirige; `Seccion.enMenu: false`). "Inscribir alumno nuevo" (inscripción obligatoria); la ficha
+  muestra la tarjeta "Inscripción <año>" (pagado, saldo, límite, "Registrar abono", enlace `?id=` al detalle) y
+  "Renovar inscripción" si no tiene vigente; en la pestaña de inscripciones "Renovar alumno existente". Pestañas
+  móviles: Resumen, Asistencia, Alumnos, Multas. Estilos de formularios de popups (`.formulario`, `.rejilla`,
+  `.campo`, `.casilla`, `.acciones`…) ahora globales. 189 pruebas backend, 45 frontend.
 - SIGUIENTE (frontend): Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).

@@ -12,7 +12,7 @@ const PANTALLAS: Record<string, Cargar> = {
   '': () => import('./paginas/resumen/resumen').then((m) => m.ResumenPage),
   asistencia: () => import('./paginas/asistencia/asistencia').then((m) => m.AsistenciaPage),
   alumnos: () => import('./paginas/alumnos/alumnos').then((m) => m.AlumnosPage),
-  inscripciones: () => import('./paginas/inscripciones/inscripciones').then((m) => m.InscripcionesPage),
+  'alumnos/inscripciones': () => import('./paginas/inscripciones/inscripciones').then((m) => m.InscripcionesPage),
 };
 
 export const routes: Routes = [
@@ -38,5 +38,6 @@ export const routes: Routes = [
       })),
     ],
   },
+  { path: 'inscripciones', redirectTo: 'alumnos/inscripciones' }, // enlaces viejos
   { path: '**', redirectTo: '' },
 ];

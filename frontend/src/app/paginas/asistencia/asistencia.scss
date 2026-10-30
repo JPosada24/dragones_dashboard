@@ -115,27 +115,6 @@ h2 {
 }
 
 /* ---------- Formularios (popups) ---------- */
-.formulario {
-  display: grid;
-  gap: 14px;
-}
-
-.rejilla {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-}
-
-.campo {
-  display: grid;
-  gap: 5px;
-}
-
-.acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
 
 .tabla-horario {
   display: grid;

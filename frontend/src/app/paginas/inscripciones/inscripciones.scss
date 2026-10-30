@@ -432,49 +432,6 @@ h3 {
 }
 
 /* ---------- Formularios (popups) ---------- */
-.formulario {
-  display: grid;
-  gap: 14px;
-
-  p {
-    margin: 0;
-  }
-}
-
-.rejilla {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
-}
-
-.campo {
-  display: grid;
-  gap: 5px;
-}
-
-.monto {
-  max-width: 240px;
-}
-
-.casilla {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  cursor: pointer;
-
-  input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--naranja);
-  }
-}
-
-.opciones-pago {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-}
 
 .candidatos {
   margin: 0;
@@ -513,13 +470,6 @@ h3 {
     opacity: 0.5;
     cursor: not-allowed;
   }
-}
-
-.acciones {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .peligro-borde {

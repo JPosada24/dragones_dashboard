@@ -109,6 +109,7 @@ describe('Sesión (AuthService + interceptor)', () => {
     expect(rutas).not.toContain('configuracion');
     expect(rutas).not.toContain('torneos');
     expect(rutas).not.toContain('usuarios');
+    expect(rutas).not.toContain('alumnos/inscripciones'); // es una pestaña de Alumnos, no un ítem del menú
   });
 });
 

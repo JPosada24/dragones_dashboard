@@ -2,7 +2,9 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.schemas.alumnos import AlumnoCrear
 
 EstadoInscripcion = Literal["pendiente_pago", "activo", "a_expulsar", "expulsado", "rechazado"]
 
@@ -15,6 +17,26 @@ class InscripcionCrear(_Entrada):
     alumno_id: uuid.UUID
     # Solo Admin/SuperAdmin pueden indicar otra fecha (p. ej. para registrar inscripciones en papel).
     fecha_inscripcion: date | None = None
+
+
+class PagoInicialIn(_Entrada):
+    """Cómo paga al inscribirse: nada aún, un abono parcial (monto) o el valor completo."""
+
+    forma: Literal["ninguno", "parcial", "completo"] = "ninguno"
+    monto: int | None = Field(default=None, gt=0, le=100_000_000)
+
+    @model_validator(mode="after")
+    def _monto_si_parcial(self):
+        if self.forma == "parcial" and self.monto is None:
+            raise ValueError("Indica el valor del abono parcial.")
+        return self
+
+
+class AlumnoNuevoIn(_Entrada):
+    """Alta de un alumno que entra al club: ficha + inscripción del año + primer pago, en una sola operación."""
+
+    alumno: AlumnoCrear
+    pago: PagoInicialIn = Field(default_factory=PagoInicialIn)
 
 
 class PagoIn(_Entrada):

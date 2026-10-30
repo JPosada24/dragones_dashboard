@@ -1,3 +1,5 @@
+<app-pestanas-alumnos />
+
 @if (mensaje(); as m) {
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
@@ -20,8 +22,8 @@
     }
   </div>
   @if (puedeInscribir()) {
-    <button type="button" class="boton chico" (click)="abrirNueva()">
-      <span class="icono" aria-hidden="true">how_to_reg</span> Nueva inscripción
+    <button type="button" class="boton secundario chico" (click)="abrirNueva()">
+      <span class="icono" aria-hidden="true">how_to_reg</span> Renovar alumno existente
     </button>
   }
 </section>
@@ -130,14 +132,14 @@
         <span class="mono chico apagado">configurable</span>
       </div>
       <ol class="pasos">
-        <li><b>Inscripción.</b> La hace el entrenador; el valor y el plazo (30 días) salen de la configuración del club.</li>
+        <li><b>Inscripción.</b> La hace el entrenador al registrar al alumno (o al renovarlo cada año); el valor y el plazo (30 días) salen de la configuración del club.</li>
         <li><b>Abonos.</b> Se aceptan pagos parciales dentro del plazo. Al completar el valor, la inscripción queda <b>activa</b>.</li>
         <li><b>Prórroga.</b> Solo Admin o SuperAdmin, con motivo. Reactiva una inscripción rechazada por vencimiento.</li>
         <li><b>Vencimiento.</b> Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.</li>
       </ol>
       <p class="nota-chica">Un abono errado no se borra: el SuperAdmin lo anula con motivo y queda en el historial.</p>
       @if (esStaff()) {
-        <a class="enlace" routerLink="/alumnos">Inscribir desde la ficha del alumno →</a>
+        <a class="enlace" routerLink="/alumnos">Alumno nuevo: «Inscribir alumno nuevo» en Fichas →</a>
       }
     </aside>
   </div>
@@ -294,7 +296,8 @@
 
 <!-- ---------- Nueva inscripción ---------- -->
 @if (creando()) {
-  <app-dialogo [titulo]="'Nueva inscripción ' + hoy.slice(0, 4)" descripcion="Busca al alumno; si aún no está registrado, créalo primero en Alumnos."
+  <app-dialogo [titulo]="'Renovar inscripción ' + hoy.slice(0, 4)"
+               descripcion="Para quien ya estuvo en el club. Si es la primera vez, usa «Inscribir alumno nuevo» en Fichas."
                (cerrar)="creando.set(false)">
     <form class="formulario" [formGroup]="formNueva" (ngSubmit)="guardarNueva()">
       <label class="campo"><span class="etiqueta">Alumno</span>

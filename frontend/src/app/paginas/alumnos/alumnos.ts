@@ -2,7 +2,7 @@ import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
@@ -16,7 +16,8 @@ import { API } from '../../core/modelos';
 import {
   Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial,
 } from './alumnos.modelos';
-import { FormaPago, inscribirConPago, problemaPago, resumenPago } from '../inscripciones/inscribir';
+import { PestanasAlumnos } from './pestanas-alumnos';
+import { FormaPago, inscribirConPago, inscripcionUrl, problemaPago, resumenPago } from '../inscripciones/inscribir';
 import { Inscripcion } from '../inscripciones/inscripciones.modelos';
 
 const TIPOS_ARCHIVO: { valor: string; texto: string }[] = [
@@ -50,7 +51,7 @@ type BusquedaAcudiente = Acudiente | 'nuevo' | null;
 
 @Component({
   selector: 'app-alumnos',
-  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, Aviso, Dialogo, PesosPipe],
+  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, PestanasAlumnos],
   templateUrl: './alumnos.html',
   styleUrl: './alumnos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -93,6 +94,13 @@ export class AlumnosPage implements OnInit {
   protected readonly historial = signal<RegistroHistorial[]>([]);
   protected readonly documentos = signal<Documento[]>([]);
   protected readonly documentoCompleto = signal<string | null>(null);
+  /** Inscripción del año en curso (la vigente o la última), para la tarjeta de la ficha. */
+  protected readonly inscripcion = signal<Inscripcion | null>(null);
+  protected readonly vigente = computed(() => {
+    const i = this.inscripcion();
+    return !!i && ['pendiente_pago', 'activo', 'a_expulsar'].includes(i.estado);
+  });
+  protected readonly textoNuevo = computed(() => (this.puedeInscribir() ? 'Inscribir alumno nuevo' : 'Nuevo alumno'));
   protected readonly errorFicha = signal(false);
 
   protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
@@ -106,6 +114,7 @@ export class AlumnosPage implements OnInit {
   protected readonly subiendoDocumento = signal(false);
   protected readonly eliminandoDocumento = signal<Documento | null>(null);
   protected readonly inscribiendo = signal(false);
+  protected readonly abonando = signal(false);
   protected readonly busquedaAcudiente = signal<BusquedaAcudiente>(null);
   protected readonly archivo = signal<File | null>(null);
 
@@ -133,9 +142,12 @@ export class AlumnosPage implements OnInit {
     email: ['', [Validators.email, Validators.maxLength(254)]],
   });
   protected readonly formDocumento = this.fb.group({ tipo: ['identidad', Validators.required] });
+  protected readonly formAbono = this.fb.group({
+    monto: [0, [Validators.required, Validators.min(1), Validators.max(100_000_000)]],
+    fecha_pago: [this.hoy, Validators.required],
+  });
   /** Inscripción del año (al crear el alumno o desde su ficha) y su primer abono. */
   protected readonly formInscripcion = this.fb.group({
-    inscribir: true,
     pago: this.fb.control<FormaPago>('ninguno'),
     monto: [0, [Validators.min(1), Validators.max(100_000_000)]],
   });
@@ -225,6 +237,9 @@ export class AlumnosPage implements OnInit {
       cuenta: this.http.get<EstadoCuenta>(`${alumnoUrl(id)}/estado-cuenta`),
       historial: this.http.get<RegistroHistorial[]>(`${alumnoUrl(id)}/asistencia`),
       documentos: this.http.get<Documento[]>(`${alumnoUrl(id)}/documentos`),
+      inscripciones: this.http.get<Inscripcion[]>(`${API}/inscripciones`, {
+        params: new HttpParams().set('alumno_id', id).set('anio', this.hoy.slice(0, 4)),
+      }),
     }).subscribe({
       next: (r) => {
         if (this.seleccionadoId() !== id) return; // el usuario ya eligió otro
@@ -232,6 +247,9 @@ export class AlumnosPage implements OnInit {
         this.cuenta.set(r.cuenta);
         this.historial.set(r.historial);
         this.documentos.set(r.documentos);
+        // La vigente si la hay; si no, la más reciente del año (la lista viene de la más nueva a la más vieja).
+        const vigente = r.inscripciones.find((i) => ['pendiente_pago', 'activo', 'a_expulsar'].includes(i.estado));
+        this.inscripcion.set(vigente ?? r.inscripciones[0] ?? null);
       },
       error: () => this.errorFicha.set(true),
     });
@@ -291,41 +309,28 @@ export class AlumnosPage implements OnInit {
     };
 
     if (modo === 'nuevo') {
-      const error = this.problemaAcudiente(false);
+      const error = this.problemaAcudiente(false) ?? this.problemaInscripcion();
       if (error) return this.errorDialogo.set(error);
-      const peticion = this.vinculo$().pipe(
-        switchMap((v) =>
-          this.http.post<Alumno>(`${API}/alumnos`, {
-            ...base, tipo_documento: f.tipo_documento, documento: f.documento, acudientes: v ? [v] : [],
-          }),
-        ),
+      const ficha = { ...base, tipo_documento: f.tipo_documento, documento: f.documento };
+      const pago = this.formInscripcion.getRawValue();
+      if (!this.puedeInscribir()) {
+        // Sin permiso de inscribir solo se registra la ficha (hoy ningún rol está en ese caso).
+        const alta = this.vinculo$().pipe(
+          switchMap((v) => this.http.post<Alumno>(`${API}/alumnos`, { ...ficha, acudientes: v ? [v] : [] })),
+        );
+        this.ejecutar(alta, (a) => this.terminarAlta(a.id, `${a.nombres} ${a.apellidos} quedó registrado.`), true);
+        return;
+      }
+      // Ficha + inscripción + primer pago en una sola operación: si algo falla, no queda nada a medias.
+      const alta = this.vinculo$().pipe(
+        switchMap((v) => this.http.post<Inscripcion>(`${API}/inscripciones/alumno-nuevo`, {
+          alumno: { ...ficha, acudientes: v ? [v] : [] },
+          pago: this.puedeAbonar() && pago.pago !== 'ninguno'
+            ? { forma: pago.pago, monto: pago.pago === 'parcial' ? pago.monto : null }
+            : { forma: 'ninguno' },
+        })),
       );
-      const errorPago = this.problemaInscripcion();
-      if (errorPago) return this.errorDialogo.set(errorPago);
-      const inscribir = this.puedeInscribir() && this.formInscripcion.getRawValue().inscribir;
-      this.ejecutar(peticion, (a) => {
-        const nombre = `${a.nombres} ${a.apellidos}`;
-        const terminar = (texto: string, error = false) => {
-          this.editandoAlumno.set(null);
-          this.cargarLista();
-          this.seleccionar(a.id);
-          this.mensaje.set({ error, texto });
-        };
-        if (!inscribir) return terminar(`${nombre} quedó registrado.`);
-        // El alumno ya existe: si la inscripción falla, se cierra el popup (reintentar lo duplicaría) y se avisa.
-        this.ocupado.set(true);
-        this.inscribir$(a.id).subscribe({
-          next: (i) => {
-            this.ocupado.set(false);
-            terminar(`${nombre} quedó registrado e inscrito. ${resumenPago(i)}`);
-          },
-          error: (e) => {
-            this.ocupado.set(false);
-            const detalle = `${nombre} quedó registrado, pero falló la inscripción: ${mensajeError(e)}`;
-            terminar(`${detalle} Puedes inscribirlo desde su ficha.`, true);
-          },
-        });
-      }, true);
+      this.ejecutar(alta, (i) => this.terminarAlta(i.alumno_id, `${i.alumno_nombre} quedó inscrito. ${resumenPago(i)}`), true);
       return;
     }
 
@@ -342,9 +347,16 @@ export class AlumnosPage implements OnInit {
     }, true);
   }
 
+  private terminarAlta(alumnoId: string, texto: string): void {
+    this.editandoAlumno.set(null);
+    this.cargarLista();
+    this.seleccionar(alumnoId);
+    this.avisar(null, texto);
+  }
+
   // ---------- Inscripción del año ----------
   private reiniciarInscripcion(): void {
-    this.formInscripcion.reset({ inscribir: true, pago: 'ninguno', monto: 0 });
+    this.formInscripcion.reset({ pago: 'ninguno', monto: 0 });
   }
 
   protected abrirInscribir(): void {
@@ -354,7 +366,7 @@ export class AlumnosPage implements OnInit {
 
   private problemaInscripcion(): string | null {
     const f = this.formInscripcion.getRawValue();
-    return f.inscribir ? problemaPago(f.pago, f.monto) : null;
+    return this.puedeAbonar() ? problemaPago(f.pago, f.monto) : null;
   }
 
   private inscribir$(alumnoId: string): Observable<Inscripcion> {
@@ -362,6 +374,32 @@ export class AlumnosPage implements OnInit {
     return inscribirConPago(this.http, alumnoId, {
       forma: f.pago, monto: f.monto, hoy: this.hoy, puedeAbonar: this.puedeAbonar(),
     });
+  }
+
+  protected pctPagado(i: Inscripcion): string {
+    return i.valor ? `${Math.round(((i.monto_pagado ?? 0) / i.valor) * 100)}%` : '100%';
+  }
+
+  protected abonable(i: Inscripcion): boolean {
+    return this.puedeAbonar() && i.estado === 'pendiente_pago' && i.saldo > 0;
+  }
+
+  protected abrirAbono(i: Inscripcion): void {
+    this.formAbono.reset({ monto: i.saldo, fecha_pago: this.hoy });
+    this.abrir(() => this.abonando.set(true));
+  }
+
+  protected guardarAbono(): void {
+    const i = this.inscripcion();
+    if (!i) return;
+    if (this.formAbono.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del abono.');
+    const url = `${inscripcionUrl(i.id)}/pagos`;
+    this.ejecutar(this.http.post<Inscripcion>(url, this.formAbono.getRawValue()), (r) => {
+      this.abonando.set(false);
+      this.seleccionar(r.alumno_id); // refresca estado de cuenta y punto de la lista
+      this.cargarLista();
+      this.avisar(null, `Abono registrado. ${resumenPago(r)}`);
+    }, true);
   }
 
   protected guardarInscripcion(): void {

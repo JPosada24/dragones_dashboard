@@ -23,7 +23,7 @@ const RESUMEN: ResumenStaff = {
     alumnos_activos: 42, alumnos_sin_inscripcion: 3, inscripciones_pendientes: 5, inscripciones_vencen_pronto: 2,
     multas_pendientes: 3, multas_saldo: 6000, alertas: 1,
   },
-  alertas: [{ tipo: 'expulsion', titulo: 'Kevin · marcado para expulsión', detalle: 'Mora', cuando: '', ruta: '/inscripciones' }],
+  alertas: [{ tipo: 'expulsion', titulo: 'Kevin · marcado para expulsión', detalle: 'Mora', cuando: '', ruta: '/alumnos/inscripciones' }],
   hoy: [{ id: 's', lugar: 'Coliseo', horario: '18:00–20:00', cerrada: false, esperados: 10, presentes: 6,
           justificados: 1, ausentes: 1, sin_marcar: 2 }],
   rifas: [],

@@ -1,3 +1,5 @@
+<app-pestanas-alumnos />
+
 @if (mensaje(); as m) {
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
@@ -12,7 +14,7 @@
           <input #campoBusqueda id="buscar-alumno" class="control" type="search" placeholder="Buscar por nombre o documento…"
                  maxlength="80" [value]="buscar()" (input)="escribirBusqueda(campoBusqueda.value)" />
           @if (puedeEditar()) {
-            <button type="button" class="boton chico" (click)="abrirNuevo()" aria-label="Nuevo alumno" title="Nuevo alumno">
+            <button type="button" class="boton chico" (click)="abrirNuevo()" [attr.aria-label]="textoNuevo()" [title]="textoNuevo()">
               <span class="icono" aria-hidden="true">person_add</span>
             </button>
           }
@@ -95,11 +97,6 @@
               </div>
             </div>
             <div class="acciones-ficha">
-              @if (puedeInscribir() && a.activo && !a.inscripcion_estado) {
-                <button type="button" class="boton chico" (click)="abrirInscribir()">
-                  <span class="icono" aria-hidden="true">how_to_reg</span> Inscribir {{ hoy.slice(0, 4) }}
-                </button>
-              }
               @if (puedeEditar()) {
                 <button type="button" class="boton secundario chico" (click)="abrirEditar(a)">
                   <span class="icono" aria-hidden="true">edit</span> Editar
@@ -127,6 +124,43 @@
 
       <div class="rejilla-ficha">
         <div class="columna">
+          <!-- Inscripción del año -->
+          <section class="panel relleno tarjeta-inscripcion" [attr.data-tono]="tono(a)">
+            <div class="fila-base">
+              <h2>Inscripción {{ hoy.slice(0, 4) }}</h2>
+              @if (inscripcion(); as i) {
+                <span class="estado" [attr.data-tono]="tono(a)"><i></i><b>{{ estadoInscripcion[i.estado] }}</b></span>
+              }
+            </div>
+            @if (inscripcion(); as i) {
+              <div class="pago">
+                <div class="cuenta-fila"><span>Pagado</span><span class="mono">{{ (i.monto_pagado ?? 0) | pesos }} de {{ i.valor | pesos }}</span></div>
+                <span class="barra" role="img" [attr.aria-label]="'Pagado ' + pctPagado(i)"><span [style.width]="pctPagado(i)"></span></span>
+                @if (i.estado === 'pendiente_pago') {
+                  <p class="nota-chica">Saldo <b class="mono oro">{{ i.saldo | pesos }}</b> · paga hasta el {{ i.fecha_limite_pago | date: 'd MMM y' }}</p>
+                } @else if (i.motivo) {
+                  <p class="nota-chica">{{ i.motivo }}</p>
+                }
+              </div>
+              <div class="acciones-tarjeta">
+                <a class="enlace" routerLink="/alumnos/inscripciones" [queryParams]="{ id: i.id }">Ver abonos y prórrogas →</a>
+                @if (abonable(i)) {
+                  <button type="button" class="boton chico" (click)="abrirAbono(i)">
+                    <span class="icono" aria-hidden="true">payments</span> Registrar abono
+                  </button>
+                }
+              </div>
+            }
+            @if (puedeInscribir() && a.activo && !vigente()) {
+              <p class="nota-chica">{{ inscripcion() ? 'Esta inscripción ya no está vigente.' : 'Aún no está inscrito este año (p. ej., viene del año pasado).' }}</p>
+              <button type="button" class="boton chico inscribir" (click)="abrirInscribir()">
+                <span class="icono" aria-hidden="true">how_to_reg</span> {{ inscripcion() ? 'Inscribir de nuevo' : 'Renovar inscripción' }} {{ hoy.slice(0, 4) }}
+              </button>
+            } @else if (!inscripcion()) {
+              <p class="nota-chica">Sin inscripción este año.</p>
+            }
+          </section>
+
           <!-- Datos personales -->
           <section class="panel relleno">
             <h2>Datos personales</h2>
@@ -264,8 +298,8 @@
 
 <!-- ---------- Ventanas emergentes ---------- -->
 @if (editandoAlumno(); as modo) {
-  <app-dialogo [titulo]="modo === 'nuevo' ? 'Nuevo alumno' : 'Editar alumno'" ancho="ancho"
-               [descripcion]="modo === 'nuevo' ? 'Los menores de edad necesitan un acudiente.' : ''"
+  <app-dialogo [titulo]="modo === 'nuevo' ? textoNuevo() : 'Editar alumno'" ancho="ancho"
+               [descripcion]="modo === 'nuevo' ? 'Queda registrado e inscrito en un solo paso. Los menores de edad necesitan un acudiente.' : ''"
                (cerrar)="editandoAlumno.set(null)">
     <form class="formulario" [formGroup]="formAlumno" (ngSubmit)="guardarAlumno()">
       <div class="rejilla">
@@ -313,15 +347,15 @@
         </fieldset>
         @if (puedeInscribir()) {
           <fieldset class="grupo-acudiente">
-            <legend>Inscripción {{ hoy.slice(0, 4) }}</legend>
-            <ng-container *ngTemplateOutlet="inscripcionCampos; context: { conCasilla: true }" />
+            <legend>Inscripción {{ hoy.slice(0, 4) }} <span class="nota-chica">(30 días para completar el pago; se aceptan abonos)</span></legend>
+            <ng-container *ngTemplateOutlet="inscripcionCampos" />
           </fieldset>
         }
       }
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="editandoAlumno.set(null)">Cancelar</button>
-        <button type="submit" class="boton" [disabled]="ocupado()">{{ modo === 'nuevo' ? 'Registrar alumno' : 'Guardar cambios' }}</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">{{ modo === 'nuevo' ? (puedeInscribir() ? 'Inscribir alumno' : 'Registrar alumno') : 'Guardar cambios' }}</button>
       </div>
     </form>
   </app-dialogo>
@@ -380,14 +414,9 @@
 </ng-template>
 
 <!-- Inscripción del año y primer abono (en "Nuevo alumno" y en "Inscribir") -->
-<ng-template #inscripcionCampos let-conCasilla="conCasilla">
+<ng-template #inscripcionCampos>
   <div class="formulario" [formGroup]="formInscripcion">
-    @if (conCasilla) {
-      <label class="casilla"><input type="checkbox" formControlName="inscribir" />
-        <span>Inscribirlo ahora <span class="nota-chica">(tiene 30 días para completar el pago; se aceptan abonos)</span></span>
-      </label>
-    }
-    @if (formInscripcion.controls.inscribir.value && puedeAbonar()) {
+    @if (puedeAbonar()) {
       <div class="opciones-pago" role="radiogroup" aria-label="Pago de la inscripción">
         <label class="casilla"><input type="radio" formControlName="pago" value="ninguno" /><span>Sin pago por ahora</span></label>
         <label class="casilla"><input type="radio" formControlName="pago" value="parcial" /><span>Abono parcial</span></label>
@@ -408,11 +437,30 @@
   <app-dialogo [titulo]="'Inscripción ' + hoy.slice(0, 4)" (cerrar)="inscribiendo.set(false)"
                descripcion="El valor y el plazo de pago salen de la configuración del club.">
     <form class="formulario" [formGroup]="formInscripcion" (ngSubmit)="guardarInscripcion()">
-      <ng-container *ngTemplateOutlet="inscripcionCampos; context: { conCasilla: false }" />
+      <ng-container *ngTemplateOutlet="inscripcionCampos" />
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="inscribiendo.set(false)">Cancelar</button>
         <button type="submit" class="boton" [disabled]="ocupado()">Inscribir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (abonando() && inscripcion(); as i) {
+  <app-dialogo titulo="Registrar abono" [descripcion]="'Saldo ' + (i.saldo | pesos)" (cerrar)="abonando.set(false)">
+    <form class="formulario" [formGroup]="formAbono" (ngSubmit)="guardarAbono()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Valor (pesos)</span>
+          <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" /></label>
+        <label class="campo"><span class="etiqueta">Fecha del pago</span>
+          <input class="control" type="date" formControlName="fecha_pago" [max]="hoy" /></label>
+      </div>
+      <p class="nota-chica">Viene con el saldo completo; cámbialo si es un abono parcial.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="abonando.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Registrar</button>
       </div>
     </form>
   </app-dialogo>

@@ -178,12 +178,12 @@ describe('InscripcionesPage', () => {
     expect(el().querySelector('.kpis')).toBeNull();
     expect(nombres()).toEqual(['Alumno 1']);
     expect(el().querySelector('.acciones-fila button')).toBeNull();
-    expect(boton('Nueva inscripción')).toBeUndefined();
+    expect(boton('how_to_reg Renovar')).toBeUndefined();
   });
 
   it('nueva inscripción: busca al alumno, no deja elegir a quien ya está inscrito y paga completo', async () => {
     await cargar(ADMIN, []);
-    boton('how_to_reg Nueva inscripción')!.click();
+    boton('how_to_reg Renovar alumno existente')!.click();
     await estable();
     escribir(ultimoDialogo().querySelector<HTMLInputElement>('input[type="search"]')!, 'Laura');
     await new Promise((r) => setTimeout(r, 350));

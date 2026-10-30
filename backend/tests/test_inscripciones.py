@@ -6,7 +6,7 @@ from sqlalchemy.exc import DBAPIError
 
 from app.core.fechas import hoy
 from app.models.sistema import Auditoria
-from tests.fabrica import I, crear_acudiente, crear_alumno, crear_menor, inscribir
+from tests.fabrica import I, crear_acudiente, crear_alumno, crear_menor, datos_alumno, inscribir
 
 
 @pytest.fixture
@@ -316,3 +316,60 @@ def test_entrenador_ve_inscripciones_de_su_rama(client, h_admin, alumno, crear_u
     crear_usuario("coach@club.com", "ENTRENADOR", rama="masculina")
     filas = client.get(I, headers=auth_header("coach@club.com")).json()
     assert [f["alumno_id"] for f in filas] == [otra["id"]]
+
+
+# ---------- Alta de alumno nuevo: ficha + inscripción + primer pago, todo o nada ----------
+NUEVO = f"{I}/alumno-nuevo"
+
+
+def _cuantos_alumnos(db) -> int:
+    return db.scalar(text("SELECT count(*) FROM alumnos"))
+
+
+def test_alta_de_alumno_nuevo_lo_inscribe_y_registra_el_abono(client, h_admin):
+    cuerpo = {"alumno": datos_alumno(), "pago": {"forma": "parcial", "monto": 40000}}
+    r = client.post(NUEVO, json=cuerpo, headers=h_admin)
+    assert r.status_code == 201, r.text
+    i = r.json()
+    assert (i["estado"], i["monto_pagado"], i["saldo"], i["anio"]) == ("pendiente_pago", 40000, 50000, hoy().year)
+    assert i["alumno_nombre"] == "Laura Pérez" and len(i["pagos"]) == 1
+
+    completo = client.post(NUEVO, json={"alumno": datos_alumno(documento="2222222222"), "pago": {"forma": "completo"}},
+                           headers=h_admin).json()
+    assert (completo["estado"], completo["saldo"]) == ("activo", 0)
+    sin_pago = client.post(NUEVO, json={"alumno": datos_alumno(documento="3333333333")}, headers=h_admin).json()
+    assert (sin_pago["estado"], sin_pago["monto_pagado"]) == ("pendiente_pago", None)
+
+
+@pytest.mark.parametrize("cuerpo, error", [
+    ({"alumno": datos_alumno(), "pago": {"forma": "parcial", "monto": 999999}}, "supera"),  # abono > valor
+    ({"alumno": datos_alumno(anios=12)}, "menor de edad"),  # menor sin acudiente
+])
+def test_alta_que_falla_no_deja_nada_a_medias(client, h_admin, db, cuerpo, error):
+    r = client.post(NUEVO, json=cuerpo, headers=h_admin)
+    assert r.status_code == 422 and error in r.text
+    assert _cuantos_alumnos(db) == 0  # ni el alumno quedó creado
+
+
+def test_alta_parcial_sin_monto_y_documento_repetido(client, h_admin, db):
+    assert client.post(NUEVO, json={"alumno": datos_alumno(), "pago": {"forma": "parcial"}},
+                       headers=h_admin).status_code == 422
+    crear_alumno(client, h_admin)
+    assert client.post(NUEVO, json={"alumno": datos_alumno()}, headers=h_admin).status_code == 409
+    assert _cuantos_alumnos(db) == 1
+
+
+def test_alta_de_alumno_nuevo_permisos(client, h_admin, crear_usuario, auth_header, db):
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    h_coach = auth_header("coach@club.com")
+    crear_usuario("familia@club.com", "MIEMBRO")
+    h_familia = auth_header("familia@club.com")
+
+    assert client.post(NUEVO, json={"alumno": datos_alumno()}, headers=h_familia).status_code == 403
+    # El entrenador asistente solo inscribe en su rama…
+    otra = {"alumno": datos_alumno(rama="masculina"), "pago": {"forma": "completo"}}
+    assert client.post(NUEVO, json=otra, headers=h_coach).status_code == 403
+    assert _cuantos_alumnos(db) == 0
+    # …y en la suya sí, con el pago incluido.
+    r = client.post(NUEVO, json={"alumno": datos_alumno(), "pago": {"forma": "completo"}}, headers=h_coach)
+    assert r.status_code == 201 and r.json()["estado"] == "activo"

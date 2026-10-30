@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
@@ -14,6 +14,7 @@ import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
 import { Alumno } from '../alumnos/alumnos.modelos';
+import { PestanasAlumnos } from '../alumnos/pestanas-alumnos';
 import { FormaPago, inscribirConPago, inscripcionUrl, problemaPago, resumenPago } from './inscribir';
 import { EstadoInscripcion, Inscripcion, PagoInscripcion } from './inscripciones.modelos';
 
@@ -50,7 +51,7 @@ type Transicion = (typeof TRANSICIONES)[number];
 
 @Component({
   selector: 'app-inscripciones',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, PestanasAlumnos],
   templateUrl: './inscripciones.html',
   styleUrl: './inscripciones.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +60,10 @@ export class InscripcionesPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly ruta = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  /** Inscripción que pidió abrir la ficha del alumno (?id=…). */
+  private abrirAlCargar = this.ruta.snapshot.queryParamMap.get('id');
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
   protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
@@ -155,6 +160,12 @@ export class InscripcionesPage implements OnInit {
       next: (lista) => {
         this.errorCarga.set(false);
         this.inscripciones.set(lista);
+        if (this.abrirAlCargar) {
+          const pedida = lista.find((i) => i.id === this.abrirAlCargar);
+          this.abrirAlCargar = null;
+          if (pedida) this.detalle.set(pedida);
+          void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+        }
       },
       error: () => this.errorCarga.set(true),
     });

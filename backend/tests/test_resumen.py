@@ -55,7 +55,7 @@ def test_alertas_que_requieren_decision(client, h_admin, h_root, familia, reloj)
     assert tipos[0] == "expulsion"  # lo más urgente primero
     assert {"justificaciones", "vence_inscripcion"} <= set(tipos)
     vence = next(a for a in alertas if a["tipo"] == "vence_inscripcion")
-    assert vence["cuando"] == "en 5 d" and vence["ruta"] == "/inscripciones"
+    assert vence["cuando"] == "en 5 d" and vence["ruta"] == "/alumnos/inscripciones"
 
 
 def test_entrenador_ve_solo_su_rama_y_sin_torneos(client, h_admin, crear_usuario, auth_header):

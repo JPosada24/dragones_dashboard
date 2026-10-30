@@ -392,6 +392,64 @@ a.kpi-nota {
   }
 }
 
+/* Formularios dentro de popups (todas las pantallas) */
+.formulario {
+  display: grid;
+  gap: 14px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.campo {
+  display: grid;
+  gap: 5px;
+}
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--naranja);
+  }
+
+  // Alineada con los campos de su fila en una .rejilla.
+  &.alineada {
+    align-self: end;
+    min-height: 36px;
+  }
+}
+
+.opciones-pago {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.campo.monto {
+  max-width: 240px;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* Mensajes de resultado */
 .mensaje {
   margin: 0;

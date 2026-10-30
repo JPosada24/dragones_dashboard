@@ -109,7 +109,7 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
     ).unique():
         r.alertas.append(Alerta(
             "expulsion", 1, f"{_nombre(i.alumno)} · marcado para expulsión",
-            i.motivo or "Pendiente de tu confirmación", "", "/inscripciones",
+            i.motivo or "Pendiente de tu confirmación", "", "/alumnos/inscripciones",
         ))
     if "justificaciones.revisar" in permisos:
         n = db.scalar(
@@ -125,7 +125,7 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
         faltan = (i.fecha_limite_pago - hoy).days
         r.alertas.append(Alerta(
             "vence_inscripcion", 2 if faltan <= 2 else 3, f"{_nombre(i.alumno)} · inscripción por vencer",
-            f"Saldo {formato_pesos(i.saldo)}", "hoy" if faltan == 0 else f"en {faltan} d", "/inscripciones",
+            f"Saldo {formato_pesos(i.saldo)}", "hoy" if faltan == 0 else f"en {faltan} d", "/alumnos/inscripciones",
         ))
     for a in asistencia.alertas(db, usuario):
         r.alertas.append(Alerta(
