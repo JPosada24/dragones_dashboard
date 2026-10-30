@@ -201,11 +201,57 @@ button {
   color: var(--texto);
   font: 400 12.5px var(--f-texto);
   color-scheme: dark;
+  accent-color: var(--naranja);
 
   &:focus {
     outline: none;
     border-color: var(--naranja);
   }
+}
+
+/* Fecha y hora: el campo toma los colores del club. El calendario/reloj que se despliega lo dibuja
+   el navegador (solo acepta tema oscuro y color de acento). */
+input.control[type='date'],
+input.control[type='time'] {
+  font-family: var(--f-mono);
+  cursor: pointer;
+
+  &::-webkit-calendar-picker-indicator {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    cursor: pointer;
+    background: var(--naranja);
+    -webkit-mask: var(--icono-mascara) center / contain no-repeat;
+    mask: var(--icono-mascara) center / contain no-repeat;
+    opacity: 0.85;
+  }
+
+  &:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+  }
+
+  /* Parte seleccionada (día, mes, hora...) al editar con el teclado. */
+  &::-webkit-datetime-edit-day-field:focus,
+  &::-webkit-datetime-edit-month-field:focus,
+  &::-webkit-datetime-edit-year-field:focus,
+  &::-webkit-datetime-edit-hour-field:focus,
+  &::-webkit-datetime-edit-minute-field:focus,
+  &::-webkit-datetime-edit-ampm-field:focus {
+    background: var(--naranja-tenue);
+    color: var(--naranja);
+    border-radius: 3px;
+  }
+}
+
+input.control[type='date'] {
+  /* Icono de calendario (Material Symbols "calendar_month"). */
+  --icono-mascara: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Z'/%3E%3C/svg%3E");
+}
+
+input.control[type='time'] {
+  /* Icono de reloj (Material Symbols "schedule"). */
+  --icono-mascara: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z'/%3E%3C/svg%3E");
 }
 
 textarea.control {
