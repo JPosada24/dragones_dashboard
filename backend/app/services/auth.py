@@ -72,7 +72,7 @@ def emitir_sesion(
 ) -> tuple[str, int, str]:
     """Devuelve (access_token, segundos_de_vida, refresh_token_plano). No hace commit."""
     s = get_settings()
-    access, vida = security.crear_access_token(usuario.id, usuario.rol.codigo)
+    access, vida = security.crear_access_token(usuario.id, usuario.rol.codigo, usuario.credenciales_version)
     refresh = security.nuevo_refresh_token()
     db.add(
         SesionRefresh(

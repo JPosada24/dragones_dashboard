@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import ColumnElement, false, select, true
+from sqlalchemy import ColumnElement, delete, false, func, select, true
 from sqlalchemy.orm import Session
 
 from app.core import fechas
@@ -131,6 +131,25 @@ def crear_extra(
         despues={"fecha": fecha.isoformat(), "hora_inicio": _hhmm(hora_inicio), "hora_fin": _hhmm(hora_fin)},
     )
     return sesion
+
+
+def eliminar(db: Session, sesion: Sesion, *, actor: Usuario, ip: str | None) -> None:
+    """Borra una sesión creada a mano (extra) con su asistencia, justificaciones y multas. Las del horario no se
+    eliminan (la programación las volvería a crear): se cancelan. Si ya cobraron multas de esa sesión, tampoco."""
+    if sesion.automatica:
+        raise ErrorNegocio("Los entrenamientos del horario no se eliminan; si no hay entreno, cancélalo.")
+    pagadas = db.scalar(select(func.count()).select_from(Multa).where(
+        Multa.sesion_id == sesion.id, Multa.estado == "pagada",
+    ))
+    if pagadas:
+        raise Conflicto("Esta sesión ya tiene multas pagadas: cancélala en lugar de eliminarla.")
+    antes = {"fecha": sesion.fecha.isoformat(), "hora_inicio": sesion.hora_inicio.isoformat(),
+             "lugar": sesion.lugar, "cancelada": sesion.cancelada}
+    for modelo in (Multa, Justificacion, Asistencia):
+        db.execute(delete(modelo).where(modelo.sesion_id == sesion.id))
+    db.delete(sesion)
+    db.flush()
+    _auditar(db, "sesion.eliminar", "sesion", sesion.id, actor.id, ip, antes=antes)
 
 
 def cancelar(db: Session, sesion: Sesion, *, motivo: str | None, actor: Usuario, ip: str | None) -> Sesion:

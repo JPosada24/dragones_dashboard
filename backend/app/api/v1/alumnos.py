@@ -120,6 +120,23 @@ def actualizar(
     return _out(db, alumno)
 
 
+@router.delete("/{alumno_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar(
+    alumno_id: uuid.UUID,
+    request: Request,
+    actor: Usuario = Depends(requiere("alumnos.eliminar")),  # solo el SuperAdmin
+    db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    """Elimina al alumno con TODA su información (pagos, asistencia, rifas, documentos). No se puede deshacer."""
+    alumno = servicio.obtener_visible(db, actor, alumno_id)
+    claves = servicio.eliminar(db, alumno, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    for clave in claves:  # después del commit: si la transacción falla, los archivos siguen ahí
+        almacen.borrar(clave)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{alumno_id}/estado-cuenta", response_model=EstadoCuentaOut)
 def ver_estado_cuenta(
     alumno_id: uuid.UUID, usuario: Usuario = Depends(VER_ALUMNOS), db: Session = Depends(get_db)

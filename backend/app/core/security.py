@@ -48,7 +48,7 @@ def verificar_password_falso(password: str) -> None:
     verificar_password(_HASH_FALSO, password)
 
 
-def crear_access_token(usuario_id: uuid.UUID, rol_codigo: str) -> tuple[str, int]:
+def crear_access_token(usuario_id: uuid.UUID, rol_codigo: str, version: int = 0) -> tuple[str, int]:
     """Devuelve (token, segundos de vida)."""
     s = get_settings()
     ahora = datetime.now(UTC)
@@ -56,6 +56,7 @@ def crear_access_token(usuario_id: uuid.UUID, rol_codigo: str) -> tuple[str, int
     payload = {
         "sub": str(usuario_id),
         "rol": rol_codigo,
+        "cv": version,  # versión de credenciales: un cambio de contraseña o de rol invalida el token
         "tipo": "access",
         "iat": ahora,
         "exp": ahora + vida,

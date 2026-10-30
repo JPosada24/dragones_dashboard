@@ -105,7 +105,8 @@ describe('SorteoPage', () => {
     const whatsapp = el().querySelector<HTMLAnchorElement>('a[href^="https://wa.me/"]')!;
     expect(whatsapp.href).toContain('https://wa.me/573001234567?text=');
     expect(decodeURIComponent(whatsapp.href)).toContain('¡Hola, Marta!');
-    expect(decodeURIComponent(whatsapp.href)).toContain('la boleta F001-07 del talonario de Laura ganó «Televisor»');
+    expect(decodeURIComponent(whatsapp.href)).toContain('la boleta número 07 del talonario de Laura ganó «Televisor»');
+    expect(decodeURIComponent(whatsapp.href)).not.toContain('F001');
     // Se puede volver a jugar: la urna ya no cuenta la boleta que ganó.
     expect(boton('casino Jugar otra vez')!.disabled).toBe(false);
     expect(el().querySelector('.en-urna')?.textContent).toContain('19');

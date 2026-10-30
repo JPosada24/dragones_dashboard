@@ -40,6 +40,8 @@ def usuario_actual(
     usuario = db.get(Usuario, usuario_id)
     if usuario is None or not usuario.activo:
         raise _no_autenticado()
+    if payload.get("cv", 0) != usuario.credenciales_version:
+        raise _no_autenticado()  # token anterior a un cambio de contraseña o de rol
     return usuario
 
 

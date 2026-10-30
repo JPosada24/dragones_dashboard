@@ -51,9 +51,15 @@
               @if (!s.automatica) { · sesión extra }
             </p>
           </div>
-          @if (puedeGestionar() && !s.cancelada && !s.cerrada) {
-            <button type="button" class="enlace-rojo" (click)="abrirCancelar()">Cancelar sesión</button>
-          }
+          <div class="acciones-sesion">
+            @if (puedeGestionar() && !s.cancelada && !s.cerrada) {
+              <button type="button" class="enlace-rojo" (click)="abrirCancelar()">Cancelar sesión</button>
+            }
+            @if (puedeGestionar() && !s.automatica) {
+              <button type="button" class="boton-icono peligro" (click)="abrirEliminar()" aria-label="Eliminar sesión extra"
+                      title="Eliminar sesión extra"><span class="icono" aria-hidden="true">delete</span></button>
+            }
+          </div>
         </div>
 
         @if (s.cancelada) {
@@ -299,6 +305,20 @@
   </app-dialogo>
 }
 
+@if (eliminandoSesion() && seleccionada(); as s) {
+  <app-dialogo titulo="Eliminar sesión extra" [descripcion]="(s.fecha | date: 'EEEE d MMMM') + ' · ' + hora(s.hora_inicio)"
+               (cerrar)="eliminandoSesion.set(false)">
+    <div class="formulario">
+      <p>Se borra la sesión con su asistencia, justificaciones y multas pendientes. Si ya se cobraron multas de esta sesión, no se puede eliminar: cancélala.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario chico" (click)="eliminandoSesion.set(false)">Volver</button>
+        <button type="button" class="boton chico peligro" [disabled]="ocupado()" (click)="eliminarSesion()">Eliminar</button>
+      </div>
+    </div>
+  </app-dialogo>
+}
+
 @if (cancelandoSesion()) {
   <app-dialogo titulo="Cancelar entrenamiento" (cerrar)="cancelandoSesion.set(false)"
                descripcion="Úsalo para otro evento del club. Los festivos y torneos se cancelan solos.">
@@ -323,6 +343,7 @@
       <label class="campo">
         <span class="etiqueta">Nuevo estado</span>
         <select class="control" formControlName="estado">
+          <option value="" disabled>Selecciona…</option>
           <option value="presente">Presente</option>
           <option value="justificado">Justificado</option>
           <option value="ausente">Ausente (genera multa)</option>

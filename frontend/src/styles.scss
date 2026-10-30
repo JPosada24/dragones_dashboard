@@ -533,6 +533,30 @@ a.kpi-nota {
   }
 }
 
+/* Aclaración pequeña junto a la etiqueta de un campo ("Vacía = hoy", "opcional") */
+.nota-campo {
+  margin-left: 4px;
+  font: 400 10.5px var(--f-texto);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texto-3);
+}
+
+/* Atajo para llenar un monto con el saldo (el campo empieza vacío) */
+.enlace-saldo {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--oro);
+  font: 600 11px var(--f-texto);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 /* Mensajes de resultado */
 .mensaje {
   margin: 0;
@@ -561,5 +585,23 @@ a.kpi-nota {
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Advertencia antes de una acción que no se puede deshacer */
+.advertencia {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--rojo) 40%, transparent);
+  border-radius: var(--radio-sm);
+  background: var(--rojo-tenue);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto);
+
+  > .icono {
+    color: var(--rojo);
+    font-size: 20px;
   }
 }

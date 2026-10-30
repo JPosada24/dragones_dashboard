@@ -96,7 +96,11 @@ describe('RifasPage', () => {
     expect(ultimo().textContent).not.toContain('comprador');
     boton('payments Registrar pago', ultimo())!.click();
     await estable();
-    expect(ultimo().querySelector<HTMLInputElement>('[formcontrolname="monto"]')!.value).toBe('30000');
+    const monto = ultimo().querySelector<HTMLInputElement>('[formcontrolname="monto"]')!;
+    expect(monto.value).toBe('');
+    boton('Usar el saldo completo', ultimo())!.click();
+    await estable();
+    expect(monto.value).toBe('30000');
     boton('Registrar', ultimo().querySelector('form')!)!.click();
     const pago = backend.expectOne(`${API}/rifas/1/talonarios/t2/pagos`);
     expect(pago.request.body).toEqual({ monto: 30000, fecha: isoLocal(HOY) });

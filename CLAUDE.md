@@ -241,8 +241,19 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   los endpoints de puestos. `MotivoOpcional` en `schemas/comunes.py`. Frontend: talonario con pagos (sin puestos),
   eliminar rifa (papelera en la tarjeta), sorteo con "Jugar otra vez", lista de jugadas, historial y aviso por
   WhatsApp al acudiente principal (o al alumno). Estilo global `.boton-icono`. 193 pruebas backend, 66 frontend.
-- SIGUIENTE (frontend): Torneos, Avisos, Configuración,
-  Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (eliminar, usuarios y campos sin valor por defecto, 2026-10-30): migración 0013 (`solo_agregar()` admite
+  DELETE solo con `SET LOCAL dragones.purga = 'on'`, nunca en `auditoria`; `usuarios.credenciales_version`, que va
+  en el token como `cv`: cambiar contraseña o rol invalida los tokens al instante). `DELETE /alumnos/{id}`
+  (`alumnos.eliminar`, solo SA): purga todo lo del alumno (acudientes se conservan; archivos tras el commit;
+  auditoría solo con el código). `DELETE /sesiones/{id}`: solo sesiones extra y sin multas pagadas. Usuarios:
+  `UsuarioListaOut.vinculado_a`, crear Miembro con `vincular_alumno_id` (mayor de edad) o `vincular_acudiente_id`
+  en la misma transacción, `password` en el PATCH. Pantalla `paginas/usuarios/` (filtros por rol, nueva cuenta con
+  contraseña generada y búsqueda del alumno, editar, cambiar contraseña; nadie se quita su propio rol). **Regla de
+  formularios: ningún campo trae valor por defecto**, solo placeholder; selects con «Selecciona…»; fecha de pago
+  vacía = hoy (`.nota-campo`); montos con el saldo como placeholder y el atajo «Usar el saldo completo»
+  (`.enlace-saldo`); el nombre de la rifa vacío usa la sugerencia. WhatsApp del sorteo: «la boleta número 07».
+  Las boletas ganadoras solo se excluyen dentro de la misma rifa. 199 pruebas backend, 75 frontend.
+- SIGUIENTE (frontend): Torneos, Avisos, Configuración. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.
 

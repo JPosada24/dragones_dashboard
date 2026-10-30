@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere, requiere_alguno
@@ -153,6 +153,19 @@ def cancelar(
     servicio.cancelar(db, sesion, motivo=datos.motivo, actor=actor, ip=ip_cliente(request))
     db.commit()
     return sesion_a_out(sesion)
+
+
+@router.delete("/{sesion_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar(
+    sesion_id: uuid.UUID,
+    request: Request,
+    actor: Usuario = Depends(requiere("sesiones.gestionar")),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Elimina una sesión extra (las del horario solo se cancelan)."""
+    servicio.eliminar(db, servicio.obtener_visible(db, actor, sesion_id), actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{sesion_id}/reactivar", response_model=SesionOut)

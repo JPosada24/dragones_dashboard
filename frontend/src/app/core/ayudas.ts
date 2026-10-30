@@ -25,6 +25,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Justificar', texto: 'La familia justifica una inasistencia hasta unos días después; el staff la aprueba o la rechaza con un comentario.' },
       { titulo: 'Cierre del día', texto: 'A las 11:59 pm, quien no marcó ni justificó queda ausente y con multa (por defecto $2.000). Si hay una justificación pendiente, decide la revisión.' },
       { titulo: 'Cancelar y deshacer', texto: 'Una sesión se cancela (el motivo es opcional) y anula sus multas pendientes. Se puede deshacer hasta el cierre de ese día.', permisos: ['sesiones.gestionar'] },
+      { titulo: 'Eliminar', texto: 'Las sesiones extra (creadas a mano) se pueden eliminar con la papelera; las del horario solo se cancelan. Si ya se cobraron multas de esa sesión, no se elimina.', permisos: ['sesiones.gestionar'] },
       { titulo: 'Rachas', texto: 'Tras varias ausencias seguidas aparece una alerta; una ausencia justificada corta la racha.', permisos: STAFF },
     ],
   },
@@ -37,6 +38,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Inscripción del año', texto: 'La tarjeta de la ficha muestra lo pagado, el saldo y el límite. Quien viene del año pasado se renueva con "Renovar inscripción".' },
       { titulo: 'Documentos', texto: 'Solo PDF, JPG o PNG; se guardan cifrados. El número de documento completo solo lo ven Admin y SuperAdmin, y cada consulta queda registrada.' },
       { titulo: 'Inactivo', texto: 'Si deja el club, se desactiva desde "Editar": su historial se conserva.', permisos: ['alumnos.editar'] },
+      { titulo: 'Eliminar', texto: 'La papelera de la ficha borra al alumno con toda su información (pagos, asistencia, rifas, documentos). No se puede deshacer: pide escribir su código para confirmar.', permisos: ['alumnos.eliminar'] },
     ],
   },
   'alumnos/inscripciones': {
@@ -106,11 +108,13 @@ export const AYUDAS: Record<string, Ayuda> = {
   },
   usuarios: {
     titulo: 'Cuentas y roles',
+    intro: 'Cada persona entra con su correo y su contraseña. Al crear una cuenta, la contraseña se muestra una sola vez para entregarla.',
     pasos: [
       { titulo: 'SuperAdmin', texto: 'El dueño y entrenador principal: acceso total.' },
       { titulo: 'Admin', texto: 'Gestiona alumnos, cobros, inscripciones y torneos.' },
       { titulo: 'Entrenador', texto: 'Asistente de una rama: ve y gestiona solo su rama; no cobra multas ni rifas.' },
-      { titulo: 'Miembro', texto: 'Alumno mayor de edad o acudiente: solo consulta lo suyo.' },
+      { titulo: 'Miembro', texto: 'Acudiente o alumno mayor de edad: solo consulta lo suyo. Al crear la cuenta se elige a qué alumno pertenece.' },
+      { titulo: 'Contraseña', texto: 'La llave cambia la contraseña y cierra sus sesiones abiertas. Desactivar una cuenta le impide entrar sin borrar nada.' },
     ],
   },
 };

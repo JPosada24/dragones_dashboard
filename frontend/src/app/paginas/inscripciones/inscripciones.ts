@@ -101,8 +101,8 @@ export class InscripcionesPage implements OnInit {
   private temporizador: ReturnType<typeof setTimeout> | undefined;
 
   protected readonly formAbono = this.fb.group({
-    monto: [0, [Validators.required, Validators.min(1), Validators.max(100_000_000)]],
-    fecha_pago: [this.hoy, Validators.required],
+    monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(1), Validators.max(100_000_000)]),
+    fecha_pago: [''], // vacía = hoy
   });
   protected readonly formProrroga = this.fb.group({
     nueva_fecha_limite: ['', Validators.required],
@@ -114,7 +114,7 @@ export class InscripcionesPage implements OnInit {
   protected readonly formNueva = this.fb.group({
     buscar: '',
     pago: this.fb.control<FormaPago>('ninguno'),
-    monto: [0],
+    monto: this.fb.control<number | null>(null),
   });
 
   // ---------- Derivados ----------
@@ -231,7 +231,7 @@ export class InscripcionesPage implements OnInit {
 
   // ---------- Abono ----------
   protected abrirAbono(i: Inscripcion): void {
-    this.formAbono.reset({ monto: i.saldo, fecha_pago: this.hoy });
+    this.formAbono.reset({ monto: null, fecha_pago: '' });
     this.abrir(() => this.abonando.set(i));
   }
 
@@ -239,7 +239,8 @@ export class InscripcionesPage implements OnInit {
     const i = this.abonando();
     if (!i) return;
     if (this.formAbono.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del abono.');
-    const datos = this.formAbono.getRawValue();
+    const { monto, fecha_pago } = this.formAbono.getRawValue();
+    const datos = { monto, fecha_pago: fecha_pago || this.hoy };
     this.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(i.id)}/pagos`, datos), (r) => {
       this.abonando.set(null);
       this.actualizar(r);
@@ -316,7 +317,7 @@ export class InscripcionesPage implements OnInit {
 
   // ---------- Nueva inscripción ----------
   protected abrirNueva(): void {
-    this.formNueva.reset({ buscar: '', pago: 'ninguno', monto: 0 });
+    this.formNueva.reset({ buscar: '', pago: 'ninguno', monto: null });
     this.candidatos.set(null);
     this.elegido.set(null);
     this.abrir(() => this.creando.set(true));

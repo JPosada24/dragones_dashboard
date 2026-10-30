@@ -103,3 +103,49 @@ def test_eliminar_documento_borra_el_archivo_y_queda_auditado(client, h_admin, c
     assert client.delete(url, headers=h_admin).status_code == 204
     assert not ruta.exists()
     assert "documento.eliminar" in {a.accion for a in db.scalars(select(Auditoria))}
+
+
+# ---------- Eliminar alumno (purga) ----------
+def test_superadmin_elimina_un_alumno_con_toda_su_informacion(client, h_admin, crear_usuario, auth_header, db):
+    from sqlalchemy import text
+
+    crear_usuario("root@club.com", "SUPERADMIN")
+    h_root = auth_header("root@club.com")
+    alumno = crear_menor(client, h_admin)
+    acudiente_id = alumno["acudientes"][0]["acudiente_id"]
+    i = client.post("/api/v1/inscripciones", json={"alumno_id": alumno["id"]}, headers=h_admin).json()
+    client.post(f"/api/v1/inscripciones/{i['id']}/pagos",
+                json={"fecha_pago": i["fecha_inscripcion"], "monto": 40000}, headers=h_admin)
+    doc = _subir(client, h_admin, alumno["id"]).json()
+    archivo = _archivo_en_disco(db, doc["id"])
+    assert archivo.exists()
+
+    # Solo el SuperAdmin.
+    assert client.delete(f"{A}/{alumno['id']}", headers=h_admin).status_code == 403
+    assert client.delete(f"{A}/{alumno['id']}", headers=h_root).status_code == 204
+
+    assert client.get(f"{A}/{alumno['id']}", headers=h_root).status_code == 404
+    for tabla in ("alumnos", "inscripciones", "pagos_inscripcion", "documentos_alumno", "alumno_acudiente"):
+        assert db.scalar(text(f"SELECT count(*) FROM {tabla}")) == 0, tabla  # noqa: S608
+    assert not archivo.exists()
+    # El acudiente se conserva (podría serlo de un hermano) y la auditoría solo guarda el código.
+    assert client.get(f"/api/v1/acudientes/{acudiente_id}", headers=h_root).status_code == 200
+    registro = db.execute(text("SELECT antes FROM auditoria WHERE accion = 'alumno.eliminar'")).scalar_one()
+    assert registro["codigo"] == alumno["codigo"] and "nombres" not in registro and registro["inscripciones"] == 1
+
+
+def test_fuera_de_la_purga_la_evidencia_sigue_protegida(client, h_admin, db):
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+
+    alumno = crear_alumno(client, h_admin)
+    i = client.post("/api/v1/inscripciones", json={"alumno_id": alumno["id"]}, headers=h_admin).json()
+    client.post(f"/api/v1/inscripciones/{i['id']}/pagos",
+                json={"fecha_pago": i["fecha_inscripcion"], "monto": 1000}, headers=h_admin)
+    with pytest.raises(DBAPIError, match="solo agregar"):
+        db.execute(text("DELETE FROM pagos_inscripcion"))
+    db.rollback()
+    with pytest.raises(DBAPIError, match="solo agregar"):  # ni siquiera con la purga se borra la auditoría
+        db.execute(text("SET LOCAL dragones.purga = 'on'"))
+        db.execute(text("DELETE FROM auditoria"))
+    db.rollback()

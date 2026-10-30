@@ -1,0 +1,204 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<section class="controles" aria-label="Filtros">
+  <div class="busqueda">
+    <label class="solo-lectores" for="buscar-usuario">Buscar cuenta</label>
+    <input #campoBuscar id="buscar-usuario" class="control" type="search" placeholder="Nombre o correo…"
+           (input)="buscar.set(campoBuscar.value)" />
+    <div class="filtros" role="group" aria-label="Filtrar por rol">
+      <button type="button" class="filtro" [attr.aria-pressed]="filtroRol() === ''" (click)="filtroRol.set('')">Todos</button>
+      @for (r of roles; track r.valor) {
+        <button type="button" class="filtro" [attr.aria-pressed]="filtroRol() === r.valor" (click)="filtroRol.set(r.valor)">
+          {{ r.texto }} <span class="mono">{{ conteo()[r.valor] ?? 0 }}</span>
+        </button>
+      }
+    </div>
+  </div>
+  <button type="button" class="boton chico" (click)="abrirNuevo()">
+    <span class="icono" aria-hidden="true">person_add</span> Nueva cuenta
+  </button>
+</section>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudieron cargar las cuentas. Recarga la página.</p>
+} @else if (usuarios() === null) {
+  <p class="panel vacio">Cargando…</p>
+} @else {
+  <section class="panel" aria-label="Cuentas">
+    <ul class="cuentas">
+      @for (u of lista(); track u.id) {
+        <li class="cuenta" [class.inactiva]="!u.activo">
+          <span class="avatar" aria-hidden="true">{{ u.nombre.charAt(0).toUpperCase() }}</span>
+          <span class="cuenta-textos">
+            <span class="cuenta-nombre">{{ u.nombre }} @if (u.id === yo()) { <span class="nota-chica">(tú)</span> }</span>
+            <span class="nota-chica">{{ u.email }}</span>
+            @if (u.vinculado_a) { <span class="nota-chica vinculo">{{ u.vinculado_a }}</span> }
+          </span>
+          <span class="chip-rol" [attr.data-rol]="u.rol">
+            {{ nombreRol[u.rol] }}@if (u.rama) { <span class="capital"> · {{ u.rama }}</span> }
+          </span>
+          <span class="estado" [class.apagado]="!u.activo">{{ u.activo ? 'Activa' : 'Desactivada' }}</span>
+          <span class="acciones-fila">
+            <button type="button" class="boton-icono" (click)="abrirClave(u)" [attr.aria-label]="'Cambiar la contraseña de ' + u.nombre"
+                    title="Cambiar contraseña"><span class="icono" aria-hidden="true">key</span></button>
+            <button type="button" class="boton-icono" (click)="abrirEditar(u)" [attr.aria-label]="'Editar la cuenta de ' + u.nombre"
+                    title="Editar"><span class="icono" aria-hidden="true">edit</span></button>
+          </span>
+        </li>
+      } @empty {
+        <li class="vacio">Nadie coincide.</li>
+      }
+    </ul>
+  </section>
+}
+
+<!-- ---------- Nueva cuenta ---------- -->
+@if (creando()) {
+  <app-dialogo titulo="Nueva cuenta" descripcion="La persona entra con su correo y esta contraseña; puede cambiarla después." ancho="ancho"
+               (cerrar)="creando.set(false)">
+    <form class="formulario" [formGroup]="formNuevo" (ngSubmit)="guardarNuevo()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombre</span>
+          <input class="control" formControlName="nombre" autocomplete="off" placeholder="Nombre y apellido" /></label>
+        <label class="campo"><span class="etiqueta">Correo</span>
+          <input class="control" type="email" formControlName="email" autocomplete="off" placeholder="persona@correo.com" /></label>
+        <label class="campo"><span class="etiqueta">Contraseña <span class="nota-campo">12+ con mayúscula, minúscula y número</span></span>
+          <span class="con-boton">
+            <input class="control mono" formControlName="password" autocomplete="new-password" placeholder="Escríbela o genera una" />
+            <button type="button" class="boton secundario chico" (click)="generar('nuevo')">Generar</button>
+          </span></label>
+        <label class="campo"><span class="etiqueta">Rol</span>
+          <select class="control" formControlName="rol">
+            <option value="" disabled>Selecciona…</option>
+            @for (r of roles; track r.valor) { <option [value]="r.valor">{{ r.texto }}</option> }
+          </select></label>
+      </div>
+      @if (formNuevo.controls.rol.value; as rol) {
+        <p class="nota-chica">{{ descripcionRol(rol) }}</p>
+      }
+      @if (formNuevo.controls.rol.value === 'ENTRENADOR') {
+        <label class="campo corto"><span class="etiqueta">Rama</span>
+          <select class="control" formControlName="rama">
+            <option value="" disabled>Selecciona…</option>
+            <option value="femenina">Femenina</option>
+            <option value="masculina">Masculina</option>
+          </select></label>
+      }
+      @if (formNuevo.controls.rol.value === 'MIEMBRO') {
+        <fieldset class="grupo">
+          <legend>¿De quién es la cuenta?</legend>
+          <div class="opciones" role="radiogroup" aria-label="Tipo de cuenta">
+            <label class="casilla"><input type="radio" formControlName="vinculo" value="acudiente" /><span>Acudiente de un alumno</span></label>
+            <label class="casilla"><input type="radio" formControlName="vinculo" value="alumno" /><span>Alumno mayor de edad</span></label>
+          </div>
+          <label class="campo"><span class="etiqueta">Alumno</span>
+            <input #campoAlumno class="control" type="search" placeholder="Nombre o código (F012)" autocomplete="off"
+                   (input)="buscarAlumno(campoAlumno.value)" /></label>
+          @if (candidatos(); as lista) {
+            <ul class="candidatos" aria-label="Resultados">
+              @for (a of lista; track a.id) {
+                <li>
+                  <button type="button" class="candidato" [class.elegido]="alumnoElegido()?.id === a.id"
+                          [attr.aria-pressed]="alumnoElegido()?.id === a.id"
+                          [disabled]="formNuevo.controls.vinculo.value === 'alumno' && a.es_menor" (click)="elegirAlumno(a)">
+                    <span><b class="mono">{{ a.codigo }}</b> {{ a.nombres }} {{ a.apellidos }}</span>
+                    <span class="nota-chica">{{ a.es_menor ? 'menor de edad' : a.edad + ' años' }}</span>
+                  </button>
+                </li>
+              } @empty {
+                <li class="nota-chica">Nadie coincide.</li>
+              }
+            </ul>
+          }
+          @if (formNuevo.controls.vinculo.value === 'acudiente' && alumnoElegido(); as a) {
+            @if (a.acudientes.length) {
+              <label class="campo"><span class="etiqueta">Acudiente</span>
+                <select class="control" formControlName="acudiente_id">
+                  @for (ac of a.acudientes; track ac.acudiente_id) {
+                    <option [value]="ac.acudiente_id">{{ ac.nombres }} {{ ac.apellidos }} ({{ ac.parentesco }})</option>
+                  }
+                </select></label>
+              <p class="nota-chica">Con esta cuenta verá a todos los alumnos de los que es acudiente.</p>
+            } @else {
+              <p class="nota-chica">Este alumno no tiene acudientes: agrégalo primero en su ficha.</p>
+            }
+          }
+        </fieldset>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="creando.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Crear cuenta</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Editar ---------- -->
+@if (editando(); as u) {
+  <app-dialogo titulo="Editar cuenta" [descripcion]="u.email" (cerrar)="editando.set(null)">
+    <form class="formulario" [formGroup]="formEditar" (ngSubmit)="guardarEdicion()">
+      <label class="campo"><span class="etiqueta">Nombre</span><input class="control" formControlName="nombre" placeholder="Nombre y apellido" /></label>
+      @if (u.id === yo()) {
+        <p class="nota-chica">Es tu cuenta: no puedes cambiar tu propio rol ni desactivarte.</p>
+      } @else {
+        <label class="campo"><span class="etiqueta">Rol</span>
+          <select class="control" formControlName="rol">
+            @for (r of roles; track r.valor) { <option [value]="r.valor">{{ r.texto }}</option> }
+          </select></label>
+        @if (formEditar.controls.rol.value === 'ENTRENADOR') {
+          <label class="campo"><span class="etiqueta">Rama</span>
+            <select class="control" formControlName="rama">
+              <option value="" disabled>Selecciona…</option>
+              <option value="femenina">Femenina</option>
+              <option value="masculina">Masculina</option>
+            </select></label>
+        }
+        <label class="casilla"><input type="checkbox" formControlName="activo" />
+          <span>Cuenta activa <span class="nota-chica">(desactivarla cierra sus sesiones y le impide entrar)</span></span></label>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Contraseña ---------- -->
+@if (cambiandoClave(); as u) {
+  <app-dialogo titulo="Cambiar contraseña" [descripcion]="u.nombre + ' · ' + u.email" (cerrar)="cambiandoClave.set(null)">
+    <form class="formulario" [formGroup]="formClave" (ngSubmit)="guardarClave()">
+      <label class="campo"><span class="etiqueta">Nueva contraseña <span class="nota-campo">12+ con mayúscula, minúscula y número</span></span>
+        <span class="con-boton">
+          <input class="control mono" formControlName="password" autocomplete="new-password" placeholder="Escríbela o genera una" />
+          <button type="button" class="boton secundario chico" (click)="generar('clave')">Generar</button>
+        </span></label>
+      <p class="nota-chica">Se cerrarán todas sus sesiones abiertas.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="cambiandoClave.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Cambiar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Contraseña para entregar ---------- -->
+@if (claveEntregada(); as c) {
+  <app-dialogo titulo="Listo" descripcion="Entrégale estos datos por un medio privado. La contraseña no se vuelve a mostrar." (cerrar)="claveEntregada.set(null)">
+    <div class="formulario">
+      <dl class="credenciales">
+        <div><dt>Correo</dt><dd class="mono">{{ c.email }}</dd></div>
+        <div><dt>Contraseña</dt><dd class="mono">{{ c.clave }}</dd></div>
+      </dl>
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="copiar(c.clave)"><span class="icono" aria-hidden="true">content_copy</span> Copiar contraseña</button>
+        <button type="button" class="boton" (click)="claveEntregada.set(null)">Cerrar</button>
+      </div>
+    </div>
+  </app-dialogo>
+}

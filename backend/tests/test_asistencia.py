@@ -417,3 +417,33 @@ def test_pago_de_varias_multas_es_todo_o_nada(client, h_admin, familia, reloj, c
     r = client.post(f"{M}/pagos", json={"multa_ids": [*de_otra, de_la_hija[1]], "fecha_pago": hoy_}, headers=h_admin)
     assert r.status_code == 200 and {m["estado"] for m in r.json()} == {"pagada"} and len(r.json()) == 3
     assert client.post(f"{M}/pagos", json={"multa_ids": [], "fecha_pago": hoy_}, headers=h_admin).status_code == 422
+
+
+# ---------- Eliminar sesiones ----------
+def test_solo_se_eliminan_las_sesiones_extra(client, h_admin, familia, reloj, db, crear_usuario, auth_header):
+    extra = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 23, 59))
+    cerrar_dia(client, h_admin)  # deja asistencia y multa
+    crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
+    assert client.delete(f"{S}/{extra['id']}", headers=auth_header("coach@club.com")).status_code == 403
+    assert client.delete(f"{S}/{extra['id']}", headers=h_admin).status_code == 204
+    assert client.get(f"{S}/{extra['id']}", headers=h_admin).status_code == 404
+    assert client.get(M, headers=h_admin).json() == []  # su multa también
+
+    # Las del horario (automáticas) no se eliminan: se cancelan.
+    db.execute(update(Sesion).values(automatica=True))
+    otra = crear_sesion(client, h_admin, dia=LUNES + timedelta(days=2))
+    db.execute(update(Sesion).where(Sesion.id == otra["id"]).values(automatica=True))
+    db.commit()
+    r = client.delete(f"{S}/{otra['id']}", headers=h_admin)
+    assert r.status_code == 422 and "cancélalo" in r.json()["detail"]
+
+
+def test_una_sesion_con_multas_pagadas_no_se_elimina(client, h_admin, familia, reloj):
+    extra = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 23, 59))
+    cerrar_dia(client, h_admin)
+    multa = client.get(M, headers=h_admin).json()[0]
+    client.post(f"{M}/{multa['id']}/pago", json={"fecha_pago": LUNES.isoformat()}, headers=h_admin)
+    r = client.delete(f"{S}/{extra['id']}", headers=h_admin)
+    assert r.status_code == 409 and "pagadas" in r.json()["detail"]

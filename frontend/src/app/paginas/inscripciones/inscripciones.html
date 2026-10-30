@@ -200,11 +200,11 @@
     <form class="formulario" [formGroup]="formAbono" (ngSubmit)="guardarAbono()">
       <div class="rejilla">
         <label class="campo"><span class="etiqueta">Valor (pesos)</span>
-          <input class="control mono" type="number" min="1" [max]="i.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
-        <label class="campo"><span class="etiqueta">Fecha del pago</span>
+          <input class="control mono" type="number" min="1" [max]="i.saldo" step="1" inputmode="numeric" formControlName="monto" [placeholder]="'Saldo: ' + (i.saldo | pesos)" /></label>
+        <label class="campo"><span class="etiqueta">Fecha del pago <span class="nota-campo">Vacía = hoy</span></span>
           <input class="control" type="date" formControlName="fecha_pago" [min]="i.fecha_inscripcion" [max]="hoy" /></label>
       </div>
-      <p class="nota-chica">Viene con el saldo completo; cámbialo si es un abono parcial.</p>
+      <button type="button" class="enlace-saldo" (click)="formAbono.controls.monto.setValue(i.saldo)">Usar el saldo completo ({{ i.saldo | pesos }})</button>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="abonando.set(null)">Cancelar</button>
@@ -307,7 +307,7 @@
         </div>
         @if (formNueva.controls.pago.value === 'parcial') {
           <label class="campo monto"><span class="etiqueta">Valor del abono (pesos)</span>
-            <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" /></label>
+            <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" placeholder="Ej.: 40000" /></label>
         }
       }
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }

@@ -70,6 +70,7 @@ export class AlumnosPage implements OnInit {
   protected readonly puedeEditar = computed(() => this.auth.tiene('alumnos.editar'));
   protected readonly puedeInscribir = computed(() => this.auth.tiene('inscripciones.crear'));
   protected readonly puedeAbonar = computed(() => this.auth.tiene('inscripciones.abonar'));
+  protected readonly puedeEliminar = computed(() => this.auth.tiene('alumnos.eliminar'));
   /** Rama fija para quien solo maneja la suya (el Entrenador). */
   protected readonly ramaPropia = computed(() => (this.veTodasLasRamas() ? null : (this.auth.usuario()?.rama ?? null)));
 
@@ -116,16 +117,19 @@ export class AlumnosPage implements OnInit {
   protected readonly eliminandoDocumento = signal<Documento | null>(null);
   protected readonly inscribiendo = signal(false);
   protected readonly abonando = signal(false);
+  protected readonly eliminando = signal(false);
+  /** Para confirmar hay que escribir el código del alumno (evita borrar por un clic). */
+  protected readonly confirmacion = signal('');
   protected readonly busquedaAcudiente = signal<BusquedaAcudiente>(null);
   protected readonly archivo = signal<File | null>(null);
 
   protected readonly formAlumno = this.fb.group({
     nombres: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
     apellidos: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
-    tipo_documento: ['TI', Validators.required],
+    tipo_documento: ['', Validators.required],
     documento: ['', Validators.maxLength(30)],
     fecha_nacimiento: ['', Validators.required],
-    rama: this.fb.control<Rama>('femenina', Validators.required),
+    rama: this.fb.control<Rama | ''>('', Validators.required),
     telefono: ['', Validators.maxLength(20)],
     email: ['', [Validators.email, Validators.maxLength(254)]],
     direccion: ['', Validators.maxLength(200)],
@@ -133,7 +137,7 @@ export class AlumnosPage implements OnInit {
     activo: true,
   });
   protected readonly formAcudiente = this.fb.group({
-    tipo_documento: ['CC', Validators.required],
+    tipo_documento: ['', Validators.required],
     documento: ['', Validators.maxLength(30)],
     parentesco: ['', Validators.maxLength(30)],
     principal: false,
@@ -142,15 +146,15 @@ export class AlumnosPage implements OnInit {
     telefono: ['', Validators.maxLength(20)],
     email: ['', [Validators.email, Validators.maxLength(254)]],
   });
-  protected readonly formDocumento = this.fb.group({ tipo: ['identidad', Validators.required] });
+  protected readonly formDocumento = this.fb.group({ tipo: ['', Validators.required] });
   protected readonly formAbono = this.fb.group({
-    monto: [0, [Validators.required, Validators.min(1), Validators.max(100_000_000)]],
-    fecha_pago: [this.hoy, Validators.required],
+    monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(1), Validators.max(100_000_000)]),
+    fecha_pago: [''], // vacía = hoy
   });
   /** Inscripción del año (al crear el alumno o desde su ficha) y su primer abono. */
   protected readonly formInscripcion = this.fb.group({
     pago: this.fb.control<FormaPago>('ninguno'),
-    monto: [0, [Validators.min(1), Validators.max(100_000_000)]],
+    monto: this.fb.control<number | null>(null, [Validators.min(1), Validators.max(100_000_000)]),
   });
 
   // ---------- Derivados ----------
@@ -256,6 +260,22 @@ export class AlumnosPage implements OnInit {
     });
   }
 
+  protected abrirEliminar(): void {
+    this.confirmacion.set('');
+    this.abrir(() => this.eliminando.set(true));
+  }
+
+  protected eliminarAlumno(): void {
+    const a = this.alumno();
+    if (!a || this.confirmacion().trim().toUpperCase() !== a.codigo) return;
+    this.ejecutar(this.http.delete(alumnoUrl(a.id)), () => {
+      this.eliminando.set(false);
+      this.alumnos.update((lista) => lista?.filter((x) => x.id !== a.id) ?? lista);
+      this.volverALista();
+      this.avisar(null, `${a.nombres} ${a.apellidos} (${a.codigo}) fue eliminado con toda su información.`);
+    }, true);
+  }
+
   protected volverALista(): void {
     this.seleccionadoId.set(null);
     this.alumno.set(null);
@@ -277,7 +297,7 @@ export class AlumnosPage implements OnInit {
 
   // ---------- Alumno: crear / editar ----------
   protected abrirNuevo(): void {
-    this.formAlumno.reset({ rama: this.ramaPropia() === 'masculina' ? 'masculina' : 'femenina' });
+    this.formAlumno.reset({ rama: this.ramaPropia() ?? '' });
     this.reiniciarAcudiente();
     this.reiniciarInscripcion();
     this.abrir(() => this.editandoAlumno.set('nuevo'));
@@ -306,7 +326,7 @@ export class AlumnosPage implements OnInit {
     };
     const base = {
       nombres: f.nombres, apellidos: f.apellidos, fecha_nacimiento: f.fecha_nacimiento,
-      rama: this.ramaPropia() ?? f.rama, ...opcionales,
+      rama: this.ramaPropia() ?? (f.rama || null), ...opcionales,
     };
 
     if (modo === 'nuevo') {
@@ -357,7 +377,7 @@ export class AlumnosPage implements OnInit {
 
   // ---------- Inscripción del año ----------
   private reiniciarInscripcion(): void {
-    this.formInscripcion.reset({ pago: 'ninguno', monto: 0 });
+    this.formInscripcion.reset({ pago: 'ninguno', monto: null });
   }
 
   protected abrirInscribir(): void {
@@ -385,8 +405,8 @@ export class AlumnosPage implements OnInit {
     return this.puedeAbonar() && i.estado === 'pendiente_pago' && i.saldo > 0;
   }
 
-  protected abrirAbono(i: Inscripcion): void {
-    this.formAbono.reset({ monto: i.saldo, fecha_pago: this.hoy });
+  protected abrirAbono(): void {
+    this.formAbono.reset({ monto: null, fecha_pago: '' });
     this.abrir(() => this.abonando.set(true));
   }
 
@@ -395,7 +415,8 @@ export class AlumnosPage implements OnInit {
     if (!i) return;
     if (this.formAbono.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del abono.');
     const url = `${inscripcionUrl(i.id)}/pagos`;
-    this.ejecutar(this.http.post<Inscripcion>(url, this.formAbono.getRawValue()), (r) => {
+    const { monto, fecha_pago } = this.formAbono.getRawValue();
+    this.ejecutar(this.http.post<Inscripcion>(url, { monto, fecha_pago: fecha_pago || this.hoy }), (r) => {
       this.abonando.set(false);
       this.seleccionar(r.alumno_id); // refresca estado de cuenta y punto de la lista
       this.cargarLista();
@@ -539,6 +560,7 @@ export class AlumnosPage implements OnInit {
     const archivo = this.archivo();
     if (!a) return;
     if (!archivo) return this.errorDialogo.set('Elige el archivo (PDF, JPG o PNG).');
+    if (this.formDocumento.invalid) return this.errorDialogo.set('Elige qué tipo de documento es.');
     const datos = new FormData();
     datos.append('tipo', this.formDocumento.getRawValue().tipo);
     datos.append('archivo', archivo);

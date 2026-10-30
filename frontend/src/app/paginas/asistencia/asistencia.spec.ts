@@ -68,6 +68,10 @@ describe('AsistenciaPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
   }
+  function escribirEn(campo: HTMLInputElement, valor: string) {
+    campo.value = valor;
+    campo.dispatchEvent(new Event('input'));
+  }
   function escribir(selector: string, valor: string) {
     const campo = el().querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
     campo.value = valor;
@@ -166,7 +170,14 @@ describe('AsistenciaPage', () => {
     await estable();
     expect(dialogo()).not.toBeNull();
     const martes = el().querySelectorAll<HTMLInputElement>('dialog input[type="checkbox"]')[1]!;
-    martes.click(); // agrega el martes
+    martes.click(); // agrega el martes: sus horas empiezan vacías
+    await estable();
+    boton('Guardar horario', dialogo()!)!.click();
+    await estable();
+    expect(dialogo()!.querySelector('[role="alert"]')?.textContent).toContain('hora de inicio y de fin');
+    const [inicio, fin] = [...dialogo()!.querySelectorAll('.dia-fila')[1]!.querySelectorAll<HTMLInputElement>('input[type="time"]')];
+    escribirEn(inicio!, '18:00');
+    escribirEn(fin!, '20:00');
     await estable();
     boton('Guardar horario', dialogo()!)!.click();
     const req = backend.expectOne(`${API}/sesiones/horario`);
@@ -239,6 +250,20 @@ describe('AsistenciaPage', () => {
     await estable();
     expect(dialogo()?.querySelector('[role="alert"]')?.textContent).toContain('La sesión ya estaba cancelada.');
     expect(dialogo()!.querySelector<HTMLInputElement>('input')!.value).toBe('Evento del club');
+  });
+
+  it('una sesión extra se puede eliminar; las del horario no muestran la opción', async () => {
+    await cargarStaff([sesion()], [fila('a1', 'Laura Pérez')]);
+    expect(el().querySelector('[aria-label="Eliminar sesión extra"]')).toBeNull(); // automática
+    TestBed.resetTestingModule();
+
+    await cargarStaff([sesion({ automatica: false })], [fila('a1', 'Laura Pérez')]);
+    (el().querySelector('[aria-label="Eliminar sesión extra"]') as HTMLButtonElement).click();
+    await estable();
+    boton('Eliminar', dialogo()!)!.click();
+    backend.expectOne((r) => r.method === 'DELETE' && r.url === `${API}/sesiones/s1`).flush(null, { status: 204, statusText: 'No Content' });
+    await estable();
+    expect(texto()).toContain('Sesión extra eliminada');
   });
 });
 

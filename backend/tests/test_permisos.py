@@ -95,3 +95,54 @@ def test_configuracion_valida_tipos(client, crear_usuario, auth_header):
     assert client.patch("/api/v1/configuracion/no_existe", json={"valor": 1}, headers=h).status_code == 422
     r = client.patch("/api/v1/configuracion/hora_cierre_asistencia", json={"valor": "25:99"}, headers=h)
     assert r.status_code == 422
+
+
+# ---------- Cuentas: vínculo de Miembros y contraseña ----------
+def test_superadmin_crea_cuenta_de_miembro_vinculada_a_un_acudiente(client, crear_usuario, auth_header, login):
+    from tests.fabrica import crear_alumno, crear_menor
+
+    crear_usuario("root@club.com", "SUPERADMIN")
+    h = auth_header("root@club.com")
+    hija = crear_menor(client, h)
+    acudiente_id = hija["acudientes"][0]["acudiente_id"]
+    cuenta = {"email": "marta@club.com", "nombre": "Marta Gómez", "password": PASSWORD, "rol": "MIEMBRO"}
+
+    # Un menor no tiene cuenta propia.
+    r = client.post("/api/v1/usuarios", json={**cuenta, "vincular_alumno_id": hija["id"]}, headers=h)
+    assert r.status_code == 422 and "acudiente" in r.json()["detail"]
+    # Solo los Miembros se vinculan.
+    r = client.post("/api/v1/usuarios", json={**cuenta, "rol": "ADMIN", "vincular_acudiente_id": acudiente_id},
+                    headers=h)
+    assert r.status_code == 422
+
+    r = client.post("/api/v1/usuarios", json={**cuenta, "vincular_acudiente_id": acudiente_id}, headers=h)
+    assert r.status_code == 201, r.text
+    # Con la cuenta nueva, Marta ve a su hija.
+    token = login("marta@club.com").json()["access_token"]
+    alumnos = client.get("/api/v1/alumnos", headers={"Authorization": f"Bearer {token}"}).json()
+    assert [a["id"] for a in alumnos] == [hija["id"]]
+    lista = {u["email"]: u["vinculado_a"] for u in client.get("/api/v1/usuarios", headers=h).json()}
+    assert lista["marta@club.com"].startswith("Acudiente de " + hija["codigo"])
+    # Ya tiene cuenta: no se vincula otra.
+    otra = {**cuenta, "email": "otra@club.com", "vincular_acudiente_id": acudiente_id}
+    r = client.post("/api/v1/usuarios", json=otra, headers=h)
+    assert r.status_code == 409
+
+    mayor = crear_alumno(client, h, documento="1000000099")
+    r = client.post("/api/v1/usuarios", json={**cuenta, "email": "laura@club.com", "vincular_alumno_id": mayor["id"]},
+                    headers=h)
+    assert r.status_code == 201
+
+
+def test_superadmin_restablece_la_contrasena_y_cierra_las_sesiones(client, crear_usuario, auth_header, login):
+    crear_usuario("root@club.com", "SUPERADMIN")
+    usuario = crear_usuario("coach@club.com", "ENTRENADOR")
+    h_coach = auth_header("coach@club.com")
+    h_root = auth_header("root@club.com")
+    nueva = "OtraClaveSegura456"
+    assert client.patch(f"/api/v1/usuarios/{usuario.id}", json={"password": "123"}, headers=h_root).status_code == 422
+    r = client.patch(f"/api/v1/usuarios/{usuario.id}", json={"password": nueva}, headers=h_root)
+    assert r.status_code == 200
+    assert client.get("/api/v1/auth/me", headers=h_coach).status_code == 401
+    assert login("coach@club.com").status_code == 401
+    assert login("coach@club.com", nueva).status_code == 200

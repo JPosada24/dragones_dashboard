@@ -102,6 +102,10 @@
                   <span class="icono" aria-hidden="true">edit</span> Editar
                 </button>
               }
+              @if (puedeEliminar()) {
+                <button type="button" class="boton-icono peligro" (click)="abrirEliminar()" aria-label="Eliminar alumno"
+                        title="Eliminar alumno"><span class="icono" aria-hidden="true">delete</span></button>
+              }
             </div>
           </div>
           <div class="estados">
@@ -145,7 +149,7 @@
               <div class="acciones-tarjeta">
                 <a class="enlace" routerLink="/alumnos/inscripciones" [queryParams]="{ id: i.id }">Ver abonos y prórrogas →</a>
                 @if (abonable(i)) {
-                  <button type="button" class="boton chico" (click)="abrirAbono(i)">
+                  <button type="button" class="boton chico" (click)="abrirAbono()">
                     <span class="icono" aria-hidden="true">payments</span> Registrar abono
                   </button>
                 }
@@ -296,6 +300,31 @@
   </div>
 </div>
 
+<!-- ---------- Eliminar alumno ---------- -->
+@if (eliminando() && alumno(); as a) {
+  <app-dialogo titulo="Eliminar alumno" [descripcion]="a.nombres + ' ' + a.apellidos + ' · ' + a.codigo" (cerrar)="eliminando.set(false)">
+    <div class="formulario">
+      <div class="advertencia" role="alert">
+        <span class="icono" aria-hidden="true">warning</span>
+        <div>
+          <b>Se perderá toda la información de este alumno y no se puede deshacer:</b>
+          su ficha, documentos, inscripciones y pagos, asistencia, multas, talonarios de rifa y los sorteos que haya ganado.
+          Si solo dejó el club, mejor desactívalo desde «Editar»: así se conserva su historial.
+        </div>
+      </div>
+      <label class="campo"><span class="etiqueta">Para confirmar, escribe su código: <b class="mono">{{ a.codigo }}</b></span>
+        <input #confirmar class="control mono" autocomplete="off" [placeholder]="a.codigo" [value]="confirmacion()"
+               (input)="confirmacion.set(confirmar.value)" /></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="eliminando.set(false)">Volver</button>
+        <button type="button" class="boton peligro" [disabled]="ocupado() || confirmacion().trim().toUpperCase() !== a.codigo"
+                (click)="eliminarAlumno()">Eliminar definitivamente</button>
+      </div>
+    </div>
+  </app-dialogo>
+}
+
 <!-- ---------- Ventanas emergentes ---------- -->
 @if (editandoAlumno(); as modo) {
   <app-dialogo [titulo]="modo === 'nuevo' ? textoNuevo() : 'Editar alumno'" ancho="ancho"
@@ -309,6 +338,7 @@
           <input class="control" formControlName="apellidos" autocomplete="off" /></label>
         <label class="campo"><span class="etiqueta">Tipo de documento</span>
           <select class="control" formControlName="tipo_documento">
+            <option value="" disabled>Selecciona…</option>
             @for (t of tiposDocumento; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
           </select></label>
         <label class="campo"><span class="etiqueta">Número de documento</span>
@@ -322,6 +352,7 @@
         } @else {
           <label class="campo"><span class="etiqueta">Rama</span>
             <select class="control" formControlName="rama">
+              <option value="" disabled>Selecciona…</option>
               <option value="femenina">Femenina</option>
               <option value="masculina">Masculina</option>
             </select></label>
@@ -381,6 +412,7 @@
     <div class="rejilla">
       <label class="campo"><span class="etiqueta">Tipo de documento</span>
         <select class="control" formControlName="tipo_documento" (change)="documentoAcudienteCambio()">
+          <option value="" disabled>Selecciona…</option>
           @for (t of tiposDocumento; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
         </select></label>
       <label class="campo"><span class="etiqueta">Número de documento</span>
@@ -424,7 +456,7 @@
       </div>
       @if (formInscripcion.controls.pago.value === 'parcial') {
         <label class="campo monto"><span class="etiqueta">Valor del abono (pesos)</span>
-          <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" /></label>
+          <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" placeholder="Ej.: 40000" /></label>
       }
       @if (formInscripcion.controls.pago.value !== 'ninguno') {
         <p class="nota-chica">El pago queda registrado con fecha de hoy y a tu nombre.</p>
@@ -452,11 +484,11 @@
     <form class="formulario" [formGroup]="formAbono" (ngSubmit)="guardarAbono()">
       <div class="rejilla">
         <label class="campo"><span class="etiqueta">Valor (pesos)</span>
-          <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" /></label>
-        <label class="campo"><span class="etiqueta">Fecha del pago</span>
+          <input class="control mono" type="number" min="1" step="1" inputmode="numeric" formControlName="monto" [placeholder]="'Saldo: ' + (i.saldo | pesos)" /></label>
+        <label class="campo"><span class="etiqueta">Fecha del pago <span class="nota-campo">Vacía = hoy</span></span>
           <input class="control" type="date" formControlName="fecha_pago" [max]="hoy" /></label>
       </div>
-      <p class="nota-chica">Viene con el saldo completo; cámbialo si es un abono parcial.</p>
+      <button type="button" class="enlace-saldo" (click)="formAbono.controls.monto.setValue(i.saldo)">Usar el saldo completo ({{ i.saldo | pesos }})</button>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="abonando.set(false)">Cancelar</button>
@@ -484,6 +516,7 @@
     <form class="formulario" [formGroup]="formDocumento" (ngSubmit)="subirDocumento()">
       <label class="campo"><span class="etiqueta">Tipo</span>
         <select class="control" formControlName="tipo">
+          <option value="" disabled>Selecciona…</option>
           @for (t of tiposArchivo; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
         </select></label>
       <label class="campo"><span class="etiqueta">Archivo</span>

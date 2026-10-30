@@ -162,7 +162,7 @@
           <li><span class="capital">Inasistencia {{ m.fecha_sesion | date: 'EEE d MMM' }}</span><span class="mono chico">{{ m.valor | pesos }}</span></li>
         }
       </ul>
-      <label class="campo"><span class="etiqueta">Fecha del pago</span>
+      <label class="campo"><span class="etiqueta">Fecha del pago <span class="nota-campo">Vacía = hoy</span></span>
         <input class="control" type="date" formControlName="fecha_pago" [min]="minimoPago(lista)" [max]="hoy" /></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">

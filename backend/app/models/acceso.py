@@ -44,6 +44,8 @@ class Usuario(UUIDMixin, TiempoMixin, Base):
     intentos_fallidos: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     bloqueado_hasta: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Va dentro del token de acceso; sube al cambiar la contraseña o el rol y los tokens anteriores dejan de valer.
+    credenciales_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     # Rama del Entrenador: limita qué alumnos ve con "alumnos.ver_rama".
     rama: Mapped[str | None] = mapped_column(String(10))
 

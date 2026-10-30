@@ -82,6 +82,7 @@ export class AsistenciaPage implements OnInit {
   protected readonly editandoHorario = signal(false);
   protected readonly creandoExtra = signal(false);
   protected readonly cancelandoSesion = signal(false);
+  protected readonly eliminandoSesion = signal(false);
   protected readonly corrigiendo = signal<FilaPlanilla | null>(null);
   protected readonly justificando = signal<FilaPlanilla | null>(null);
   protected readonly rechazando = signal<Justificacion | null>(null);
@@ -91,21 +92,21 @@ export class AsistenciaPage implements OnInit {
       DIAS.map(() =>
         this.fb.group({
           activo: false,
-          hora_inicio: ['18:00', Validators.required],
-          hora_fin: ['20:00', Validators.required],
+          hora_inicio: [''],
+          hora_fin: [''],
           lugar: ['', Validators.maxLength(120)],
         }),
       ),
     ),
   });
   protected readonly formExtra = this.fb.group({
-    fecha: [this.hoy, Validators.required],
-    hora_inicio: ['18:00', Validators.required],
-    hora_fin: ['20:00', Validators.required],
+    fecha: ['', Validators.required],
+    hora_inicio: ['', Validators.required],
+    hora_fin: ['', Validators.required],
     lugar: ['', Validators.maxLength(120)],
   });
   protected readonly formCorregir = this.fb.group({
-    estado: this.fb.control<EstadoAsistencia>('presente'),
+    estado: this.fb.control<EstadoAsistencia | ''>('', Validators.required),
     motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(255)]],
   });
   protected readonly formJustificar = this.fb.group({
@@ -291,8 +292,8 @@ export class AsistenciaPage implements OnInit {
       const d = dias.find((x) => x.dia_semana === i);
       g.reset({
         activo: !!d,
-        hora_inicio: d ? this.hora(d.hora_inicio) : '18:00',
-        hora_fin: d ? this.hora(d.hora_fin) : '20:00',
+        hora_inicio: d ? this.hora(d.hora_inicio) : '',
+        hora_fin: d ? this.hora(d.hora_fin) : '',
         lugar: d?.lugar ?? '',
       });
     });
@@ -303,6 +304,10 @@ export class AsistenciaPage implements OnInit {
     const dias = this.formHorario.getRawValue().dias.flatMap((d, i) =>
       d.activo ? [{ dia_semana: i, hora_inicio: d.hora_inicio, hora_fin: d.hora_fin, lugar: d.lugar.trim() || null }] : [],
     );
+    if (dias.some((d) => !d.hora_inicio || !d.hora_fin)) {
+      this.errorDialogo.set('Indica la hora de inicio y de fin de cada día de entrenamiento.');
+      return;
+    }
     if (dias.some((d) => d.hora_fin <= d.hora_inicio)) {
       this.errorDialogo.set('En cada día, la hora de fin debe ser posterior a la de inicio.');
       return;
@@ -319,12 +324,12 @@ export class AsistenciaPage implements OnInit {
   }
 
   protected abrirExtra(): void {
-    this.formExtra.reset({ fecha: this.hoy, hora_inicio: '18:00', hora_fin: '20:00', lugar: '' });
+    this.formExtra.reset({ fecha: '', hora_inicio: '', hora_fin: '', lugar: '' });
     this.abrir(() => this.creandoExtra.set(true));
   }
 
   protected crearExtra(): void {
-    if (this.formExtra.invalid) return;
+    if (this.formExtra.invalid) return this.errorDialogo.set('Indica la fecha y las horas de inicio y fin.');
     const v = this.formExtra.getRawValue();
     const cuerpo = { ...v, lugar: v.lugar.trim() || null };
     this.ejecutar(this.http.post<Sesion>(`${API}/sesiones`, cuerpo), (s) => {
@@ -352,6 +357,22 @@ export class AsistenciaPage implements OnInit {
     }, true);
   }
 
+  protected abrirEliminar(): void {
+    this.abrir(() => this.eliminandoSesion.set(true));
+  }
+
+  /** Solo las sesiones extra (creadas a mano); las del horario se cancelan. */
+  protected eliminarSesion(): void {
+    const s = this.seleccionada();
+    if (!s) return;
+    this.ejecutar(this.http.delete(sesionUrl(s.id)), () => {
+      this.eliminandoSesion.set(false);
+      this.sesiones.update((l) => l?.filter((x) => x.id !== s.id) ?? l);
+      this.seleccionar(this.sesiones()?.[0] ?? null);
+      this.avisar(null, 'Sesión extra eliminada.');
+    }, true);
+  }
+
   /** Se puede deshacer una cancelación manual o por festivo, mientras no haya pasado el día (el servidor
    * además exige que no haya pasado la hora de cierre). Torneos y cambios de horario se manejan solos. */
   protected reactivable(s: Sesion): boolean {
@@ -370,14 +391,15 @@ export class AsistenciaPage implements OnInit {
   }
 
   protected abrirCorregir(f: FilaPlanilla): void {
-    this.formCorregir.reset({ estado: f.asistencia === 'presente' ? 'ausente' : 'presente', motivo: '' });
+    this.formCorregir.reset({ estado: '', motivo: '' });
     this.abrir(() => this.corrigiendo.set(f));
   }
 
   protected enviarCorreccion(): void {
     const s = this.seleccionada();
     const f = this.corrigiendo();
-    if (!s || !f || this.formCorregir.invalid) return;
+    if (!s || !f) return;
+    if (this.formCorregir.invalid) return this.errorDialogo.set('Elige el nuevo estado y escribe el motivo (mín. 10 caracteres).');
     const url = `${sesionUrl(s.id)}/asistencia/${encodeURIComponent(f.alumno_id)}`;
     this.ejecutar(this.http.patch<FilaPlanilla[]>(url, this.formCorregir.getRawValue()), (p) => {
       this.planilla.set(p);

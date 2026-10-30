@@ -63,15 +63,17 @@ export class RifasPage implements OnInit {
   protected readonly anulandoPago = signal<PagoTalonario | null>(null);
   protected readonly eliminando = signal<Rifa | null>(null);
 
+  /** Se muestra como placeholder; si el nombre queda vacío, se usa este. */
+  protected readonly nombreSugerido = signal('');
   protected readonly formRifa = this.fb.group({
-    nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
+    nombre: ['', Validators.maxLength(120)],
     premio: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
     fecha_sorteo: ['', Validators.required],
   });
   protected readonly formCancelar = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
   protected readonly formPago = this.fb.group({
-    monto: [0, [Validators.required, Validators.min(1), Validators.max(10_000_000)]],
-    fecha: [this.hoy, Validators.required],
+    monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(1), Validators.max(10_000_000)]),
+    fecha: [''], // vacía = hoy
   });
   protected readonly formAnular = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
 
@@ -199,13 +201,15 @@ export class RifasPage implements OnInit {
   // ---------- Crear y cancelar ----------
   protected abrirNueva(): void {
     const n = (this.rifas() ?? []).filter((r) => r.estado !== 'cancelada').length + 1;
-    this.formRifa.reset({ nombre: `Rifa ${n} de ${this.anio()}`, premio: '', fecha_sorteo: '' });
+    this.nombreSugerido.set(`Rifa ${n} de ${this.anio()}`);
+    this.formRifa.reset({ nombre: '', premio: '', fecha_sorteo: '' });
     this.abrir(() => this.creando.set(true));
   }
 
   protected guardarRifa(): void {
-    if (this.formRifa.invalid) return this.errorDialogo.set('Completa el nombre, el premio y la fecha del sorteo.');
-    const cuerpo = { ...this.formRifa.getRawValue(), anio: this.anio() };
+    if (this.formRifa.invalid) return this.errorDialogo.set('Completa el premio y la fecha del sorteo.');
+    const f = this.formRifa.getRawValue();
+    const cuerpo = { ...f, nombre: f.nombre.trim() || this.nombreSugerido(), anio: this.anio() };
     this.ejecutar(this.http.post<Rifa>(`${API}/rifas`, cuerpo), (r) => {
       this.creando.set(false);
       this.cargar();
@@ -267,8 +271,8 @@ export class RifasPage implements OnInit {
     this.abrir(() => this.abierto.set({ rifa, talonarioId: t.id }));
   }
 
-  protected abrirPagoTalonario(t: Talonario): void {
-    this.formPago.reset({ monto: t.saldo, fecha: this.hoy });
+  protected abrirPagoTalonario(): void {
+    this.formPago.reset({ monto: null, fecha: '' });
     this.errorDialogo.set(null);
     this.pagandoTalonario.set(true);
   }
@@ -279,7 +283,8 @@ export class RifasPage implements OnInit {
     if (!a || !t) return;
     if (this.formPago.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del pago.');
     const url = `${rifaUrl(a.rifa.id)}/talonarios/${encodeURIComponent(t.id)}/pagos`;
-    this.ejecutar(this.http.post<Talonario>(url, this.formPago.getRawValue()), (r) => {
+    const { monto, fecha } = this.formPago.getRawValue();
+    this.ejecutar(this.http.post<Talonario>(url, { monto, fecha: fecha || this.hoy }), (r) => {
       this.pagandoTalonario.set(false);
       this.actualizarTalonario(a.rifa, r);
       this.avisar(r.pagado

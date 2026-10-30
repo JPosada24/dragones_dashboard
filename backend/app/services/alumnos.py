@@ -3,14 +3,25 @@ import uuid
 from datetime import date
 from typing import Any, get_args
 
-from sqlalchemy import ColumnElement, Integer, cast, false, func, or_, select, true
+from sqlalchemy import ColumnElement, Integer, cast, delete, false, func, or_, select, text, true
 from sqlalchemy.orm import Session
 
 from app.core import cifrado
 from app.core.fechas import edad, hoy
 from app.models.acceso import Usuario
-from app.models.alumnos import Acudiente, Alumno, AlumnoAcudiente, Inscripcion
+from app.models.alumnos import (
+    Acudiente,
+    Alumno,
+    AlumnoAcudiente,
+    DocumentoAlumno,
+    Inscripcion,
+    PagoInscripcion,
+    Prorroga,
+)
+from app.models.asistencia import Asistencia, Justificacion, Multa
 from app.models.dominio import ESTADOS_VIGENTES
+from app.models.notificaciones import Notificacion
+from app.models.rifas import ActaSorteo, PagoTalonario, Talonario
 from app.schemas.comunes import TipoDocumento, normalizar_documento
 from app.services import auditoria, configuracion
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
@@ -366,3 +377,48 @@ def actualizar_acudiente(
         antes=antes, despues=_resumen_acudiente(acudiente), ip=ip,
     )
     return acudiente
+
+
+# ---------- Eliminar (purga) ----------
+def eliminar(db: Session, alumno: Alumno, *, actor: Usuario, ip: str | None) -> list[str]:
+    """Borra al alumno y TODO lo suyo: inscripciones y abonos, asistencias, justificaciones, multas, talonarios y sus
+    pagos, actas de sorteos que ganó, avisos y documentos. No se puede deshacer.
+
+    Las tablas de evidencia solo admiten este borrado dentro de esta transacción (`dragones.purga`, migración 0013).
+    Los acudientes se conservan (pueden serlo de un hermano). Devuelve las claves de los archivos a borrar del
+    almacén, que se borran después del commit.
+    """
+    db.execute(select(Alumno.id).where(Alumno.id == alumno.id).with_for_update())
+    claves = list(db.scalars(select(DocumentoAlumno.clave_almacen).where(DocumentoAlumno.alumno_id == alumno.id)))
+    inscripciones = select(Inscripcion.id).where(Inscripcion.alumno_id == alumno.id)
+    talonarios = select(Talonario.id).where(Talonario.alumno_id == alumno.id)
+    conteo = {
+        "inscripciones": db.scalar(select(func.count()).select_from(inscripciones.subquery())),
+        "talonarios": db.scalar(select(func.count()).select_from(talonarios.subquery())),
+        "documentos": len(claves),
+    }
+    db.execute(text("SET LOCAL dragones.purga = 'on'"))
+    for sentencia in (
+        delete(ActaSorteo).where(ActaSorteo.alumno_id == alumno.id),
+        delete(PagoTalonario).where(PagoTalonario.talonario_id.in_(talonarios)),
+        delete(Talonario).where(Talonario.alumno_id == alumno.id),
+        delete(PagoInscripcion).where(PagoInscripcion.inscripcion_id.in_(inscripciones)),
+        delete(Prorroga).where(Prorroga.inscripcion_id.in_(inscripciones)),
+        delete(Inscripcion).where(Inscripcion.alumno_id == alumno.id),
+        delete(Multa).where(Multa.alumno_id == alumno.id),
+        delete(Justificacion).where(Justificacion.alumno_id == alumno.id),
+        delete(Asistencia).where(Asistencia.alumno_id == alumno.id),
+        delete(Notificacion).where(Notificacion.alumno_id == alumno.id),
+        delete(DocumentoAlumno).where(DocumentoAlumno.alumno_id == alumno.id),
+        delete(AlumnoAcudiente).where(AlumnoAcudiente.alumno_id == alumno.id),
+        delete(Alumno).where(Alumno.id == alumno.id),
+    ):
+        db.execute(sentencia)
+    db.execute(text("SET LOCAL dragones.purga = 'off'"))
+    # Solo queda constancia de que existió (código) y de quién lo eliminó: ningún dato personal.
+    auditoria.registrar(
+        db, accion="alumno.eliminar", entidad="alumno", entidad_id=str(alumno.id), usuario_id=actor.id,
+        antes={"codigo": alumno.codigo, **conteo}, ip=ip,
+    )
+    db.expunge(alumno)
+    return claves

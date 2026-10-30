@@ -88,11 +88,15 @@ describe('InscripcionesPage', () => {
     expect(nombres()).toEqual(['Alumno 4']);
   });
 
-  it('registra un abono desde la fila con el saldo ya escrito', async () => {
+  it('registra un abono desde la fila: el valor empieza vacío y la fecha vacía es hoy', async () => {
     await cargar(ADMIN);
     el().querySelector<HTMLButtonElement>('[aria-label="Registrar abono de Alumno 2"]')!.click();
     await estable();
     const monto = ultimoDialogo().querySelector<HTMLInputElement>('[formcontrolname="monto"]')!;
+    expect(monto.value).toBe('');
+    expect(monto.placeholder).toBe('Saldo: $50.000');
+    boton('Usar el saldo completo', ultimoDialogo())!.click();
+    await estable();
     expect(monto.value).toBe('50000');
     escribir(monto, '20000');
     boton('Registrar', ultimoDialogo())!.click();

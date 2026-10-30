@@ -130,7 +130,7 @@ export class SorteoPage implements OnInit {
     const numero = numeroWhatsApp(principal?.telefono ?? g.telefono);
     if (!numero) return null;
     const saludo = principal ? `¡Hola, ${principal.nombres}!` : `¡Hola, ${g.nombres}!`;
-    const texto = `${saludo} Te escribimos del Club Deportivo Dragones: la boleta ${boleta(a.codigo, a.boleta)} `
+    const texto = `${saludo} Te escribimos del Club Deportivo Dragones: la boleta número ${this.dosDigitos(a.boleta)} `
       + `del talonario de ${g.nombres} ganó «${r.premio}» en la ${r.nombre}. ¡Felicitaciones! 🐉`;
     return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
   });

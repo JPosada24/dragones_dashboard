@@ -19,11 +19,11 @@ export const inscripcionUrl = (id: string) => `${API}/inscripciones/${encodeURIC
 export function inscribirConPago(
   http: HttpClient,
   alumnoId: string,
-  pago: { forma: FormaPago; monto: number; hoy: string; puedeAbonar: boolean },
+  pago: { forma: FormaPago; monto: number | null; hoy: string; puedeAbonar: boolean },
 ): Observable<Inscripcion> {
   return http.post<Inscripcion>(`${API}/inscripciones`, { alumno_id: alumnoId }).pipe(
     switchMap((i) => {
-      const monto = pago.forma === 'completo' ? i.saldo : pago.forma === 'parcial' ? pago.monto : 0;
+      const monto = pago.forma === 'completo' ? i.saldo : pago.forma === 'parcial' ? (pago.monto ?? 0) : 0;
       if (!pago.puedeAbonar || monto <= 0 || i.saldo === 0) return of(i);
       return http.post<Inscripcion>(`${inscripcionUrl(i.id)}/pagos`, { fecha_pago: pago.hoy, monto });
     }),
@@ -31,9 +31,9 @@ export function inscribirConPago(
 }
 
 /** Qué falta en la forma de pago; null si está bien. */
-export function problemaPago(forma: FormaPago, monto: number): string | null {
+export function problemaPago(forma: FormaPago, monto: number | null): string | null {
   if (forma !== 'parcial') return null;
-  if (!Number.isInteger(monto) || monto < 1) return 'Escribe el valor del abono (en pesos, sin puntos).';
+  if (monto === null || !Number.isInteger(monto) || monto < 1) return 'Escribe el valor del abono (en pesos, sin puntos).';
   return null;
 }
 

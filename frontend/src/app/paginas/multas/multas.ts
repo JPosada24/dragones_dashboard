@@ -53,7 +53,7 @@ export class MultasPage implements OnInit {
   protected readonly cobrando = signal<Multa[] | null>(null);
   protected readonly anulando = signal<Multa | null>(null);
 
-  protected readonly formCobro = this.fb.group({ fecha_pago: [this.hoy, Validators.required] });
+  protected readonly formCobro = this.fb.group({ fecha_pago: [''] }); // vacía = hoy
   protected readonly formAnular = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
 
   // ---------- Derivados ----------
@@ -135,7 +135,7 @@ export class MultasPage implements OnInit {
 
   // ---------- Cobro ----------
   protected abrirCobro(multas: Multa[]): void {
-    this.formCobro.reset({ fecha_pago: this.hoy });
+    this.formCobro.reset({ fecha_pago: '' });
     this.abrir(() => this.cobrando.set(multas));
   }
 
@@ -147,8 +147,7 @@ export class MultasPage implements OnInit {
   protected guardarCobro(): void {
     const multas = this.cobrando();
     if (!multas?.length) return;
-    if (this.formCobro.invalid) return this.errorDialogo.set('Indica la fecha del pago.');
-    const cuerpo = { multa_ids: multas.map((m) => m.id), fecha_pago: this.formCobro.getRawValue().fecha_pago };
+    const cuerpo = { multa_ids: multas.map((m) => m.id), fecha_pago: this.formCobro.getRawValue().fecha_pago || this.hoy };
     this.ejecutar(this.http.post<Multa[]>(`${API}/multas/pagos`, cuerpo), (pagadas) => {
       this.cobrando.set(null);
       const ids = new Set(pagadas.map((m) => m.id));

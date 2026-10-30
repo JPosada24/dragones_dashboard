@@ -168,8 +168,13 @@ describe('AlumnosPage', () => {
     escribir('dialog [formcontrolname="apellidos"]', 'Pérez');
     escribir('dialog [formcontrolname="documento"]', '1098765432');
     escribir('dialog [formcontrolname="fecha_nacimiento"]', '2013-05-04');
+    escribir('dialog [formcontrolname="tipo_documento"]', 'TI'); // los selects empiezan en «Selecciona…»
+    escribir('dialog [formcontrolname="rama"]', 'femenina');
 
     // Acudiente: se busca por documento; no existe, así que se piden sus datos.
+    const tipoAcudiente = dialogo().querySelectorAll<HTMLSelectElement>('[formcontrolname="tipo_documento"]')[1]!;
+    tipoAcudiente.value = 'CC';
+    tipoAcudiente.dispatchEvent(new Event('change'));
     const docAcudiente = dialogo().querySelectorAll<HTMLInputElement>('[formcontrolname="documento"]')[1]!;
     docAcudiente.value = '43111222';
     docAcudiente.dispatchEvent(new Event('input'));
@@ -222,6 +227,8 @@ describe('AlumnosPage', () => {
     escribir('dialog [formcontrolname="apellidos"]', 'Ríos');
     escribir('dialog [formcontrolname="documento"]', '1012345678');
     escribir('dialog [formcontrolname="fecha_nacimiento"]', '2000-01-01');
+    escribir('dialog [formcontrolname="tipo_documento"]', 'CC');
+    escribir('dialog [formcontrolname="rama"]', 'femenina');
     (dialogo().querySelector('input[type="radio"][value="parcial"]') as HTMLInputElement).click();
     await estable();
     escribir('dialog [formcontrolname="monto"]', '40000');
@@ -254,7 +261,9 @@ describe('AlumnosPage', () => {
 
     boton('payments Registrar abono', tarjeta)!.click();
     await estable();
-    expect(dialogo().querySelector<HTMLInputElement>('[formcontrolname="monto"]')!.value).toBe('50000');
+    expect(dialogo().querySelector<HTMLInputElement>('[formcontrolname="monto"]')!.value).toBe(''); // sin valor por defecto
+    boton('Usar el saldo completo ($50.000)', dialogo())!.click();
+    await estable();
     boton('Registrar', dialogo())!.click();
     const pago = backend.expectOne(`${API}/inscripciones/i1/pagos`);
     expect(pago.request.body.monto).toBe(50000);
@@ -296,5 +305,37 @@ describe('AlumnosPage', () => {
     await estable();
     expect(texto()).not.toContain('Renovar inscripción');
     expect(el().querySelector('[aria-label="Nuevo alumno"]')).not.toBeNull();
+  });
+
+  it('el SuperAdmin elimina un alumno solo después de escribir su código', async () => {
+    crear([...ADMIN, 'alumnos.eliminar']);
+    pedirLista().flush([alumno('a1')]);
+    await estable();
+    (el().querySelector('.item') as HTMLButtonElement).click();
+    responderFicha(alumno('a1'));
+    await estable();
+    (el().querySelector('[aria-label="Eliminar alumno"]') as HTMLButtonElement).click();
+    await estable();
+    expect(dialogo().querySelector('.advertencia')?.textContent).toContain('Se perderá toda la información');
+    const eliminar = boton('Eliminar definitivamente', dialogo())!;
+    expect(eliminar.disabled).toBe(true);
+    escribir('dialog input.mono', 'f001');
+    await estable();
+    expect(eliminar.disabled).toBe(false);
+    eliminar.click();
+    backend.expectOne((r) => r.method === 'DELETE' && r.url === `${API}/alumnos/a1`).flush(null, { status: 204, statusText: 'No Content' });
+    await estable();
+    expect(texto()).toContain('fue eliminado con toda su información');
+    expect(el().querySelectorAll('.item').length).toBe(0);
+  });
+
+  it('sin el permiso no aparece la opción de eliminar', async () => {
+    crear(ADMIN);
+    pedirLista().flush([alumno('a1')]);
+    await estable();
+    (el().querySelector('.item') as HTMLButtonElement).click();
+    responderFicha(alumno('a1'));
+    await estable();
+    expect(el().querySelector('[aria-label="Eliminar alumno"]')).toBeNull();
   });
 });

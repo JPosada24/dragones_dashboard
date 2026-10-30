@@ -179,7 +179,7 @@
   <app-dialogo titulo="Nueva rifa" descripcion="Cada alumno con inscripción vigente recibe un talonario. Boletas por talonario y precio salen de la configuración."
                (cerrar)="creando.set(false)">
     <form class="formulario" [formGroup]="formRifa" (ngSubmit)="guardarRifa()">
-      <label class="campo"><span class="etiqueta">Nombre</span><input class="control" formControlName="nombre" /></label>
+      <label class="campo"><span class="etiqueta">Nombre <span class="nota-campo">opcional</span></span><input class="control" formControlName="nombre" [placeholder]="nombreSugerido()" /></label>
       <label class="campo"><span class="etiqueta">Premio</span>
         <input class="control" formControlName="premio" placeholder="Ej.: balón oficial + uniforme" /></label>
       <label class="campo monto"><span class="etiqueta">Fecha del sorteo</span>
@@ -241,7 +241,7 @@
             <span class="barra"><span [style.width]="pct(t.recaudado, a.rifa.valor_talonario)"></span></span>
           </div>
           @if (puedeCobrar() && a.rifa.estado !== 'cancelada' && t.saldo > 0 && !pagandoTalonario()) {
-            <button type="button" class="boton chico" (click)="abrirPagoTalonario(t)">
+            <button type="button" class="boton chico" (click)="abrirPagoTalonario()">
               <span class="icono" aria-hidden="true">payments</span> Registrar pago
             </button>
           }
@@ -249,13 +249,13 @@
 
         @if (pagandoTalonario()) {
           <form class="formulario recuadro" [formGroup]="formPago" (ngSubmit)="guardarPagoTalonario()">
-            <p class="nota-chica">Viene con el saldo completo; cámbialo si es un abono.</p>
             <div class="rejilla">
               <label class="campo"><span class="etiqueta">Valor (pesos)</span>
-                <input class="control mono" type="number" min="1" [max]="t.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
-              <label class="campo"><span class="etiqueta">Fecha</span>
+                <input class="control mono" type="number" min="1" [max]="t.saldo" step="1" inputmode="numeric" formControlName="monto" [placeholder]="'Saldo: ' + (t.saldo | pesos)" /></label>
+              <label class="campo"><span class="etiqueta">Fecha <span class="nota-campo">Vacía = hoy</span></span>
                 <input class="control" type="date" formControlName="fecha" [max]="hoy" /></label>
             </div>
+            <button type="button" class="enlace-saldo" (click)="formPago.controls.monto.setValue(t.saldo)">Usar el saldo completo ({{ t.saldo | pesos }})</button>
             @if (errorDialogo() && !anulandoPago()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
             <div class="acciones">
               <button type="button" class="boton secundario chico" (click)="pagandoTalonario.set(false)">Cancelar</button>
