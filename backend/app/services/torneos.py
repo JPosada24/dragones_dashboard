@@ -22,7 +22,7 @@ def _auditar(db: Session, accion: str, entidad: str, entidad_id, actor_id, ip, *
 
 # ---------- Torneos ----------
 def listar(db: Session, *, desde: date | None) -> list[Torneo]:
-    q = select(Torneo)
+    q = select(Torneo).where(Torneo.estado != "eliminado")
     if desde:
         q = q.where(Torneo.fecha_fin >= desde)
     return list(db.scalars(q.order_by(Torneo.fecha_inicio)))
@@ -30,7 +30,7 @@ def listar(db: Session, *, desde: date | None) -> list[Torneo]:
 
 def obtener(db: Session, torneo_id: uuid.UUID) -> Torneo:
     torneo = db.get(Torneo, torneo_id)
-    if torneo is None:
+    if torneo is None or torneo.estado == "eliminado":
         raise NoEncontrado("Torneo no encontrado.")
     return torneo
 
@@ -45,14 +45,18 @@ def resumen(db: Session, torneo: Torneo) -> dict[str, int]:
     }
 
 
-def crear(db: Session, *, datos: dict[str, Any], actor: Usuario, ip: str | None) -> Torneo:
+def _validar_fechas(inicio: date, fin: date, limite: date, *, nuevo: bool) -> None:
     hoy = fechas.hoy()
-    if datos["fecha_inicio"] < hoy:
+    if nuevo and inicio < hoy:
         raise ErrorNegocio("El torneo no puede empezar en una fecha pasada.")
-    if datos["fecha_fin"] < datos["fecha_inicio"]:
+    if fin < inicio:
         raise ErrorNegocio("La fecha de fin debe ser igual o posterior a la de inicio.")
-    if not (hoy <= datos["fecha_limite_inscripcion"] <= datos["fecha_inicio"]):
+    if limite > inicio or (nuevo and limite < hoy):
         raise ErrorNegocio("La fecha límite de inscripción debe estar entre hoy y el inicio del torneo.")
+
+
+def crear(db: Session, *, datos: dict[str, Any], actor: Usuario, ip: str | None) -> Torneo:
+    _validar_fechas(datos["fecha_inicio"], datos["fecha_fin"], datos["fecha_limite_inscripcion"], nuevo=True)
     if datos.get("cupo_equipos") is None:
         datos["cupo_equipos"] = configuracion.obtener(db, "cupo_equipos_sugerido")
     torneo = Torneo(**datos, estado="programado", creado_por=actor.id)
@@ -78,6 +82,54 @@ def cancelar(db: Session, torneo: Torneo, *, motivo: str | None, actor: Usuario,
     _auditar(db, "torneo.cancelar", "torneo", torneo.id, actor.id, ip, despues={"motivo": motivo})
     programacion.generar(db)  # y vuelven los entrenamientos que había cancelado
     return torneo
+
+
+def _foto(t: Torneo) -> dict[str, Any]:
+    return {
+        "nombre": t.nombre, "rama": t.rama, "fecha_inicio": t.fecha_inicio.isoformat(),
+        "fecha_fin": t.fecha_fin.isoformat(), "lugar": t.lugar, "cupo": t.cupo_equipos, "valor": t.valor_inscripcion,
+    }
+
+
+def actualizar(db: Session, torneo: Torneo, *, cambios: dict[str, Any], actor: Usuario, ip: str | None) -> Torneo:
+    """Corrige datos del torneo. Si sube el cupo entran los primeros de la lista de espera; no se puede bajar por
+    debajo de los equipos que ya ocupan cupo. El valor nuevo aplica a quienes se inscriban después."""
+    _bloquear(db, torneo)
+    if torneo.estado != "programado":
+        raise ErrorNegocio("Solo se edita un torneo programado.")
+    nuevos = {k: v for k, v in cambios.items() if v is not None or k == "lugar"}
+    inicio = nuevos.get("fecha_inicio", torneo.fecha_inicio)
+    fin = nuevos.get("fecha_fin", torneo.fecha_fin)
+    limite = nuevos.get("fecha_limite_inscripcion", torneo.fecha_limite_inscripcion)
+    _validar_fechas(inicio, fin, limite, nuevo=False)
+    ocupados = _ocupados(db, torneo)
+    if nuevos.get("cupo_equipos") is not None and nuevos["cupo_equipos"] < ocupados:
+        raise ErrorNegocio(f"Ya hay {ocupados} equipos con cupo: el cupo no puede ser menor.")
+    antes = _foto(torneo)
+    for campo, valor in nuevos.items():
+        setattr(torneo, campo, valor)
+    # Si hay más cupo, entran los que esperaban (en orden de llegada).
+    libres = torneo.cupo_equipos - ocupados
+    if libres > 0:
+        for e in db.scalars(
+            select(EquipoTorneo).where(EquipoTorneo.torneo_id == torneo.id, EquipoTorneo.estado == "en_espera")
+            .order_by(EquipoTorneo.creado_en).limit(libres)
+        ):
+            e.estado = "confirmado" if e.valor == 0 else "pendiente_pago"
+    db.flush()
+    _auditar(db, "torneo.actualizar", "torneo", torneo.id, actor.id, ip, antes=antes, despues=_foto(torneo))
+    programacion.generar(db)  # las fechas pueden haber cambiado
+    return torneo
+
+
+def eliminar(db: Session, torneo: Torneo, *, actor: Usuario, ip: str | None) -> None:
+    """El torneo deja de verse en todas partes. Sus equipos y pagos se conservan como evidencia."""
+    _bloquear(db, torneo)
+    antes = {"nombre": torneo.nombre, "estado": torneo.estado, **resumen(db, torneo)}
+    torneo.estado = "eliminado"
+    db.flush()
+    _auditar(db, "torneo.eliminar", "torneo", torneo.id, actor.id, ip, antes=antes)
+    programacion.generar(db)  # vuelven los entrenamientos de esos días
 
 
 # ---------- Equipos ----------

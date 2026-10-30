@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere
@@ -15,10 +15,12 @@ from app.schemas.torneos import (
     MotivoIn,
     PagoEquipoIn,
     RetiroOut,
+    TorneoActualizar,
     TorneoCrear,
     TorneoOut,
 )
 from app.services import torneos as servicio
+from app.services.errores import Prohibido
 
 # Los torneos guardan datos de contacto de delegados externos: solo los ve quien los gestiona.
 router = APIRouter(prefix="/torneos", tags=["torneos"])
@@ -53,6 +55,32 @@ def crear(
 @router.get("/{torneo_id}", response_model=TorneoOut)
 def detalle(torneo_id: uuid.UUID, _: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db)) -> TorneoOut:
     return torneo_a_out(db, servicio.obtener(db, torneo_id))
+
+
+@router.patch("/{torneo_id}", response_model=TorneoOut)
+def actualizar(
+    torneo_id: uuid.UUID, datos: TorneoActualizar, request: Request,
+    actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> TorneoOut:
+    t = servicio.actualizar(
+        db, servicio.obtener(db, torneo_id), cambios=datos.model_dump(exclude_unset=True), actor=actor,
+        ip=ip_cliente(request),
+    )
+    db.commit()
+    return torneo_a_out(db, t)
+
+
+@router.delete("/{torneo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar(
+    torneo_id: uuid.UUID, request: Request, actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> Response:
+    """Quita el torneo de todas las vistas. Si ya recibió pagos, solo el SuperAdmin puede."""
+    t = servicio.obtener(db, torneo_id)
+    if servicio.resumen(db, t)["recaudado"] and "pagos.anular" not in actor.permisos_codigos:
+        raise Prohibido("Este torneo ya tiene pagos: solo el SuperAdmin puede eliminarlo.")
+    servicio.eliminar(db, t, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{torneo_id}/cancelar", response_model=TorneoOut)

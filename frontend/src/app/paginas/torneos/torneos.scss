@@ -1,0 +1,297 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+h2 {
+  margin: 0;
+  font: 600 14px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.capital {
+  text-transform: capitalize;
+}
+
+.chico {
+  font-size: 10.5px;
+}
+
+.oro {
+  color: var(--oro);
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+}
+
+.nota-chica {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.fila-base {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.enlace {
+  color: var(--oro);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.barra {
+  display: block;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--naranja);
+  }
+}
+
+/* ---------- Tarjetas ---------- */
+.lista {
+  display: grid;
+  gap: 12px;
+}
+
+.torneo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+  padding: 16px 18px;
+
+  &[data-estado='cancelado'] {
+    opacity: 0.6;
+  }
+}
+
+.fecha {
+  width: 54px;
+  display: grid;
+  justify-items: center;
+  padding: 8px 0;
+  border-radius: var(--radio-sm);
+  background: var(--naranja-tenue);
+  color: var(--naranja);
+
+  .mes {
+    font: 600 10px var(--f-texto);
+    text-transform: uppercase;
+  }
+
+  .dia {
+    font: 600 22px/1 var(--f-titulo);
+  }
+}
+
+.cuerpo {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip-rama,
+.chip-cancelado,
+.chip-estado {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font: 600 10px var(--f-texto);
+}
+
+.chip-rama {
+  background: var(--panel-elevado);
+  color: var(--texto-2);
+}
+
+.chip-cancelado {
+  background: var(--rojo-tenue);
+  color: var(--rojo);
+}
+
+.detalle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--texto-2);
+  text-transform: capitalize;
+
+  span {
+    text-transform: none;
+  }
+}
+
+.avance {
+  display: grid;
+  gap: 5px;
+}
+
+.lado {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  text-align: right;
+}
+
+.valor {
+  display: grid;
+
+  .mono {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--texto-blanco);
+  }
+}
+
+.acciones-torneo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Clubes ---------- */
+.acciones.izquierda {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.equipos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.equipo {
+  --tono: var(--oro);
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-left: 2px solid var(--tono);
+  border-radius: var(--radio-sm);
+
+  &[data-estado='confirmado'] {
+    --tono: var(--naranja);
+  }
+
+  &[data-estado='en_espera'] {
+    --tono: var(--texto-3);
+  }
+
+  &[data-estado='retirado'] {
+    --tono: var(--rojo);
+    opacity: 0.6;
+  }
+}
+
+.equipo-cabecera {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.equipo-textos {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.equipo-nombre {
+  font: 600 12.5px var(--f-texto);
+  color: var(--texto);
+}
+
+.chip-estado {
+  align-self: start;
+  background: color-mix(in srgb, var(--tono) 14%, transparent);
+  color: var(--tono);
+  white-space: nowrap;
+}
+
+.acciones-equipo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagos {
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--borde-suave);
+
+  li {
+    display: grid;
+    grid-template-columns: 88px 84px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .negativo .mono {
+    color: var(--rojo);
+  }
+
+  .anulado .mono {
+    text-decoration: line-through;
+    color: var(--texto-3);
+  }
+}
+
+@media (max-width: 699px) {
+  .torneo {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .lado {
+    grid-column: 1 / -1;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .acciones-torneo {
+    justify-content: flex-start;
+  }
+
+  .pagos li {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+}

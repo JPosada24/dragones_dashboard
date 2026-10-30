@@ -11,7 +11,8 @@ import { isoLocal, sumarDias } from '../../../compartido/fechas';
 import { AuthService } from '../../../core/auth/auth.service';
 import { API, Usuario } from '../../../core/modelos';
 import { Acta, Rifa, Talonario } from '../rifas.modelos';
-import { SorteoPage, numeroWhatsApp } from './sorteo';
+import { numeroWhatsApp } from '../../../compartido/whatsapp';
+import { SorteoPage } from './sorteo';
 
 registerLocaleData(localeEsCo);
 

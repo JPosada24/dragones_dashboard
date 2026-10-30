@@ -1,0 +1,312 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<section class="controles" aria-label="Filtros">
+  <div class="filtros" role="group" aria-label="Torneos">
+    <button type="button" class="filtro" [attr.aria-pressed]="filtro() === 'proximos'" (click)="filtro.set('proximos')">Próximos <span class="mono">{{ conteo().proximos }}</span></button>
+    <button type="button" class="filtro" [attr.aria-pressed]="filtro() === 'pasados'" (click)="filtro.set('pasados')">Pasados <span class="mono">{{ conteo().pasados }}</span></button>
+    <button type="button" class="filtro" [attr.aria-pressed]="filtro() === 'cancelados'" (click)="filtro.set('cancelados')">Cancelados <span class="mono">{{ conteo().cancelados }}</span></button>
+  </div>
+  <button type="button" class="boton chico" (click)="abrirNuevo()">
+    <span class="icono" aria-hidden="true">add</span> Nuevo torneo
+  </button>
+</section>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudieron cargar los torneos. Recarga la página.</p>
+} @else if (torneos() === null) {
+  <p class="panel vacio">Cargando…</p>
+} @else {
+  @let k = indicadores();
+  <section class="kpis" aria-label="Indicadores">
+    <div class="kpi">
+      <div class="etiqueta">Torneos próximos</div>
+      <div class="kpi-valor">{{ k.proximos }}</div>
+      <div class="kpi-nota">programados</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Clubes con cupo</div>
+      <div class="kpi-valor">{{ k.equipos }}</div>
+      <div class="kpi-nota">{{ k.enEspera }} en lista de espera</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Por cobrar</div>
+      <div class="kpi-valor" [class.oro]="k.porCobrar > 0">{{ k.porCobrar | pesos }}</div>
+      <div class="kpi-nota">inscripciones de clubes</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Recaudado</div>
+      <div class="kpi-valor">{{ k.recaudado | pesos }}</div>
+      <div class="kpi-nota">en los torneos próximos</div>
+    </div>
+  </section>
+
+  <section class="lista" aria-label="Torneos">
+    @for (t of visibles(); track t.id) {
+      <article class="panel torneo" [attr.data-estado]="t.estado">
+        <div class="fecha" aria-hidden="true">
+          <span class="mes">{{ t.fecha_inicio | date: 'MMM' }}</span>
+          <span class="dia">{{ t.fecha_inicio | date: 'd' }}</span>
+        </div>
+        <div class="cuerpo">
+          <div class="cabecera">
+            <h2>{{ t.nombre }}</h2>
+            <span class="chip-rama capital">{{ t.rama }}</span>
+            @if (t.estado === 'cancelado') { <span class="chip-cancelado">Cancelado</span> }
+          </div>
+          <p class="detalle">
+            {{ t.fecha_inicio | date: 'EEE d MMM' }}@if (t.fecha_fin !== t.fecha_inicio) { – {{ t.fecha_fin | date: 'EEE d MMM' }} }
+            @if (t.lugar) { · {{ t.lugar }} }
+            @if (t.estado === 'programado') { · <span [class.oro]="inscripcionAbierta(t)">{{ cierre(t) }}</span> }
+          </p>
+          @if (t.estado === 'cancelado' && t.motivo_cancelacion) { <p class="nota-chica">{{ t.motivo_cancelacion }}</p> }
+          <div class="avance">
+            <div class="fila-base">
+              <span class="nota-chica">{{ t.ocupados }} de {{ t.cupo_equipos }} cupos · {{ t.confirmados }} confirmados@if (t.en_espera) { · {{ t.en_espera }} en espera }</span>
+              <span class="mono chico">{{ pct(t.ocupados, t.cupo_equipos) }}</span>
+            </div>
+            <span class="barra" role="img" [attr.aria-label]="t.ocupados + ' de ' + t.cupo_equipos + ' cupos'"><span [style.width]="pct(t.ocupados, t.cupo_equipos)"></span></span>
+          </div>
+        </div>
+        <div class="lado">
+          <div class="valor">
+            <span class="mono">{{ t.valor_inscripcion | pesos }}</span>
+            <span class="nota-chica">por equipo</span>
+          </div>
+          <span class="nota-chica">Recaudado <b class="mono">{{ t.recaudado | pesos }}</b></span>
+          <div class="acciones-torneo">
+            <button type="button" class="boton chico" (click)="verEquipos(t)">
+              <span class="icono" aria-hidden="true">groups</span> Clubes
+            </button>
+            @if (t.estado === 'programado') {
+              <button type="button" class="boton-icono" (click)="abrirEditar(t)" [attr.aria-label]="'Editar ' + t.nombre" title="Editar">
+                <span class="icono" aria-hidden="true">edit</span></button>
+              <button type="button" class="enlace-rojo" (click)="abrirCancelar(t)">Cancelar</button>
+            }
+            <button type="button" class="boton-icono peligro" (click)="abrirEliminar(t)" [attr.aria-label]="'Eliminar ' + t.nombre" title="Eliminar">
+              <span class="icono" aria-hidden="true">delete</span></button>
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <p class="panel vacio">
+        @switch (filtro()) {
+          @case ('proximos') { No hay torneos próximos. Crea uno con «Nuevo torneo»: los entrenamientos de esas fechas se cancelan solos. }
+          @case ('pasados') { Aún no hay torneos pasados. }
+          @default { No hay torneos cancelados. }
+        }
+      </p>
+    }
+  </section>
+}
+
+<!-- ---------- Torneo: nuevo / editar ---------- -->
+@if (editando(); as modo) {
+  <app-dialogo [titulo]="modo === 'nuevo' ? 'Nuevo torneo' : 'Editar torneo'" ancho="ancho"
+               descripcion="Lo organiza el club y se inscriben clubes externos. Los días del torneo no hay entrenamiento."
+               (cerrar)="editando.set(null)">
+    <form class="formulario" [formGroup]="formTorneo" (ngSubmit)="guardarTorneo()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombre</span>
+          <input class="control" formControlName="nombre" placeholder="Ej.: Copa Dragones 2026" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Rama</span>
+          <select class="control" formControlName="rama">
+            <option value="" disabled>Selecciona…</option>
+            <option value="femenina">Femenina</option>
+            <option value="masculina">Masculina</option>
+          </select></label>
+        <label class="campo"><span class="etiqueta">Lugar <span class="nota-campo">opcional</span></span>
+          <input class="control" formControlName="lugar" placeholder="Ej.: Coliseo Mayor" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Empieza</span>
+          <input class="control" type="date" formControlName="fecha_inicio" [min]="modo === 'nuevo' ? hoy : ''" /></label>
+        <label class="campo"><span class="etiqueta">Termina</span>
+          <input class="control" type="date" formControlName="fecha_fin" [min]="formTorneo.controls.fecha_inicio.value" /></label>
+        <label class="campo"><span class="etiqueta">Inscripciones hasta</span>
+          <input class="control" type="date" formControlName="fecha_limite_inscripcion" [max]="formTorneo.controls.fecha_inicio.value" /></label>
+        <label class="campo"><span class="etiqueta">Cupo de equipos <span class="nota-campo">vacío = sugerido</span></span>
+          <input class="control mono" type="number" min="2" max="200" step="1" formControlName="cupo_equipos" placeholder="Ej.: 18" /></label>
+        <label class="campo"><span class="etiqueta">Valor por equipo (pesos)</span>
+          <input class="control mono" type="number" min="0" step="1" inputmode="numeric" formControlName="valor_inscripcion" placeholder="Ej.: 150000 (0 = gratis)" /></label>
+      </div>
+      @if (modo !== 'nuevo') {
+        <p class="nota-chica">Un valor nuevo aplica a los clubes que se inscriban después. Si subes el cupo, entran los primeros de la lista de espera.</p>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">{{ modo === 'nuevo' ? 'Crear torneo' : 'Guardar cambios' }}</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Cancelar / eliminar ---------- -->
+@if (cancelando(); as t) {
+  <app-dialogo titulo="Cancelar torneo" [descripcion]="t.nombre" (cerrar)="cancelando.set(null)">
+    <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarCancelacion()">
+      <p>Los entrenamientos de esas fechas vuelven. Lo ya pagado queda registrado; la devolución a cada club se hace por fuera.</p>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="cancelando.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Cancelar torneo</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (eliminando(); as t) {
+  <app-dialogo titulo="Eliminar torneo" [descripcion]="t.nombre" (cerrar)="eliminando.set(null)">
+    <div class="formulario">
+      <p>El torneo desaparece de todas las pantallas y los entrenamientos de esas fechas vuelven. No se puede deshacer desde la aplicación.</p>
+      @if (t.recaudado > 0) {
+        <p class="nota-chica">Tiene {{ t.recaudado | pesos }} en pagos: ese registro se conserva en la auditoría (solo el SuperAdmin puede eliminarlo).</p>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="eliminando.set(null)">Volver</button>
+        <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="eliminar()">Eliminar torneo</button>
+      </div>
+    </div>
+  </app-dialogo>
+}
+
+<!-- ---------- Clubes del torneo ---------- -->
+@if (abierto(); as t) {
+  <app-dialogo [titulo]="'Clubes · ' + t.nombre" ancho="ancho"
+               [descripcion]="t.ocupados + ' de ' + t.cupo_equipos + ' cupos · ' + (t.valor_inscripcion | pesos) + ' por equipo'"
+               (cerrar)="abierto.set(null)">
+    <div class="formulario">
+      @if (inscripcionAbierta(t)) {
+        <div class="acciones izquierda">
+          <button type="button" class="boton chico" (click)="abrirInscribir()"><span class="icono" aria-hidden="true">add</span> Inscribir club</button>
+          <span class="nota-chica">Inscripciones hasta el {{ t.fecha_limite_inscripcion | date: 'd MMM y' }}. Si no hay cupo, queda en lista de espera.</span>
+        </div>
+      }
+      @if (equipos(); as lista) {
+        <ul class="equipos">
+          @for (e of lista; track e.id) {
+            <li class="equipo" [attr.data-estado]="e.estado">
+              <div class="equipo-cabecera">
+                <div class="equipo-textos">
+                  <span class="equipo-nombre">{{ e.nombre_club }} <span class="nota-chica">· {{ e.ciudad }}</span></span>
+                  <span class="nota-chica">
+                    {{ e.delegado_nombre }} · <span class="mono">{{ e.delegado_telefono }}</span>
+                    @if (whatsapp(e); as url) { · <a class="enlace" [href]="url" target="_blank" rel="noopener noreferrer">WhatsApp</a> }
+                  </span>
+                </div>
+                <span class="chip-estado">{{ estadoEquipo[e.estado] }}</span>
+              </div>
+              @if (e.estado !== 'en_espera' && e.estado !== 'retirado') {
+                <div class="fila-base">
+                  <span class="nota-chica">Pagado <b class="mono">{{ e.monto_pagado | pesos }}</b> de {{ e.valor | pesos }}</span>
+                  <span class="acciones-equipo">
+                    @if (puedeCobrar() && e.saldo > 0 && t.estado === 'programado') {
+                      <button type="button" class="boton secundario chico" (click)="abrirPago(e)">Registrar pago</button>
+                    }
+                    @if (t.estado === 'programado') {
+                      <button type="button" class="enlace-rojo" (click)="abrirRetirar(e)">Retirar</button>
+                    }
+                  </span>
+                </div>
+              } @else if (e.estado === 'en_espera' && t.estado === 'programado') {
+                <div class="fila-base"><span class="nota-chica">Entra solo si se libera un cupo.</span>
+                  <button type="button" class="enlace-rojo" (click)="abrirRetirar(e)">Retirar</button></div>
+              } @else if (e.motivo_retiro) {
+                <p class="nota-chica">{{ e.motivo_retiro }}</p>
+              }
+              @if (e.pagos.length) {
+                <ul class="pagos">
+                  @for (p of e.pagos; track p.id) {
+                    <li [class.negativo]="p.monto < 0" [class.anulado]="anulado(e, p)">
+                      <span class="mono chico">{{ p.fecha | date: 'd MMM y' }}</span>
+                      <span class="mono">{{ p.monto | pesos }}</span>
+                      <span class="nota-chica">@if (p.monto < 0) { Anulación{{ p.motivo ? ': ' + p.motivo : '' }} } @else if (anulado(e, p)) { Anulado } @else { Pago }</span>
+                      @if (puedeAnular() && p.monto > 0 && !anulado(e, p)) {
+                        <button type="button" class="enlace-rojo" (click)="abrirAnular(e, p)">Anular</button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </li>
+          } @empty {
+            <li class="nota-chica">Aún no hay clubes inscritos.</li>
+          }
+        </ul>
+      } @else {
+        <p class="nota-chica">Cargando…</p>
+      }
+      @if (errorDialogo() && !inscribiendo() && !pagando() && !retirando() && !anulando()) {
+        <p class="mensaje error" role="alert">{{ errorDialogo() }}</p>
+      }
+    </div>
+  </app-dialogo>
+}
+
+@if (inscribiendo()) {
+  <app-dialogo titulo="Inscribir club" [descripcion]="abierto()?.nombre ?? ''" (cerrar)="inscribiendo.set(false)">
+    <form class="formulario" [formGroup]="formEquipo" (ngSubmit)="guardarEquipo()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Club</span><input class="control" formControlName="nombre_club" placeholder="Ej.: Club Halcones" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Ciudad</span><input class="control" formControlName="ciudad" placeholder="Ej.: Medellín" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Delegado</span><input class="control" formControlName="delegado_nombre" placeholder="Nombre y apellido" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Teléfono del delegado</span><input class="control" type="tel" formControlName="delegado_telefono" placeholder="Ej.: 300 123 4567" autocomplete="off" /></label>
+        <label class="campo"><span class="etiqueta">Correo <span class="nota-campo">opcional</span></span><input class="control" type="email" formControlName="delegado_email" placeholder="delegado@club.com" autocomplete="off" /></label>
+      </div>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="inscribiendo.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Inscribir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (pagando(); as e) {
+  <app-dialogo titulo="Registrar pago" [descripcion]="e.nombre_club + ' · saldo ' + (e.saldo | pesos)" (cerrar)="pagando.set(null)">
+    <form class="formulario" [formGroup]="formPago" (ngSubmit)="guardarPago()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Valor (pesos)</span>
+          <input class="control mono" type="number" min="1" [max]="e.saldo" step="1" inputmode="numeric" formControlName="monto" [placeholder]="'Saldo: ' + (e.saldo | pesos)" /></label>
+        <label class="campo"><span class="etiqueta">Fecha <span class="nota-campo">Vacía = hoy</span></span>
+          <input class="control" type="date" formControlName="fecha" [max]="hoy" /></label>
+      </div>
+      <button type="button" class="enlace-saldo" (click)="formPago.controls.monto.setValue(e.saldo)">Usar el saldo completo ({{ e.saldo | pesos }})</button>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="pagando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Registrar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (retirando(); as e) {
+  <app-dialogo titulo="Retirar club" [descripcion]="e.nombre_club" (cerrar)="retirando.set(null)">
+    <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarRetiro()">
+      <p>Si ocupaba un cupo, entra el primero de la lista de espera. Lo pagado queda registrado.</p>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="retirando.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Retirar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (anulando(); as a) {
+  <app-dialogo titulo="Anular pago" [descripcion]="(a.pago.monto | pesos) + ' · ' + a.equipo.nombre_club" (cerrar)="anulando.set(null)">
+    <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarAnulacion()">
+      <p>El pago no se borra: se registra un movimiento en negativo que lo revierte.</p>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="anulando.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Anular pago</button>
+      </div>
+    </form>
+  </app-dialogo>
+}

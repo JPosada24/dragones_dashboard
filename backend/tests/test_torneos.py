@@ -148,3 +148,40 @@ def test_retirar_a_uno_en_espera_no_promueve_a_nadie(client, h_admin):
     assert r.json()["promovido"] is None
     assert client.post(f"{T}/{torneo['id']}/equipos/{espera['id']}/retirar", json={"motivo": "Otra vez"},
                        headers=h_admin).status_code == 409
+
+
+# ---------- Editar y eliminar ----------
+def test_editar_torneo_valida_fechas_y_al_subir_el_cupo_entran_los_que_esperan(client, h_admin):
+    torneo = crear_torneo(client, h_admin, cupo_equipos=2).json()
+    for n in range(3):
+        inscribir_equipo(client, h_admin, torneo["id"], club=f"Club {n}")
+    url = f"{T}/{torneo['id']}"
+    assert client.patch(url, json={"cupo_equipos": 1}, headers=h_admin).status_code == 422  # ya hay 2 con cupo
+    assert client.patch(url, json={"fecha_fin": (INICIO - timedelta(days=1)).isoformat()},
+                        headers=h_admin).status_code == 422
+    r = client.patch(url, json={"cupo_equipos": 3, "lugar": "Coliseo Mayor", "valor_inscripcion": 0}, headers=h_admin)
+    assert r.status_code == 200, r.text
+    assert (r.json()["cupo_equipos"], r.json()["lugar"], r.json()["ocupados"], r.json()["en_espera"]) == (
+        3, "Coliseo Mayor", 3, 0,
+    )
+    # El valor nuevo es para los que se inscriban después; el promovido conserva el suyo.
+    equipos = client.get(f"{url}/equipos", headers=h_admin).json()
+    estados = {e["nombre_club"]: (e["estado"], e["valor"]) for e in equipos}
+    assert estados["Club 2"] == ("pendiente_pago", 150000)
+    assert client.patch(url, json={"rama": "mixta"}, headers=h_admin).status_code == 422
+
+
+def test_eliminar_torneo_lo_quita_y_con_pagos_solo_el_superadmin(client, h_admin, h_root, db):
+    from sqlalchemy import text
+
+    vacio = crear_torneo(client, h_admin, nombre="Torneo de prueba").json()
+    con_pago = crear_torneo(client, h_admin, nombre="Copa con plata").json()
+    equipo = inscribir_equipo(client, h_admin, con_pago["id"]).json()
+    _pagar(client, h_admin, con_pago["id"], equipo["id"], 50000)
+
+    assert client.delete(f"{T}/{vacio['id']}", headers=h_admin).status_code == 204
+    assert client.delete(f"{T}/{con_pago['id']}", headers=h_admin).status_code == 403
+    assert client.delete(f"{T}/{con_pago['id']}", headers=h_root).status_code == 204
+    assert client.get(T, headers=h_admin).json() == []
+    assert client.get(f"{T}/{vacio['id']}", headers=h_admin).status_code == 404
+    assert db.scalar(text("SELECT count(*) FROM pagos_equipo")) == 1  # el dinero queda como evidencia

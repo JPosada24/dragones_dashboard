@@ -19,7 +19,7 @@ class Torneo(UUIDMixin, TiempoMixin, Base):
     __tablename__ = "torneos"
     __table_args__ = (
         CheckConstraint(en("rama", RAMAS), name="ck_torneos_rama"),
-        CheckConstraint("estado IN ('programado', 'cancelado')", name="ck_torneos_estado"),
+        CheckConstraint("estado IN ('programado', 'cancelado', 'eliminado')", name="ck_torneos_estado"),
         CheckConstraint("fecha_fin >= fecha_inicio", name="ck_torneos_fechas"),
         CheckConstraint("fecha_limite_inscripcion <= fecha_inicio", name="ck_torneos_limite"),
         CheckConstraint("cupo_equipos BETWEEN 2 AND 200", name="ck_torneos_cupo"),

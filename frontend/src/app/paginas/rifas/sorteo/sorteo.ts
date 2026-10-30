@@ -10,6 +10,7 @@ import { mensajeError } from '../../../compartido/errores';
 import { isoLocal } from '../../../compartido/fechas';
 import { PESTANAS_RIFAS, Pestanas } from '../../../compartido/pestanas';
 import { PesosPipe } from '../../../compartido/pesos.pipe';
+import { numeroWhatsApp } from '../../../compartido/whatsapp';
 import { AuthService } from '../../../core/auth/auth.service';
 import { API } from '../../../core/modelos';
 import { Alumno } from '../../alumnos/alumnos.modelos';
@@ -23,13 +24,6 @@ const CAMBIO_MS = 70;
 type FiltroTalonarios = 'todos' | 'sin_pagar' | 'pagados';
 
 const rifaUrl = (id: string) => `${API}/rifas/${encodeURIComponent(id)}`;
-
-/** Número de WhatsApp para wa.me: solo dígitos; los celulares colombianos de 10 dígitos llevan el 57. */
-export function numeroWhatsApp(telefono: string | null): string | null {
-  const digitos = (telefono ?? '').replace(/\D/g, '');
-  if (digitos.length === 10 && digitos.startsWith('3')) return `57${digitos}`;
-  return digitos.length >= 11 && digitos.length <= 15 ? digitos : null;
-}
 
 @Component({
   selector: 'app-sorteo',

@@ -21,6 +21,19 @@ class TorneoCrear(_Entrada):
     valor_inscripcion: int = Field(ge=0, le=100_000_000)
 
 
+class TorneoActualizar(_Entrada):
+    """Lo que se puede corregir de un torneo. El valor nuevo aplica a los equipos que se inscriban después."""
+
+    nombre: str | None = Field(default=None, min_length=3, max_length=120)
+    rama: Rama | None = None
+    fecha_inicio: date | None = None
+    fecha_fin: date | None = None
+    fecha_limite_inscripcion: date | None = None
+    lugar: str | None = Field(default=None, max_length=120)
+    cupo_equipos: int | None = Field(default=None, ge=2, le=200)
+    valor_inscripcion: int | None = Field(default=None, ge=0, le=100_000_000)
+
+
 class TorneoOut(BaseModel):
     id: uuid.UUID
     nombre: str

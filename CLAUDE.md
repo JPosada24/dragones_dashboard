@@ -259,7 +259,14 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   Entrenador tiene `alumnos.ver_todos`; el documento completo pasa a `alumnos.ver_documento` (Admin/SA). Se quitaron
   `_verificar_rama_permitida` y la rama en usuarios (API, esquemas, pantalla). Los avisos al staff van a todos los
   entrenadores. Las notas anteriores sobre "Entrenador solo su rama" quedan sin efecto. 194 pruebas backend, 75 frontend.
-- SIGUIENTE (frontend): Torneos, Avisos, Configuración. Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (Torneos, 2026-10-30): migración 0015 (estado `eliminado`). `PATCH /torneos/{id}` (nombre, rama, fechas,
+  lugar, cupo, valor: el valor nuevo aplica a los que se inscriban después; subir el cupo promueve a los que esperan;
+  no se baja por debajo de los que ocupan cupo; regenera la programación) y `DELETE /torneos/{id}` (oculto en todo,
+  pagos se conservan; con pagos solo SA; vuelven los entrenamientos). Pantalla `paginas/torneos/`: próximos/pasados/
+  cancelados, indicadores, tarjetas con fecha, cierre de inscripciones y cupos; popup de clubes (inscribir, WhatsApp
+  del delegado, pagos con «Usar el saldo», retirar con promoción de la lista de espera, anular solo SA).
+  `compartido/whatsapp.ts` (`numeroWhatsApp`). 196 pruebas backend, 80 frontend.
+- SIGUIENTE (frontend): Avisos, Configuración. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.
 
