@@ -25,8 +25,8 @@ DEFAULTS: dict[str, tuple[Any, str]] = {
     "inasistencias_consecutivas_aviso": (4, "Inasistencias seguidas que avisan al staff"),
     "recordatorios_dias_antes": ([7, 1], "Días antes del vencimiento en que se envía recordatorio"),
     "rifas_por_anio": (4, "Cantidad de rifas por año"),
-    "puestos_por_talonario": (20, "Puestos por talonario de rifa"),
-    "precio_puesto": (2000, "Precio de cada puesto de rifa (COP)"),
+    "puestos_por_talonario": (20, "Boletas por talonario de rifa"),
+    "precio_puesto": (2000, "Precio de cada boleta de rifa (COP)"),
     "cupo_equipos_sugerido": (18, "Cupo sugerido de equipos por rama en un torneo"),
 }
 

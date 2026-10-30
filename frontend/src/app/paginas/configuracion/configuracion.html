@@ -1,0 +1,75 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<section class="controles">
+  <p class="nota-chica">
+    @if (puedeEditar()) {
+      Los cambios aplican a lo que se cree desde ese momento: lo ya creado conserva su valor. Cada cambio queda en la auditoría.
+    } @else {
+      Solo el SuperAdmin puede cambiar estos parámetros.
+    }
+  </p>
+  @if (puedeEditar()) {
+    <button type="button" class="boton secundario chico" [disabled]="probando()" (click)="probarCorreo()">
+      <span class="icono" aria-hidden="true">mail</span> {{ probando() ? 'Enviando…' : 'Probar correo' }}
+    </button>
+  }
+</section>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudo cargar la configuración. Recarga la página.</p>
+} @else if (valores() === null) {
+  <p class="panel vacio">Cargando…</p>
+} @else {
+  <div class="grupos">
+    @for (g of grupos(); track g.titulo) {
+      <section class="panel grupo" [attr.aria-label]="g.titulo">
+        <h2><span class="icono" aria-hidden="true">{{ g.icono }}</span> {{ g.titulo }}</h2>
+        @for (p of g.parametros; track p.clave) {
+          <div class="parametro">
+            <div class="parametro-textos">
+              <span class="parametro-titulo">{{ p.titulo }}</span>
+              @if (p.ayuda) { <span class="nota-chica">{{ p.ayuda }}</span> }
+            </div>
+            <span class="valor mono">{{ mostrar(p) }}</span>
+            @if (puedeEditar()) {
+              <button type="button" class="boton-icono" (click)="abrirEditar(p)" [attr.aria-label]="'Cambiar ' + p.titulo" title="Cambiar">
+                <span class="icono" aria-hidden="true">edit</span></button>
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
+}
+
+@if (editando(); as d) {
+  <app-dialogo [titulo]="d.titulo" [descripcion]="'Valor actual: ' + mostrar(d)" (cerrar)="editando.set(null)">
+    <form class="formulario" [formGroup]="formValor" (ngSubmit)="guardar()">
+      @switch (d.tipo) {
+        @case ('booleano') {
+          <label class="casilla"><input type="checkbox" formControlName="activo" /><span>Activada</span></label>
+        }
+        @case ('hora') {
+          <label class="campo"><span class="etiqueta">Nueva hora (HH:MM)</span>
+            <input class="control mono" formControlName="valor" inputmode="numeric" [placeholder]="guia(d)" autocomplete="off" /></label>
+        }
+        @case ('lista') {
+          <label class="campo"><span class="etiqueta">Nuevos valores ({{ d.unidad }})</span>
+            <input class="control mono" formControlName="valor" [placeholder]="guia(d)" autocomplete="off" /></label>
+        }
+        @default {
+          <label class="campo"><span class="etiqueta">Nuevo valor{{ d.tipo === 'pesos' ? ' (pesos)' : d.unidad ? ' (' + d.unidad + ')' : '' }}</span>
+            <input class="control mono" formControlName="valor" inputmode="numeric" [placeholder]="guia(d)" autocomplete="off" /></label>
+        }
+      }
+      @if (d.ayuda) { <p class="nota-chica">{{ d.ayuda }}</p> }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}

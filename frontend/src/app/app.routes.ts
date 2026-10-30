@@ -18,6 +18,7 @@ const PANTALLAS: Record<string, Cargar> = {
   'rifas/sorteo': () => import('./paginas/rifas/sorteo/sorteo').then((m) => m.SorteoPage),
   usuarios: () => import('./paginas/usuarios/usuarios').then((m) => m.UsuariosPage),
   torneos: () => import('./paginas/torneos/torneos').then((m) => m.TorneosPage),
+  configuracion: () => import('./paginas/configuracion/configuracion').then((m) => m.ConfiguracionPage),
   'alumnos/inscripciones': () => import('./paginas/inscripciones/inscripciones').then((m) => m.InscripcionesPage),
 };
 
