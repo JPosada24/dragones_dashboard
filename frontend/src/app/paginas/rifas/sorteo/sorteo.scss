@@ -327,3 +327,17 @@ h2 {
     animation: none;
   }
 }
+
+.jugadas {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--texto);
+
+  li::marker {
+    font: 600 10.5px var(--f-mono);
+    color: var(--texto-3);
+  }
+}

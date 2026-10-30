@@ -15,12 +15,21 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _migrar(connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
+    with context.begin_transaction():
+        context.run_migrations()
+
+
 def run_migrations_online() -> None:
+    # Las pruebas pueden pasar su propia conexión (p. ej. para probar una migración en una base aparte).
+    propia = context.config.attributes.get("connection")
+    if propia is not None:
+        _migrar(propia)
+        return
     engine = create_engine(url)
     with engine.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
-        with context.begin_transaction():
-            context.run_migrations()
+        _migrar(connection)
 
 
 if context.is_offline_mode():

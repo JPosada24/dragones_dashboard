@@ -97,18 +97,14 @@ describe('MultasPage', () => {
     expect(el().querySelectorAll('.grupo').length).toBe(1);
   });
 
-  it('anular exige motivo y el error de la API se ve en el popup', async () => {
+  it('anular no exige motivo y el error de la API se ve en el popup', async () => {
     await cargarStaff();
     boton('Anular')!.click();
     await estable();
     boton('Anular multa', dialogo())!.click();
-    await estable();
-    expect(dialogo().querySelector('[role="alert"]')?.textContent).toContain('motivo');
-    const motivo = dialogo().querySelector('textarea')!;
-    motivo.value = 'Estaba con la selección';
-    motivo.dispatchEvent(new Event('input'));
-    boton('Anular multa', dialogo())!.click();
-    backend.expectOne(`${API}/multas/1/anular`).flush({ detail: 'Solo se puede anular una multa pendiente.' }, { status: 409, statusText: 'Conflict' });
+    const r = backend.expectOne(`${API}/multas/1/anular`);
+    expect(r.request.body).toEqual({ motivo: null });
+    r.flush({ detail: 'Solo se puede anular una multa pendiente.' }, { status: 409, statusText: 'Conflict' });
     await estable();
     expect(dialogo().querySelector('[role="alert"]')?.textContent).toContain('Solo se puede anular');
   });

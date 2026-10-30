@@ -56,7 +56,13 @@
       <article class="panel tarjeta" [attr.data-estado]="r.estado">
         <div class="tarjeta-cabecera">
           <span class="mono numero">R{{ r.numero }}</span>
-          <span class="chip-estado">{{ r.estado === 'abierta' ? 'Abierta' : r.estado === 'sorteada' ? 'Sorteada' : 'Cancelada' }}</span>
+          <span class="tarjeta-estado">
+            <span class="chip-estado">{{ r.estado === 'abierta' ? 'Abierta' : r.estado === 'sorteada' ? 'Sorteada' : 'Cancelada' }}</span>
+            @if (puedeGestionar()) {
+              <button type="button" class="boton-icono peligro" (click)="abrirEliminar(r)" [attr.aria-label]="'Eliminar ' + r.nombre"
+                      title="Eliminar la rifa"><span class="icono" aria-hidden="true">delete</span></button>
+            }
+          </span>
         </div>
         <h2>{{ r.nombre }}</h2>
         <p class="premio"><span class="icono" aria-hidden="true">redeem</span> {{ r.premio }}</p>
@@ -80,7 +86,7 @@
           <div class="tarjeta-acciones">
             @if (r.estado === 'sorteada') {
               <a class="boton chico" routerLink="/rifas/sorteo" [queryParams]="{ rifa: r.id }">
-                <span class="icono" aria-hidden="true">workspace_premium</span> Ver acta
+                <span class="icono" aria-hidden="true">workspace_premium</span> Ver sorteos
               </a>
             }
             @if (sorteable(r)) {
@@ -93,6 +99,7 @@
                       title="Da talonario a quienes se inscribieron después de crear la rifa">Asignar a nuevos</button>
               <button type="button" class="enlace-rojo" (click)="abrirCancelar(r)">Cancelar</button>
             }
+
           </div>
         }
       </article>
@@ -110,7 +117,7 @@
       <div class="panel-cabecera">
         <div>
           <h2>{{ esStaff() ? 'Paz y salvo por alumno' : 'Talonarios' }}</h2>
-          <p class="nota-chica">Toca una celda para ver el talonario: puestos, compradores y pagos.</p>
+          <p class="nota-chica">Toca una celda para ver el talonario y registrar sus pagos.</p>
         </div>
         @if (esStaff()) {
           <div class="filtros" role="group" aria-label="Filtros">
@@ -169,7 +176,7 @@
 
 <!-- ---------- Nueva rifa ---------- -->
 @if (creando()) {
-  <app-dialogo titulo="Nueva rifa" descripcion="Cada alumno con inscripción vigente recibe un talonario. Puestos y precio salen de la configuración."
+  <app-dialogo titulo="Nueva rifa" descripcion="Cada alumno con inscripción vigente recibe un talonario. Boletas por talonario y precio salen de la configuración."
                (cerrar)="creando.set(false)">
     <form class="formulario" [formGroup]="formRifa" (ngSubmit)="guardarRifa()">
       <label class="campo"><span class="etiqueta">Nombre</span><input class="control" formControlName="nombre" /></label>
@@ -190,8 +197,8 @@
 @if (cancelando(); as r) {
   <app-dialogo titulo="Cancelar rifa" [descripcion]="r.nombre" (cerrar)="cancelando.set(null)">
     <form class="formulario" [formGroup]="formCancelar" (ngSubmit)="guardarCancelacion()">
-      <p>La rifa deja de contar para el paz y salvo y no se podrá sortear. Los pagos registrados quedan en el historial.</p>
-      <label class="campo"><span class="etiqueta">Motivo</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
+      <p>La rifa deja de contar para el paz y salvo y no se podrá sortear. Sigue visible como cancelada; si prefieres que desaparezca, elimínala.</p>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="cancelando.set(null)">Volver</button>
@@ -201,22 +208,39 @@
   </app-dialogo>
 }
 
+<!-- ---------- Eliminar rifa ---------- -->
+@if (eliminando(); as r) {
+  <app-dialogo titulo="Eliminar rifa" [descripcion]="r.nombre" (cerrar)="eliminando.set(null)">
+    <div class="formulario">
+      <p>La rifa desaparece de todas las pantallas y deja de contar como deuda. Esto no se puede deshacer desde la aplicación.</p>
+      @if (r.recaudado > 0) {
+        <p class="nota-chica">Tiene {{ r.recaudado | pesos }} en pagos: ese registro se conserva en la auditoría (solo el SuperAdmin puede eliminarla).</p>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="eliminando.set(null)">Volver</button>
+        <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="eliminar()">Eliminar rifa</button>
+      </div>
+    </div>
+  </app-dialogo>
+}
+
 <!-- ---------- Talonario ---------- -->
 @if (abierto(); as a) {
   @if (talonario(); as t) {
-    <app-dialogo [titulo]="'Talonario de ' + t.alumno_nombre" ancho="ancho"
-                 [descripcion]="a.rifa.nombre + ' · talonario ' + t.codigo + ' · boletas ' + boleta(t.codigo, 1) + ' a ' + boleta(t.codigo, t.puestos.length)"
+    <app-dialogo [titulo]="'Talonario de ' + t.alumno_nombre"
+                 [descripcion]="a.rifa.nombre + ' · ' + t.codigo + ' · boletas ' + boleta(t.codigo, 1) + ' a ' + boleta(t.codigo, t.boletas)"
                  (cerrar)="abierto.set(null)">
       <div class="talonario">
         <div class="talonario-resumen">
           <div class="avance crece">
             <div class="fila-base">
-              <span>{{ t.pagado ? 'A paz y salvo' : 'Recaudado' }}</span>
+              <span>{{ t.pagado ? 'A paz y salvo: sus boletas entran al sorteo' : 'Recaudado' }}</span>
               <span class="mono">{{ t.recaudado | pesos }} / {{ a.rifa.valor_talonario | pesos }}</span>
             </div>
             <span class="barra"><span [style.width]="pct(t.recaudado, a.rifa.valor_talonario)"></span></span>
           </div>
-          @if (puedeCobrar() && a.rifa.estado === 'abierta' && t.saldo > 0 && !pagandoTalonario()) {
+          @if (puedeCobrar() && a.rifa.estado !== 'cancelada' && t.saldo > 0 && !pagandoTalonario()) {
             <button type="button" class="boton chico" (click)="abrirPagoTalonario(t)">
               <span class="icono" aria-hidden="true">payments</span> Registrar pago
             </button>
@@ -225,14 +249,14 @@
 
         @if (pagandoTalonario()) {
           <form class="formulario recuadro" [formGroup]="formPago" (ngSubmit)="guardarPagoTalonario()">
-            <p class="nota-chica">El pago se reparte entre los puestos con saldo, en orden de número.</p>
+            <p class="nota-chica">Viene con el saldo completo; cámbialo si es un abono.</p>
             <div class="rejilla">
               <label class="campo"><span class="etiqueta">Valor (pesos)</span>
                 <input class="control mono" type="number" min="1" [max]="t.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
               <label class="campo"><span class="etiqueta">Fecha</span>
                 <input class="control" type="date" formControlName="fecha" [max]="hoy" /></label>
             </div>
-            @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+            @if (errorDialogo() && !anulandoPago()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
             <div class="acciones">
               <button type="button" class="boton secundario chico" (click)="pagandoTalonario.set(false)">Cancelar</button>
               <button type="submit" class="boton chico" [disabled]="ocupado()">Registrar</button>
@@ -240,83 +264,32 @@
           </form>
         }
 
-        <ul class="puestos">
-          @for (p of t.puestos; track p.numero) {
-            <li>
-              <button type="button" class="puesto" [class.pagado]="p.saldo === 0" [class.parcial]="p.saldo > 0 && p.monto_pagado > 0"
-                      (click)="abrirPuesto(p)" [attr.aria-label]="'Boleta ' + boleta(t.codigo, p.boleta) + (p.comprador_nombre ? ', ' + p.comprador_nombre : ', sin comprador') + (p.saldo === 0 ? ', pagado' : '')">
-                <span class="mono puesto-numero">{{ p.boleta < 10 ? '0' + p.boleta : p.boleta }}</span>
-                <span class="puesto-comprador">{{ p.comprador_nombre || 'Sin comprador' }}</span>
-                <span class="mono puesto-estado">
-                  @if (p.saldo === 0) { <span class="icono" aria-hidden="true">check</span> } @else { {{ p.monto_pagado | pesos }} }
-                </span>
-              </button>
-            </li>
+        <div class="movimientos">
+          <h3>Pagos</h3>
+          @for (pago of t.pagos; track pago.id) {
+            <div class="movimiento" [class.negativo]="pago.monto < 0" [class.anulado]="anulado(t, pago)">
+              <span class="mono chico">{{ pago.fecha | date: 'd MMM y' }}</span>
+              <span class="mono">{{ pago.monto | pesos }}</span>
+              <span class="nota-chica">@if (pago.monto < 0) { Anulación{{ pago.motivo ? ': ' + pago.motivo : '' }} } @else if (anulado(t, pago)) { Anulado } @else { Pago }</span>
+              @if (anulable(t, pago) && a.rifa.estado !== 'cancelada') {
+                <button type="button" class="enlace-rojo" (click)="abrirAnularPago(pago)">Anular</button>
+              }
+            </div>
+          } @empty {
+            <p class="nota-chica">Sin pagos todavía.</p>
           }
-        </ul>
+        </div>
       </div>
     </app-dialogo>
   }
 }
 
-<!-- ---------- Puesto ---------- -->
-@if (puesto(); as p) {
-  @let a = abierto()!;
-  <app-dialogo [titulo]="'Boleta ' + boletaDe(p.numero)" [descripcion]="a.rifa.nombre + ' · ' + (p.saldo === 0 ? 'pagado' : 'saldo ' + (p.saldo | pesos))"
-               (cerrar)="puestoAbierto.set(null)">
-    <div class="formulario">
-      @if (puedeGestionar() && a.rifa.estado === 'abierta') {
-        <form class="formulario" [formGroup]="formComprador" (ngSubmit)="guardarComprador()">
-          <div class="rejilla">
-            <label class="campo"><span class="etiqueta">Comprador</span><input class="control" formControlName="nombre" autocomplete="off" /></label>
-            <label class="campo"><span class="etiqueta">Teléfono</span><input class="control" type="tel" formControlName="telefono" autocomplete="off" /></label>
-          </div>
-          <div class="acciones"><button type="submit" class="boton secundario chico" [disabled]="ocupado()">Guardar comprador</button></div>
-        </form>
-      } @else {
-        <dl class="datos">
-          <div><dt>Comprador</dt><dd>{{ p.comprador_nombre || '—' }}</dd></div>
-          <div><dt>Teléfono</dt><dd class="mono">{{ p.comprador_telefono || '—' }}</dd></div>
-        </dl>
-      }
-
-      @if (puedeCobrar() && a.rifa.estado === 'abierta' && p.saldo > 0) {
-        <form class="formulario recuadro" [formGroup]="formPago" (ngSubmit)="guardarPagoPuesto()">
-          <div class="rejilla">
-            <label class="campo"><span class="etiqueta">Pago (pesos)</span>
-              <input class="control mono" type="number" min="1" [max]="p.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
-            <label class="campo"><span class="etiqueta">Fecha</span><input class="control" type="date" formControlName="fecha" [max]="hoy" /></label>
-          </div>
-          <div class="acciones"><button type="submit" class="boton chico" [disabled]="ocupado()">Registrar pago</button></div>
-        </form>
-      }
-
-      <div class="movimientos">
-        <h3>Pagos</h3>
-        @for (pago of p.pagos; track pago.id) {
-          <div class="movimiento" [class.negativo]="pago.monto < 0" [class.anulado]="anulado(p, pago)">
-            <span class="mono chico">{{ pago.fecha | date: 'd MMM y' }}</span>
-            <span class="mono">{{ pago.monto | pesos }}</span>
-            <span class="nota-chica">@if (pago.monto < 0) { Anulación: {{ pago.motivo }} } @else if (anulado(p, pago)) { Anulado } @else { Pago }</span>
-            @if (anulable(p, pago) && a.rifa.estado === 'abierta') {
-              <button type="button" class="enlace-rojo" (click)="abrirAnularPago(p.numero, pago)">Anular</button>
-            }
-          </div>
-        } @empty {
-          <p class="nota-chica">Sin pagos todavía.</p>
-        }
-      </div>
-      @if (errorDialogo() && !anulandoPago()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-    </div>
-  </app-dialogo>
-}
-
-<!-- ---------- Anular pago de un puesto ---------- -->
-@if (anulandoPago(); as x) {
-  <app-dialogo titulo="Anular pago" [descripcion]="'Boleta ' + boletaDe(x.numero) + ' · ' + (x.pago.monto | pesos)" (cerrar)="anulandoPago.set(null)">
+<!-- ---------- Anular pago ---------- -->
+@if (anulandoPago(); as pago) {
+  <app-dialogo titulo="Anular pago" [descripcion]="(pago.monto | pesos) + ' del ' + (pago.fecha | date: 'd MMM y')" (cerrar)="anulandoPago.set(null)">
     <form class="formulario" [formGroup]="formAnular" (ngSubmit)="guardarAnulacion()">
       <p>El pago no se borra: se registra un movimiento en negativo que lo revierte.</p>
-      <label class="campo"><span class="etiqueta">Motivo</span><textarea class="control" formControlName="motivo" maxlength="500"></textarea></label>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="anulandoPago.set(null)">Volver</button>

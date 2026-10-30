@@ -499,6 +499,40 @@ a.kpi-nota {
   }
 }
 
+/* Botón cuadrado con solo un ícono (descargar, eliminar…): siempre con aria-label */
+.boton-icono {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--texto-2);
+  cursor: pointer;
+
+  .icono {
+    font-size: 17px;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--oro);
+    color: var(--oro);
+  }
+
+  &.peligro:hover:not(:disabled) {
+    border-color: var(--rojo);
+    color: var(--rojo);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
 /* Mensajes de resultado */
 .mensaje {
   margin: 0;

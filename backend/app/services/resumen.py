@@ -14,7 +14,7 @@ from app.models.acceso import Usuario
 from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import Asistencia, Justificacion, Multa, Sesion
 from app.models.dominio import ESTADOS_VIGENTES
-from app.models.rifas import Rifa, Talonario
+from app.models.rifas import RIFA_FUERA, Rifa, Talonario
 from app.models.torneos import OCUPAN_CUPO, EquipoTorneo, Torneo
 from app.services import alumnos, asistencia, configuracion, mora
 
@@ -161,7 +161,8 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
 
     # ---------- Rifas del año ----------
     deuda_rifas = 0
-    for rifa in db.scalars(select(Rifa).where(Rifa.anio == hoy.year, Rifa.estado != "cancelada").order_by(Rifa.numero)):
+    rifas_anio = select(Rifa).where(Rifa.anio == hoy.year, Rifa.estado.not_in(RIFA_FUERA)).order_by(Rifa.numero)
+    for rifa in db.scalars(rifas_anio):
         talonarios = db.scalars(
             select(Talonario).join(Talonario.alumno).where(Talonario.rifa_id == rifa.id, visibles)
         ).unique().all()

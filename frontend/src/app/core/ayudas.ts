@@ -24,7 +24,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Marcar', texto: 'El entrenador marca presente o ausente en la planilla. La familia puede marcar "presente" el mismo día, dentro del horario.' },
       { titulo: 'Justificar', texto: 'La familia justifica una inasistencia hasta unos días después; el staff la aprueba o la rechaza con un comentario.' },
       { titulo: 'Cierre del día', texto: 'A las 11:59 pm, quien no marcó ni justificó queda ausente y con multa (por defecto $2.000). Si hay una justificación pendiente, decide la revisión.' },
-      { titulo: 'Cancelar y deshacer', texto: 'Una sesión se cancela con motivo y anula sus multas pendientes. Se puede deshacer hasta el cierre de ese día.', permisos: ['sesiones.gestionar'] },
+      { titulo: 'Cancelar y deshacer', texto: 'Una sesión se cancela (el motivo es opcional) y anula sus multas pendientes. Se puede deshacer hasta el cierre de ese día.', permisos: ['sesiones.gestionar'] },
       { titulo: 'Rachas', texto: 'Tras varias ausencias seguidas aparece una alerta; una ausencia justificada corta la racha.', permisos: STAFF },
     ],
   },
@@ -48,16 +48,17 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Prórroga', texto: 'Solo Admin o SuperAdmin, con motivo. Reactiva una inscripción rechazada por vencimiento.' },
       { titulo: 'Vencimiento', texto: 'Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.' },
     ],
-    nota: 'Un abono errado no se borra: el SuperAdmin lo anula con motivo y queda en el historial.',
+    nota: 'Un abono errado no se borra: el SuperAdmin lo anula (el motivo es opcional) y queda en el historial.',
   },
   rifas: {
     titulo: 'Cómo funcionan las rifas',
     pasos: [
       { titulo: 'Cuatro al año', texto: 'Cada rifa asigna un talonario a cada alumno inscrito: por defecto 20 puestos de $2.000, es decir $40.000 por talonario.' },
-      { titulo: 'Puestos', texto: 'Cada puesto guarda el nombre y el teléfono de quien lo compró, y lo que ha pagado.' },
-      { titulo: 'Pagos', texto: 'Se registran por puesto o por el talonario completo. Un pago errado no se borra: el SuperAdmin lo anula con motivo.' },
-      { titulo: 'Paz y salvo', texto: 'El talonario está a paz y salvo cuando todos sus puestos están pagados. Un talonario con saldo tras la fecha del sorteo cuenta como deuda (y puede llevar a mora).' },
-      { titulo: 'Sorteo', texto: 'Desde la fecha del sorteo. Solo participan los puestos de talonarios pagados al 100 %; el ganador sale al azar y queda un acta que no se puede modificar.' },
+      { titulo: 'Talonario', texto: 'Es del alumno: sus boletas se leen con su código (F012-01 a F012-20). No hace falta anotar quién compró cada boleta.' },
+      { titulo: 'Pagos', texto: 'El talonario se paga completo o por abonos. Un pago errado no se borra: el SuperAdmin lo anula (el motivo es opcional).' },
+      { titulo: 'Paz y salvo', texto: 'El talonario está a paz y salvo cuando está pagado al 100 %. Si queda con saldo después de la fecha del sorteo, cuenta como deuda (y puede llevar a mora).' },
+      { titulo: 'Sorteo', texto: 'Desde la fecha del sorteo, en la pestaña Sorteo. Solo participan los talonarios pagados al 100 %; se puede jugar varias veces.' },
+      { titulo: 'Cancelar o eliminar', texto: 'Cancelar la deja visible como cancelada; eliminar la quita de todas las pantallas y de las deudas. Si ya tiene pagos, solo el SuperAdmin la puede eliminar.', permisos: ['rifas.gestionar'] },
     ],
   },
   'rifas/sorteo': {
@@ -65,9 +66,9 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       { titulo: 'La urna', texto: 'Solo entran las boletas de los talonarios pagados al 100 %. Cada talonario aporta todas sus boletas (por defecto 20).' },
       { titulo: 'La boleta', texto: 'Se lee como código del alumno y número de boleta: F012-07 es la boleta 7 del talonario de F012. El código lo asigna el sistema al registrar al alumno (F femenina, M masculina).' },
-      { titulo: 'Jugar', texto: 'Desde la fecha del sorteo, el SuperAdmin presiona «Jugar la rifa». El servidor elige al azar; la pantalla solo muestra el giro.', permisos: ['sorteo.jugar'] },
-      { titulo: 'Acta', texto: 'Queda guardada con la boleta ganadora, el comprador, cuántas boletas había y una huella que prueba que la lista no cambió. No se puede modificar ni repetir.' },
-      { titulo: 'Aviso', texto: 'Si el puesto tiene el teléfono del comprador, «Avisar por WhatsApp» abre el mensaje listo para enviar desde el número del club.' },
+      { titulo: 'Jugar', texto: 'Desde la fecha del sorteo, el SuperAdmin presiona «Jugar la rifa»; se puede jugar otra vez (por ejemplo, para varios premios). Una boleta que ya ganó no vuelve a la urna. El servidor elige al azar; la pantalla solo muestra el giro.', permisos: ['sorteo.jugar'] },
+      { titulo: 'Acta', texto: 'Cada jugada deja su acta con la boleta ganadora, el alumno dueño del talonario, cuántas boletas había y una huella que prueba que la lista no cambió. No se puede modificar.' },
+      { titulo: 'Aviso', texto: '«Avisar por WhatsApp» abre el mensaje listo para el acudiente principal (o el alumno, si es mayor), para enviarlo desde el número del club.' },
     ],
   },
   multas: {
@@ -75,7 +76,7 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       { titulo: 'Multa', texto: 'Se genera al cierre del día (11:59 pm) a quien no marcó ni justificó un entrenamiento. El valor es configurable (por defecto $2.000).' },
       { titulo: 'Pago', texto: 'Lo registran Admin o SuperAdmin. Una multa pagada no se anula.' },
-      { titulo: 'Anular', texto: 'Una multa pendiente se anula con motivo (por ejemplo, si la inasistencia estaba justificada). Cancelar un entrenamiento anula sus multas pendientes.', permisos: ['multas.anular'] },
+      { titulo: 'Anular', texto: 'Una multa pendiente se puede anular (el motivo es opcional). Cancelar un entrenamiento anula sus multas pendientes.', permisos: ['multas.anular'] },
       { titulo: 'Mora', texto: 'Cualquier deuda (multas o talonarios de rifa) con más de 3 meses sin pagar pone la inscripción "en revisión". La familia recibe aviso antes.' },
       { titulo: 'Expulsión', texto: 'La confirma el SuperAdmin. Si el alumno paga mientras está en revisión por mora, vuelve solo a activa.', permisos: STAFF },
     ],

@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.comunes import MotivoOpcional
+
 
 class _Entrada(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
@@ -60,7 +62,7 @@ class HorarioActualizadoOut(HorarioOut):
 
 
 class CancelarIn(_Entrada):
-    motivo: str = Field(min_length=5, max_length=255)
+    motivo: MotivoOpcional = None
 
 
 class SesionOut(BaseModel):
@@ -185,4 +187,4 @@ class MultasPagoIn(_Entrada):
 
 
 class MultaAnularIn(_Entrada):
-    motivo: str = Field(min_length=10, max_length=255)
+    motivo: MotivoOpcional = None

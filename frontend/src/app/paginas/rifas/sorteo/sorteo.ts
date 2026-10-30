@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { Aviso } from '../../../compartido/aviso';
 import { Dialogo } from '../../../compartido/dialogo';
@@ -12,6 +12,7 @@ import { PESTANAS_RIFAS, Pestanas } from '../../../compartido/pestanas';
 import { PesosPipe } from '../../../compartido/pesos.pipe';
 import { AuthService } from '../../../core/auth/auth.service';
 import { API } from '../../../core/modelos';
+import { Alumno } from '../../alumnos/alumnos.modelos';
 import { boleta } from '../boleta';
 import { Acta, Rifa, Talonario } from '../rifas.modelos';
 
@@ -53,8 +54,11 @@ export class SorteoPage implements OnInit {
   protected readonly rifas = signal<Rifa[] | null>(null);
   protected readonly rifaId = signal<string | null>(null);
   protected readonly talonarios = signal<Talonario[] | null>(null);
-  protected readonly acta = signal<Acta | null>(null);
+  /** Jugadas de la rifa elegida, en orden. */
+  protected readonly actas = signal<Acta[]>([]);
   protected readonly historial = signal<{ rifa: Rifa; acta: Acta }[]>([]);
+  /** Dueño del talonario ganador (para avisarle por WhatsApp). */
+  protected readonly ganador = signal<Alumno | null>(null);
   protected readonly filtro = signal<FiltroTalonarios>('todos');
   protected readonly confirmando = signal(false);
   protected readonly girando = signal(false);
@@ -72,18 +76,27 @@ export class SorteoPage implements OnInit {
     (this.rifas() ?? []).filter((r) => r.estado !== 'cancelada').sort((a, b) => a.numero - b.numero),
   );
   protected readonly rifa = computed(() => this.vigentes().find((r) => r.id === this.rifaId()) ?? null);
+  /** La última jugada: es la que se muestra en la pantalla grande. */
+  protected readonly acta = computed(() => this.actas().at(-1) ?? null);
+
+  /** Boletas en la urna: las de los talonarios pagados al 100 %, menos las que ya ganaron en esta rifa. */
+  protected readonly urna = computed(() => {
+    const ganadas = new Set(this.actas().map((a) => boleta(a.codigo, a.boleta)));
+    return (this.talonarios() ?? [])
+      .filter((t) => t.pagado)
+      .flatMap((t) => Array.from({ length: t.boletas }, (_, i) => ({ codigo: t.codigo, boleta: i + 1 })))
+      .filter((b) => !ganadas.has(boleta(b.codigo, b.boleta)));
+  });
+
+  /** En la urna según el servidor (incluye talonarios que este usuario no ve). */
+  protected readonly enUrna = computed(() => {
+    const r = this.rifa();
+    return r ? Math.max(0, r.talonarios_pagados * r.puestos_por_talonario - this.actas().length) : 0;
+  });
 
   protected readonly sorteable = computed(() => {
     const r = this.rifa();
-    return !!r && this.puedeSortear() && r.estado === 'abierta' && r.fecha_sorteo <= this.hoy && r.talonarios_pagados > 0;
-  });
-
-  /** Las boletas de la urna: todas las de los talonarios pagados al 100 %. */
-  protected readonly urna = computed(() => {
-    const r = this.rifa();
-    return (this.talonarios() ?? [])
-      .filter((t) => t.pagado)
-      .flatMap((t) => Array.from({ length: r?.puestos_por_talonario ?? 0 }, (_, i) => ({ codigo: t.codigo, boleta: i + 1 })));
+    return !!r && this.puedeSortear() && r.estado !== 'cancelada' && r.fecha_sorteo <= this.hoy && this.enUrna() > 0;
   });
 
   protected readonly listaTalonarios = computed(() => {
@@ -107,24 +120,18 @@ export class SorteoPage implements OnInit {
     }).filter((x) => x.total > 0),
   );
 
-  /** El puesto ganador (para el teléfono del comprador). */
-  protected readonly puestoGanador = computed(() => {
-    const a = this.acta();
-    if (!a) return null;
-    for (const t of this.talonarios() ?? []) {
-      const p = t.puestos.find((x) => x.numero === a.numero_ganador);
-      if (p) return p;
-    }
-    return null;
-  });
-
+  /** wa.me al acudiente principal (o al alumno, si es mayor y tiene teléfono). */
   protected readonly enlaceWhatsApp = computed(() => {
     const a = this.acta();
     const r = this.rifa();
-    const numero = numeroWhatsApp(this.puestoGanador()?.comprador_telefono ?? null);
-    if (!a || !r || !numero) return null;
-    const texto = `¡Hola${a.comprador_nombre ? ` ${a.comprador_nombre}` : ''}! Te escribimos del Club Deportivo Dragones: `
-      + `tu boleta ${boleta(a.codigo, a.boleta)} ganó «${r.premio}» en la ${r.nombre}. ¡Felicitaciones! 🐉`;
+    const g = this.ganador();
+    if (!a || !r || !g || g.id !== a.alumno_id) return null;
+    const principal = g.acudientes.find((x) => x.principal) ?? g.acudientes[0];
+    const numero = numeroWhatsApp(principal?.telefono ?? g.telefono);
+    if (!numero) return null;
+    const saludo = principal ? `¡Hola, ${principal.nombres}!` : `¡Hola, ${g.nombres}!`;
+    const texto = `${saludo} Te escribimos del Club Deportivo Dragones: la boleta ${boleta(a.codigo, a.boleta)} `
+      + `del talonario de ${g.nombres} ganó «${r.premio}» en la ${r.nombre}. ¡Felicitaciones! 🐉`;
     return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
   });
 
@@ -157,27 +164,41 @@ export class SorteoPage implements OnInit {
     if (this.girando()) return;
     this.rifaId.set(r.id);
     this.talonarios.set(null);
-    this.acta.set(null);
+    this.actas.set([]);
+    this.ganador.set(null);
     this.recien.set(false);
     void this.router.navigate([], { queryParams: { rifa: r.id }, replaceUrl: true });
     forkJoin({
       talonarios: this.http.get<Talonario[]>(`${rifaUrl(r.id)}/talonarios`),
-      acta: r.estado === 'sorteada' ? this.http.get<Acta>(`${rifaUrl(r.id)}/acta`) : of(null),
+      actas: r.estado === 'sorteada' ? this.http.get<Acta[]>(`${rifaUrl(r.id)}/actas`) : of([]),
     }).subscribe({
       next: (x) => {
         if (this.rifaId() !== r.id) return;
         this.talonarios.set(x.talonarios);
-        this.acta.set(x.acta);
+        this.actas.set(x.actas);
+        this.cargarGanador();
       },
       error: () => this.errorCarga.set(true),
     });
   }
 
+  /** Datos de contacto del dueño del talonario ganador (si quien mira no puede verlos, no hay botón). */
+  private cargarGanador(): void {
+    const a = this.acta();
+    if (!a) return this.ganador.set(null);
+    this.http.get<Alumno>(`${API}/alumnos/${encodeURIComponent(a.alumno_id)}`)
+      .pipe(catchError(() => of(null)))
+      .subscribe((g) => this.ganador.set(g));
+  }
+
   private cargarHistorial(): void {
     const sorteadas = this.vigentes().filter((r) => r.estado === 'sorteada');
     if (!sorteadas.length) return this.historial.set([]);
-    forkJoin(sorteadas.map((r) => this.http.get<Acta>(`${rifaUrl(r.id)}/acta`))).subscribe({
-      next: (actas) => this.historial.set(sorteadas.map((rifa, i) => ({ rifa, acta: actas[i] as Acta })).reverse()),
+    forkJoin(sorteadas.map((r) => this.http.get<Acta[]>(`${rifaUrl(r.id)}/actas`))).subscribe({
+      next: (porRifa) => this.historial.set(
+        sorteadas.flatMap((rifa, i) => (porRifa[i] ?? []).map((acta) => ({ rifa, acta })))
+          .sort((x, y) => y.acta.jugado_en.localeCompare(x.acta.jugado_en)),
+      ),
       error: () => this.historial.set([]),
     });
   }
@@ -201,8 +222,9 @@ export class SorteoPage implements OnInit {
         const resta = sinMovimiento ? 0 : Math.max(0, GIRO_MS - (Date.now() - inicio));
         this.espera = setTimeout(() => {
           this.detenerGiro();
-          this.acta.set(acta);
+          this.actas.update((lista) => [...lista, acta]);
           this.recien.set(true);
+          this.cargarGanador();
           this.refrescarRifa(r.id);
         }, resta);
       },
@@ -229,5 +251,9 @@ export class SorteoPage implements OnInit {
 
   protected huellaCorta(h: string): string {
     return `${h.slice(0, 10)}…${h.slice(-6)}`;
+  }
+
+  protected dosDigitos(n: number): string {
+    return String(n).padStart(2, '0');
   }
 }

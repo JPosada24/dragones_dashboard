@@ -47,14 +47,14 @@ def generar(
 
 
 def anular_si_pendiente(
-    db: Session, sesion_id: uuid.UUID, alumno_id: uuid.UUID, *, motivo: str,
+    db: Session, sesion_id: uuid.UUID, alumno_id: uuid.UUID, *, motivo: str | None,
     actor_id: uuid.UUID | None, ip: str | None,
 ) -> Multa | None:
     """Anula la multa de esa inasistencia si sigue pendiente. Una ya pagada no se toca (devolverla es manual)."""
     multa = vigente(db, sesion_id, alumno_id)
     if multa is None or multa.estado != "pendiente":
         return None
-    multa.estado, multa.motivo_anulacion, multa.anulada_por = "anulada", motivo[:255], actor_id
+    multa.estado, multa.motivo_anulacion, multa.anulada_por = "anulada", motivo[:255] if motivo else None, actor_id
     db.flush()
     _auditar(db, "multa.anular", multa, actor_id, ip, antes={"estado": "pendiente"}, despues={"motivo": motivo})
     return multa
@@ -120,7 +120,7 @@ def pagar_varias(
     return multas
 
 
-def anular(db: Session, m: Multa, *, motivo: str, actor: Usuario, ip: str | None) -> Multa:
+def anular(db: Session, m: Multa, *, motivo: str | None, actor: Usuario, ip: str | None) -> Multa:
     if m.estado != "pendiente":
         raise Conflicto("Solo se puede anular una multa pendiente.")
     anular_si_pendiente(db, m.sesion_id, m.alumno_id, motivo=motivo, actor_id=actor.id, ip=ip)

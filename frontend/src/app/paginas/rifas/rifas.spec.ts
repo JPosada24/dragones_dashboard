@@ -10,7 +10,7 @@ import { isoLocal, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
 import { API, Usuario } from '../../core/modelos';
 import { RifasPage } from './rifas';
-import { Puesto, Rifa, Talonario } from './rifas.modelos';
+import { Rifa, Talonario } from './rifas.modelos';
 
 registerLocaleData(localeEsCo);
 
@@ -27,16 +27,10 @@ const rifa = (id: string, extra: Partial<Rifa> = {}): Rifa => ({
   ...extra,
 });
 
-const puestos = (desde: number, pagados: number): Puesto[] =>
-  Array.from({ length: 20 }, (_, i) => ({
-    numero: desde + i, boleta: i + 1, comprador_nombre: i === 0 ? 'Doña Rosa' : null, comprador_telefono: null,
-    monto_pagado: i < pagados ? 2000 : 0, saldo: i < pagados ? 0 : 2000,
-    pagos: i < pagados ? [{ id: `p${desde + i}`, fecha: isoLocal(HOY), monto: 2000, anula_id: null, motivo: null, creado_en: '' }] : [],
-  }));
-
-const talonario = (id: string, alumno: string, desde: number, pagados: number): Talonario => ({
-  id, alumno_id: `a-${alumno}`, alumno_nombre: alumno, rama: 'femenina', codigo: `F00${desde / 20 + 1}`, desde, hasta: desde + 19,
-  recaudado: pagados * 2000, saldo: (20 - pagados) * 2000, pagado: pagados === 20, puestos: puestos(desde, pagados),
+const talonario = (id: string, alumno: string, codigo: string, recaudado: number): Talonario => ({
+  id, alumno_id: `a-${alumno}`, alumno_nombre: alumno, rama: 'femenina', codigo, boletas: 20, recaudado,
+  saldo: 40000 - recaudado, pagado: recaudado >= 40000,
+  pagos: recaudado ? [{ id: `p-${id}`, fecha: isoLocal(HOY), monto: recaudado, anula_id: null, motivo: null, creado_en: '' }] : [],
 });
 
 describe('RifasPage', () => {
@@ -67,91 +61,104 @@ describe('RifasPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
   }
-  async function cargar(permisos: string[], rifas = [rifa('1'), rifa('2', { estado: 'cancelada', motivo_cancelacion: 'Lluvia' })]) {
+  async function cargar(permisos: string[], rifas = [rifa('1'), rifa('2', { estado: 'cancelada', motivo_cancelacion: null })]) {
     crear(permisos);
     const r = backend.expectOne((x) => x.url === `${API}/rifas`);
     expect(r.request.params.get('anio')).toBe(String(ANIO));
     r.flush(rifas);
     // Solo se piden los talonarios de las rifas no canceladas.
-    backend.expectOne(`${API}/rifas/1/talonarios`).flush([talonario('t1', 'Laura Pérez', 0, 20), talonario('t2', 'Sara Ríos', 20, 5)]);
+    backend.expectOne(`${API}/rifas/1/talonarios`).flush([talonario('t1', 'Laura Pérez', 'F001', 40000), talonario('t2', 'Sara Ríos', 'F002', 10000)]);
     backend.expectNone(`${API}/rifas/2/talonarios`);
+    await estable();
+  }
+  async function abrirTalonarioDeSara() {
+    el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
     await estable();
   }
 
   it('muestra las rifas del año y la matriz de paz y salvo por alumno', async () => {
     await cargar(ADMIN);
     expect(el().querySelectorAll('.tarjeta').length).toBe(2);
-    expect(texto()).toContain('Lluvia');
     const filas = [...el().querySelectorAll('tbody tr')].map((f) => f.textContent?.replace(/\s+/g, ' '));
     expect(filas[0]).toContain('Laura Pérez');
-    expect(filas[1]).toContain('$30.000'); // Sara debe 15 puestos
+    expect(filas[0]).toContain('F001');
+    expect(filas[1]).toContain('$30.000');
     boton('Con deuda')!.click();
     await estable();
     expect(el().querySelectorAll('tbody tr').length).toBe(1);
   });
 
-  it('abre el talonario y registra un pago que se reparte entre los puestos', async () => {
+  it('el talonario es del alumno: muestra sus boletas por código y registra un pago o abono', async () => {
     await cargar(ADMIN);
-    el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
-    await estable();
+    await abrirTalonarioDeSara();
     expect(ultimo().textContent).toContain('Talonario de Sara Ríos');
-    expect(ultimo().querySelectorAll('.puesto').length).toBe(20);
+    expect(ultimo().textContent).toContain('boletas F002-01 a F002-20');
+    expect(ultimo().textContent).not.toContain('comprador');
     boton('payments Registrar pago', ultimo())!.click();
     await estable();
     expect(ultimo().querySelector<HTMLInputElement>('[formcontrolname="monto"]')!.value).toBe('30000');
     boton('Registrar', ultimo().querySelector('form')!)!.click();
     const pago = backend.expectOne(`${API}/rifas/1/talonarios/t2/pagos`);
     expect(pago.request.body).toEqual({ monto: 30000, fecha: isoLocal(HOY) });
-    pago.flush(talonario('t2', 'Sara Ríos', 20, 20));
+    pago.flush(talonario('t2', 'Sara Ríos', 'F002', 40000));
     backend.expectOne(`${API}/rifas/1`).flush(rifa('1', { talonarios_pagados: 2, recaudado: 80000 }));
     await estable();
     expect(texto()).toContain('queda a paz y salvo');
   });
 
-  it('el comprador de un puesto se guarda desde su popup', async () => {
+  it('solo el SuperAdmin anula pagos, y sin necesidad de motivo', async () => {
     await cargar(ADMIN);
-    el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
-    await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label^="Boleta F002-06"]')!.click();
-    await estable();
-    const nombre = ultimo().querySelector<HTMLInputElement>('[formcontrolname="nombre"]')!;
-    nombre.value = 'Carlos Mejía';
-    nombre.dispatchEvent(new Event('input'));
-    boton('Guardar comprador', ultimo())!.click();
-    const r = backend.expectOne((x) => x.method === 'PATCH' && x.url === `${API}/rifas/1/puestos/25`);
-    expect(r.request.body).toEqual({ nombre: 'Carlos Mejía', telefono: null });
-    r.flush(talonario('t2', 'Sara Ríos', 20, 5));
-    backend.expectOne(`${API}/rifas/1`).flush(rifa('1'));
-    await estable();
-    expect(texto()).toContain('Boleta F002-06: comprador guardado');
-  });
-
-  it('solo el SuperAdmin anula pagos de un puesto', async () => {
-    await cargar(ADMIN);
-    el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
-    await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label^="Boleta F002-01"]')!.click();
-    await estable();
+    await abrirTalonarioDeSara();
     expect(boton('Anular', ultimo())).toBeUndefined();
     TestBed.resetTestingModule();
 
     await cargar(SUPERADMIN);
-    el().querySelector<HTMLButtonElement>('[aria-label^="Rifa 1: debe"]')!.click();
-    await estable();
-    el().querySelector<HTMLButtonElement>('[aria-label^="Boleta F002-01"]')!.click();
-    await estable();
+    await abrirTalonarioDeSara();
     boton('Anular', ultimo())!.click();
     await estable();
-    const motivo = ultimo().querySelector('textarea')!;
-    motivo.value = 'Se registró en el puesto equivocado';
-    motivo.dispatchEvent(new Event('input'));
     boton('Anular pago', ultimo())!.click();
-    const r = backend.expectOne(`${API}/rifas/1/puestos/20/pagos/p20/anular`);
-    expect(r.request.body).toEqual({ motivo: 'Se registró en el puesto equivocado' });
-    r.flush(talonario('t2', 'Sara Ríos', 20, 4));
+    const r = backend.expectOne(`${API}/rifas/1/talonarios/t2/pagos/p-t2/anular`);
+    expect(r.request.body).toEqual({ motivo: null });
+    r.flush(talonario('t2', 'Sara Ríos', 'F002', 0));
     backend.expectOne(`${API}/rifas/1`).flush(rifa('1'));
     await estable();
     expect(texto()).toContain('Pago anulado');
+  });
+
+  it('cancelar no pide motivo y eliminar avisa si solo el SuperAdmin puede', async () => {
+    await cargar(ADMIN, [rifa('1')]);
+    boton('Cancelar', el().querySelector('.tarjeta')!)!.click();
+    await estable();
+    boton('Cancelar rifa', ultimo())!.click();
+    const c = backend.expectOne(`${API}/rifas/1/cancelar`);
+    expect(c.request.body).toEqual({ motivo: null });
+    c.flush(rifa('1', { estado: 'cancelada' }));
+    backend.expectOne((x) => x.method === 'GET' && x.url === `${API}/rifas`).flush([rifa('1', { estado: 'cancelada' })]);
+    await estable();
+
+    el().querySelector<HTMLButtonElement>('[aria-label="Eliminar Rifa 1"]')!.click();
+    await estable();
+    expect(ultimo().textContent).toContain('solo el SuperAdmin'); // ya tiene pagos
+    boton('Eliminar rifa', ultimo())!.click();
+    backend.expectOne((x) => x.method === 'DELETE' && x.url === `${API}/rifas/1`)
+      .flush({ detail: 'Esta rifa ya tiene pagos o sorteos: solo el SuperAdmin puede eliminarla.' }, { status: 403, statusText: 'Forbidden' });
+    await estable();
+    expect(ultimo().querySelector('[role="alert"]')?.textContent).toBeTruthy();
+  });
+
+  it('eliminar una rifa la quita de la pantalla', async () => {
+    crear(SUPERADMIN);
+    backend.expectOne((x) => x.url === `${API}/rifas`).flush([rifa('1', { recaudado: 0, talonarios_pagados: 0 })]);
+    backend.expectOne(`${API}/rifas/1/talonarios`).flush([]);
+    await estable();
+    el().querySelector<HTMLButtonElement>('[aria-label="Eliminar Rifa 1"]')!.click();
+    await estable();
+    boton('Eliminar rifa', ultimo())!.click();
+    backend.expectOne((x) => x.method === 'DELETE' && x.url === `${API}/rifas/1`).flush(null, { status: 204, statusText: 'No Content' });
+    backend.expectOne((x) => x.method === 'GET' && x.url === `${API}/rifas`).flush([]);
+    await estable();
+    expect(texto()).toContain('«Rifa 1» eliminada');
+    expect(el().querySelectorAll('.tarjeta').length).toBe(0);
   });
 
   it('la tarjeta lleva al sorteo cuando ya es la fecha', async () => {
@@ -165,11 +172,11 @@ describe('RifasPage', () => {
   it('la familia ve su talonario sin botones de cobro ni gestión', async () => {
     crear(FAMILIA);
     backend.expectOne((x) => x.url === `${API}/rifas`).flush([rifa('1')]);
-    backend.expectOne(`${API}/rifas/1/talonarios`).flush([talonario('t2', 'Sara Ríos', 20, 5)]);
+    backend.expectOne(`${API}/rifas/1/talonarios`).flush([talonario('t2', 'Sara Ríos', 'F002', 10000)]);
     await estable();
     expect(el().querySelector('.kpis')).toBeNull();
     expect(boton('add Nueva rifa')).toBeUndefined();
-    expect(boton('Asignar a nuevos')).toBeUndefined();
+    expect(el().querySelector('[aria-label^="Eliminar"]')).toBeNull();
     el().querySelector<HTMLButtonElement>('.celda')!.click();
     await estable();
     expect(boton('payments Registrar pago', ultimo())).toBeUndefined();

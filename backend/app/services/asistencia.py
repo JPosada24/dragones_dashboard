@@ -133,7 +133,7 @@ def crear_extra(
     return sesion
 
 
-def cancelar(db: Session, sesion: Sesion, *, motivo: str, actor: Usuario, ip: str | None) -> Sesion:
+def cancelar(db: Session, sesion: Sesion, *, motivo: str | None, actor: Usuario, ip: str | None) -> Sesion:
     """Cancelación a mano (otro evento del club). Festivos y torneos los cancela la programación automática."""
     if sesion.cancelada:
         raise Conflicto("La sesión ya estaba cancelada.")
@@ -141,7 +141,8 @@ def cancelar(db: Session, sesion: Sesion, *, motivo: str, actor: Usuario, ip: st
     # Si ya se había cerrado, las multas pendientes de esa sesión dejan de tener sentido.
     for multa in db.scalars(select(Multa).where(Multa.sesion_id == sesion.id, Multa.estado == "pendiente")):
         multas.anular_si_pendiente(
-            db, sesion.id, multa.alumno_id, motivo=f"Sesión cancelada: {motivo}", actor_id=actor.id, ip=ip
+            db, sesion.id, multa.alumno_id, motivo=f"Sesión cancelada: {motivo}" if motivo else "Sesión cancelada",
+            actor_id=actor.id, ip=ip,
         )
     db.flush()
     _auditar(db, "sesion.cancelar", "sesion", sesion.id, actor.id, ip, despues={"motivo": motivo})

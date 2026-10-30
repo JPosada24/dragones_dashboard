@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.schemas.comunes import Rama, normalizar_email, normalizar_telefono
+from app.schemas.comunes import MotivoOpcional, Rama, normalizar_email, normalizar_telefono
 
 
 class _Entrada(BaseModel):
@@ -40,7 +40,7 @@ class TorneoOut(BaseModel):
 
 
 class MotivoIn(_Entrada):
-    motivo: str = Field(min_length=5, max_length=255)
+    motivo: MotivoOpcional = None
 
 
 class EquipoCrear(_Entrada):
@@ -67,7 +67,7 @@ class PagoEquipoIn(_Entrada):
 
 
 class AnularPagoEquipoIn(_Entrada):
-    motivo: str = Field(min_length=10, max_length=500)
+    motivo: MotivoOpcional = None
 
 
 class PagoEquipoOut(BaseModel):

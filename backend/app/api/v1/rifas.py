@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere, requiere_alguno
@@ -12,15 +12,14 @@ from app.schemas.rifas import (
     AnularPagoRifaIn,
     AsignadosOut,
     CancelarRifaIn,
-    CompradorIn,
-    PagoPuestoOut,
     PagoRifaIn,
-    PuestoOut,
+    PagoTalonarioOut,
     RifaCrear,
     RifaOut,
     TalonarioOut,
 )
 from app.services import rifas as servicio
+from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/rifas", tags=["rifas"])
 
@@ -37,32 +36,21 @@ def rifa_a_out(db: Session, r: Rifa) -> RifaOut:
 
 
 def talonario_a_out(t: Talonario) -> TalonarioOut:
-    precio = t.rifa.precio_puesto
     return TalonarioOut(
         id=t.id, alumno_id=t.alumno_id, alumno_nombre=f"{t.alumno.nombres} {t.alumno.apellidos}", rama=t.alumno.rama,
-        codigo=t.codigo, desde=t.puestos[0].numero, hasta=t.puestos[-1].numero, recaudado=t.recaudado, saldo=t.saldo,
-        pagado=t.pagado,
-        puestos=[
-            PuestoOut(
-                numero=p.numero, boleta=p.numero - t.puestos[0].numero + 1, comprador_nombre=p.comprador_nombre,
-                comprador_telefono=p.comprador_telefono,
-                monto_pagado=p.monto_pagado, saldo=precio - p.monto_pagado,
-                pagos=[PagoPuestoOut.model_validate(x) for x in p.pagos],
-            )
-            for p in t.puestos
-        ],
+        codigo=t.codigo, boletas=t.rifa.puestos_por_talonario, recaudado=t.recaudado, saldo=t.saldo, pagado=t.pagado,
+        pagos=[PagoTalonarioOut.model_validate(p) for p in t.pagos],
     )
 
 
 def acta_a_out(db: Session, a: ActaSorteo) -> ActaOut:
-    """El ganador se muestra como código del talonario + boleta (F012-07), con el código que tenía al venderse."""
-    t = servicio.talonario_de(db, a.rifa_id, a.alumno_id)
+    """El ganador es el dueño del talonario; la boleta se lee código-número (F012-07)."""
+    t = db.get(Talonario, a.talonario_id)
     return ActaOut(
-        rifa_id=a.rifa_id, numero_ganador=a.numero_ganador, codigo=t.codigo,
-        boleta=a.numero_ganador - t.puestos[0].numero + 1, alumno_id=a.alumno_id,
+        id=a.id, rifa_id=a.rifa_id, orden=a.orden, codigo=a.codigo, boleta=a.boleta, alumno_id=a.alumno_id,
         alumno_nombre=f"{t.alumno.nombres} {t.alumno.apellidos}", rama=t.alumno.rama,
-        comprador_nombre=a.comprador_nombre, total_participantes=a.total_participantes,
-        participantes=a.participantes, huella=a.huella, jugado_en=a.jugado_en,
+        total_participantes=a.total_participantes, participantes=a.participantes, huella=a.huella,
+        jugado_en=a.jugado_en,
     )
 
 
@@ -105,6 +93,23 @@ def cancelar(
     return rifa_a_out(db, rifa)
 
 
+@router.delete("/{rifa_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar(
+    rifa_id: uuid.UUID,
+    request: Request,
+    actor: Usuario = Depends(requiere("rifas.gestionar")),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo el SuperAdmin puede."""
+    rifa = servicio.obtener(db, rifa_id)
+    r = servicio.resumen(db, rifa)
+    if (r["recaudado"] or servicio.actas(db, rifa)) and "pagos.anular" not in actor.permisos_codigos:
+        raise Prohibido("Esta rifa ya tiene pagos o sorteos: solo el SuperAdmin puede eliminarla.")
+    servicio.eliminar(db, rifa, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("/{rifa_id}/talonarios", response_model=AsignadosOut)
 def asignar_talonarios(
     rifa_id: uuid.UUID,
@@ -143,54 +148,22 @@ def pagar_talonario(
     return talonario_a_out(t)
 
 
-@router.patch("/{rifa_id}/puestos/{numero}", response_model=TalonarioOut)
-def actualizar_comprador(
-    rifa_id: uuid.UUID,
-    numero: int,
-    datos: CompradorIn,
-    request: Request,
-    actor: Usuario = Depends(requiere("rifas.gestionar")),
-    db: Session = Depends(get_db),
-) -> TalonarioOut:
-    rifa = servicio.obtener(db, rifa_id)
-    puesto = servicio.actualizar_comprador(
-        db, rifa, numero, nombre=datos.nombre, telefono=datos.telefono, actor=actor, ip=ip_cliente(request)
-    )
-    db.commit()
-    return talonario_a_out(db.get(Talonario, puesto.talonario_id))
-
-
-@router.post("/{rifa_id}/puestos/{numero}/pagos", response_model=TalonarioOut)
-def pagar_puesto(
-    rifa_id: uuid.UUID,
-    numero: int,
-    datos: PagoRifaIn,
-    request: Request,
-    actor: Usuario = Depends(requiere("pagos.registrar")),
-    db: Session = Depends(get_db),
-) -> TalonarioOut:
-    rifa = servicio.obtener(db, rifa_id)
-    puesto = servicio.pagar_puesto(
-        db, rifa, numero, monto=datos.monto, fecha=datos.fecha, actor=actor, ip=ip_cliente(request)
-    )
-    db.commit()
-    return talonario_a_out(db.get(Talonario, puesto.talonario_id))
-
-
-@router.post("/{rifa_id}/puestos/{numero}/pagos/{pago_id}/anular", response_model=TalonarioOut)
+@router.post("/{rifa_id}/talonarios/{talonario_id}/pagos/{pago_id}/anular", response_model=TalonarioOut)
 def anular_pago(
     rifa_id: uuid.UUID,
-    numero: int,
+    talonario_id: uuid.UUID,
     pago_id: uuid.UUID,
     datos: AnularPagoRifaIn,
     request: Request,
     actor: Usuario = Depends(requiere("pagos.anular")),
     db: Session = Depends(get_db),
 ) -> TalonarioOut:
-    rifa = servicio.obtener(db, rifa_id)
-    puesto = servicio.anular_pago(db, rifa, numero, pago_id, motivo=datos.motivo, actor=actor, ip=ip_cliente(request))
+    t = servicio.anular_pago(
+        db, servicio.obtener(db, rifa_id), talonario_id, pago_id, motivo=datos.motivo, actor=actor,
+        ip=ip_cliente(request),
+    )
     db.commit()
-    return talonario_a_out(db.get(Talonario, puesto.talonario_id))
+    return talonario_a_out(t)
 
 
 @router.post("/{rifa_id}/sorteo", response_model=ActaOut, status_code=status.HTTP_201_CREATED)
@@ -200,12 +173,13 @@ def sortear(
     actor: Usuario = Depends(requiere("sorteo.jugar")),
     db: Session = Depends(get_db),
 ) -> ActaOut:
+    """Una jugada del sorteo. Se puede repetir: cada jugada deja su acta y una boleta no gana dos veces."""
     a = servicio.sortear(db, servicio.obtener(db, rifa_id), actor=actor, ip=ip_cliente(request))
     db.commit()
     return acta_a_out(db, a)
 
 
-@router.get("/{rifa_id}/acta", response_model=ActaOut)
-def ver_acta(rifa_id: uuid.UUID, _: Usuario = Depends(VER), db: Session = Depends(get_db)) -> ActaOut:
-    a = servicio.acta(db, servicio.obtener(db, rifa_id))
-    return acta_a_out(db, a)
+@router.get("/{rifa_id}/actas", response_model=list[ActaOut])
+def ver_actas(rifa_id: uuid.UUID, _: Usuario = Depends(VER), db: Session = Depends(get_db)) -> list[ActaOut]:
+    """Las jugadas del sorteo de esta rifa, en orden."""
+    return [acta_a_out(db, a) for a in servicio.actas(db, servicio.obtener(db, rifa_id))]

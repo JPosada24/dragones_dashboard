@@ -9,7 +9,7 @@ from app.core import fechas
 from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import Multa
 from app.models.dominio import ESTADOS_VIGENTES
-from app.models.rifas import Rifa, Talonario
+from app.models.rifas import RIFA_FUERA, Rifa, Talonario
 from app.services import mora
 
 
@@ -46,7 +46,7 @@ def calcular(db: Session, alumno: Alumno) -> EstadoCuenta:
     ))
     multas = list(db.scalars(select(Multa).where(Multa.alumno_id == alumno.id, Multa.estado == "pendiente")))
     talonarios = db.scalars(
-        select(Talonario).join(Talonario.rifa).where(Talonario.alumno_id == alumno.id, Rifa.estado != "cancelada")
+        select(Talonario).join(Talonario.rifa).where(Talonario.alumno_id == alumno.id, Rifa.estado.not_in(RIFA_FUERA))
     ).unique()
     situacion = mora.situacion(db, alumno)
     return EstadoCuenta(

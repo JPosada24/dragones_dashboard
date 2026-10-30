@@ -333,13 +333,11 @@ def test_entrenador_no_cobra_multas_y_el_miembro_solo_ve_las_suyas(client, h_adm
     assert [m["id"] for m in client.get(M, headers=h_coach).json()] == [multa["id"]]  # es de su rama
 
 
-def test_anular_multa_exige_motivo_y_permiso(client, h_admin, multa, familia):
+def test_anular_multa_exige_permiso_pero_no_motivo(client, h_admin, multa, familia):
     url = f"{M}/{multa['id']}/anular"
-    assert client.post(url, json={"motivo": "Error"}, headers=h_admin).status_code == 422
-    r = client.post(url, json={"motivo": "Estaba de viaje con la selección"}, headers=familia["h"])
-    assert r.status_code == 403
-    r = client.post(url, json={"motivo": "Estaba de viaje con la selección"}, headers=h_admin)
-    assert r.status_code == 200 and r.json()["estado"] == "anulada"
+    assert client.post(url, json={}, headers=familia["h"]).status_code == 403
+    r = client.post(url, json={}, headers=h_admin)  # el motivo es opcional
+    assert r.status_code == 200 and r.json()["estado"] == "anulada" and r.json()["motivo_anulacion"] is None
 
 
 def test_pago_de_multa_con_fecha_futura_se_rechaza(client, h_admin, multa):

@@ -29,8 +29,14 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - **Código del alumno**: `F001…` (femenina) / `M001…` (masculina), consecutivo por rama, lo asigna el sistema al
   crear y nunca se reutiliza; si se corrige la rama recibe uno nuevo de la otra. Cada talonario guarda el código
   con el que se entregó. La boleta se lee **código-número** (`F012-07` = boleta 7 del talonario de F012).
-- Rifas: 4 por año; **1 talonario por alumno por rifa, 20 puestos × $2.000 = $40.000**. Cada puesto guarda comprador,
-  teléfono y monto. Paz y salvo = talonario pagado al 100 %. El sorteo solo incluye talonarios pagados; guarda acta inmutable.
+- Rifas: 4 por año; **1 talonario por alumno por rifa, 20 boletas × $2.000 = $40.000**. **Sin compradores**: el
+  talonario es del alumno y se paga completo o por abonos (`pagos_talonario`). Paz y salvo = talonario pagado al
+  100 %. El sorteo solo incluye talonarios pagados, **se puede jugar varias veces** (una boleta no gana dos veces) y
+  cada jugada deja un acta inmutable. Una rifa se puede **eliminar** (desaparece y deja de contar; su dinero y actas
+  se conservan; con pagos o sorteos solo el SuperAdmin).
+- **Cancelar y anular no exigen motivo** (sesiones, rifas, torneos, multas, abonos y pagos): es opcional; quién y
+  cuándo queda igual en la auditoría. Siguen pidiendo motivo: prórroga, cambio de estado de la inscripción,
+  corrección de asistencia y rechazo de justificación.
 - Torneos: los organiza el club y se inscriben **clubes externos** (no jugadores); cada equipo paga inscripción
   (valor fijado en cada torneo). Cupo por torneo (sugerido 18, `cupo_equipos_sugerido`). No hay otros eventos.
 - Notificaciones: **sin costo**. Correo automático (Gmail con contraseña de aplicación) + bandeja en la plataforma;
@@ -226,7 +232,15 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   pantalla grande código · boleta que gira (solo visual: el ganador lo elige el servidor; respeta
   `prefers-reduced-motion`), confirmación antes de jugar, tarjeta del ganador con acta y "Avisar por WhatsApp"
   (wa.me al teléfono del comprador, `numeroWhatsApp`), talonarios por código con filtros, avance por rama e
-  historial de sorteos del año. 192 pruebas backend, 65 frontend.
+  historial de sorteos del año. 192 pruebas backend, 65 frontend. (El aviso al comprador lo reemplazó la 0012.)
+- HECHO (rifas sin compradores, 2026-10-30): migración 0012 (`pagos_talonario` reemplaza `puestos`/`pagos_puesto`
+  con los mismos ids; actas con `orden`, `talonario_id`, `codigo`, `boleta` y participantes "F001-01"; estado
+  `eliminada` e índice único parcial `uq_rifas_anio_numero`; checks de anulación sin motivo). Probada con datos en
+  una base aparte (`tests/test_migraciones.py`; `alembic/env.py` acepta `config.attributes["connection"]`).
+  API: `DELETE /rifas/{id}`, `GET /rifas/{id}/actas`, `POST …/talonarios/{id}/pagos/{pago}/anular`; se quitaron
+  los endpoints de puestos. `MotivoOpcional` en `schemas/comunes.py`. Frontend: talonario con pagos (sin puestos),
+  eliminar rifa (papelera en la tarjeta), sorteo con "Jugar otra vez", lista de jugadas, historial y aviso por
+  WhatsApp al acudiente principal (o al alumno). Estilo global `.boton-icono`. 193 pruebas backend, 66 frontend.
 - SIGUIENTE (frontend): Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).

@@ -29,8 +29,8 @@
       </div>
       <div class="kpi">
         <div class="etiqueta">Boletas en la urna</div>
-        <div class="kpi-valor">{{ r.talonarios_pagados * r.puestos_por_talonario }}</div>
-        <div class="kpi-nota">{{ r.puestos_por_talonario }} por talonario pagado</div>
+        <div class="kpi-valor">{{ enUrna() }}</div>
+        <div class="kpi-nota">{{ r.puestos_por_talonario }} por talonario pagado{{ actas().length ? ', sin las que ya ganaron' : '' }}</div>
       </div>
       <div class="kpi">
         <div class="etiqueta">Sin pagar</div>
@@ -49,17 +49,18 @@
       <div class="escenario-cabecera">
         <div>
           <h2>Sorteo · {{ r.nombre }} — {{ r.premio }}</h2>
-          <p class="nota-chica">Solo entran los talonarios pagados al 100 %. Los que no han pagado quedan fuera de la urna.</p>
+          <p class="nota-chica">Solo entran los talonarios pagados al 100 %. Se puede jugar varias veces: una boleta que ya ganó no vuelve a la urna.</p>
         </div>
         <div class="escenario-accion">
           <div class="en-urna">
             <span class="etiqueta">Boletas en la urna</span>
-            <span class="mono">{{ r.talonarios_pagados * r.puestos_por_talonario }}</span>
+            <span class="mono">{{ enUrna() }}</span>
           </div>
-          @if (r.estado === 'abierta' && puedeSortear()) {
+          @if (puedeSortear()) {
             <button type="button" class="boton" [disabled]="!sorteable() || girando()" (click)="confirmando.set(true)"
                     [title]="r.fecha_sorteo > hoy ? 'El sorteo es el ' + (r.fecha_sorteo | date: 'd MMM y') : ''">
-              <span class="icono" aria-hidden="true">casino</span> {{ girando() ? 'Sorteando…' : 'Jugar la rifa' }}
+              <span class="icono" aria-hidden="true">casino</span>
+              {{ girando() ? 'Sorteando…' : actas().length ? 'Jugar otra vez' : 'Jugar la rifa' }}
             </button>
           }
         </div>
@@ -75,16 +76,16 @@
         <span class="pantalla-separador" aria-hidden="true">·</span>
         <div class="pantalla-bloque">
           <span class="etiqueta">Boleta 1–{{ r.puestos_por_talonario }}</span>
-          <span class="pantalla-valor mono">{{ girando() ? (d ? (d.boleta < 10 ? '0' + d.boleta : d.boleta) : '··') : (a ? (a.boleta < 10 ? '0' + a.boleta : a.boleta) : '00') }}</span>
+          <span class="pantalla-valor mono">{{ girando() ? (d ? dosDigitos(d.boleta) : '··') : (a ? dosDigitos(a.boleta) : '00') }}</span>
         </div>
       </div>
 
       @if (a && !girando()) {
         <div class="ganador" [class.recien]="recien()">
           <div class="ganador-textos">
-            <span class="etiqueta">Boleta ganadora · {{ boleta(a.codigo, a.boleta) }}</span>
-            <span class="ganador-nombre">{{ a.comprador_nombre || 'Comprador sin registrar' }}</span>
-            <span class="nota-chica capital">{{ a.rama }} · talonario {{ a.codigo }} de {{ a.alumno_nombre }} · boleta {{ a.boleta < 10 ? '0' + a.boleta : a.boleta }} de {{ r.puestos_por_talonario }}</span>
+            <span class="etiqueta">{{ a.orden }}.ª jugada · boleta ganadora {{ boleta(a.codigo, a.boleta) }}</span>
+            <span class="ganador-nombre">{{ a.alumno_nombre }}</span>
+            <span class="nota-chica capital">{{ a.rama }} · talonario {{ a.codigo }} · boleta {{ dosDigitos(a.boleta) }} de {{ r.puestos_por_talonario }}</span>
           </div>
           <dl class="acta">
             <div><dt>Boleta ganadora</dt><dd class="mono oro">{{ boleta(a.codigo, a.boleta) }}</dd></div>
@@ -97,15 +98,22 @@
               <a class="boton chico" [href]="url" target="_blank" rel="noopener noreferrer">
                 <span class="icono" aria-hidden="true">chat</span> Avisar por WhatsApp
               </a>
-            } @else {
-              <span class="nota-chica">Sin teléfono del comprador: regístralo en el puesto para avisarle por WhatsApp.</span>
+            } @else if (ganador()) {
+              <span class="nota-chica">Sin teléfono del acudiente ni del alumno: agrégalo en su ficha para avisarle por WhatsApp.</span>
             }
           </div>
-          <p class="nota-chica">El acta queda guardada y no se puede modificar. La huella prueba que la lista de boletas en la urna no cambió.</p>
+          @if (actas().length > 1) {
+            <ol class="jugadas" aria-label="Jugadas de esta rifa">
+              @for (j of actas(); track j.id) {
+                <li><span class="mono oro">{{ boleta(j.codigo, j.boleta) }}</span> {{ j.alumno_nombre }} <span class="nota-chica">· {{ j.jugado_en | date: 'h:mm a' }}</span></li>
+              }
+            </ol>
+          }
+          <p class="nota-chica">Cada jugada deja un acta que no se puede modificar. La huella prueba que la lista de boletas en la urna no cambió.</p>
         </div>
       } @else if (!girando()) {
         <p class="nota-chica centro">
-          @if (r.estado === 'abierta' && r.fecha_sorteo > hoy) {
+          @if (r.fecha_sorteo > hoy) {
             El sorteo es el {{ r.fecha_sorteo | date: 'EEEE d MMMM' }}. Ese día se habilita «Jugar la rifa».
           } @else {
             El sistema elige al azar una boleta de la urna y muestra el código del talonario y el número de boleta (1 a {{ r.puestos_por_talonario }}).
@@ -165,13 +173,13 @@
         <!-- Historial -->
         <section class="panel relleno" aria-label="Sorteos del año">
           <h2>Sorteos de {{ anio }}</h2>
-          @for (h of historial(); track h.rifa.id) {
+          @for (h of historial(); track h.acta.id) {
             <div class="historial">
               <div class="fila-base">
-                <span>{{ h.rifa.nombre }}</span>
+                <span>{{ h.rifa.nombre }} <span class="nota-chica">· {{ h.acta.orden }}.ª jugada</span></span>
                 <span class="mono chico oro">{{ boleta(h.acta.codigo, h.acta.boleta) }}</span>
               </div>
-              <span class="nota-chica">{{ h.acta.jugado_en | date: 'd MMM' }} · {{ h.acta.comprador_nombre || 'comprador sin registrar' }} · talonario de {{ h.acta.alumno_nombre }}</span>
+              <span class="nota-chica">{{ h.acta.jugado_en | date: 'd MMM' }} · {{ h.acta.alumno_nombre }}</span>
             </div>
           } @empty {
             <p class="nota-chica">Aún no se ha jugado ninguna rifa este año.</p>
@@ -182,12 +190,13 @@
   }
 }
 
-<!-- Confirmación: el sorteo no se repite -->
+<!-- Confirmación -->
 @if (confirmando() && rifa(); as r) {
-  <app-dialogo [titulo]="'Jugar ' + r.nombre" [descripcion]="'Premio: ' + r.premio" (cerrar)="confirmando.set(false)">
+  <app-dialogo [titulo]="(actas().length ? 'Jugar otra vez · ' : 'Jugar ') + r.nombre" [descripcion]="'Premio: ' + r.premio" (cerrar)="confirmando.set(false)">
     <div class="formulario">
-      <p>Entran <b>{{ r.talonarios_pagados * r.puestos_por_talonario }}</b> boletas ({{ r.talonarios_pagados }} talonarios pagados al 100 %).
-        El ganador sale al azar, queda un acta que no se puede modificar y el sorteo no se repite.</p>
+      <p>Entran <b>{{ enUrna() }}</b> boletas de {{ r.talonarios_pagados }} talonarios pagados al 100 %.
+        @if (actas().length) { Las {{ actas().length }} boletas que ya ganaron quedan fuera. }
+        El ganador sale al azar y la jugada queda en un acta que no se puede modificar.</p>
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="confirmando.set(false)">Todavía no</button>
         <button type="button" class="boton" (click)="jugar()"><span class="icono" aria-hidden="true">casino</span> Jugar ahora</button>

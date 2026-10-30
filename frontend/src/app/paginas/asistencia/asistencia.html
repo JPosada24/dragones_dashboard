@@ -304,7 +304,7 @@
                descripcion="Úsalo para otro evento del club. Los festivos y torneos se cancelan solos.">
     <form class="formulario" [formGroup]="formCancelar" (ngSubmit)="cancelarSesion()">
       <label class="campo">
-        <span class="etiqueta">Motivo</span>
+        <span class="etiqueta">Motivo (opcional)</span>
         <input class="control" type="text" formControlName="motivo" maxlength="255" placeholder="Evento del club, cancha ocupada…" />
       </label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }

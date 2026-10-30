@@ -15,7 +15,7 @@ from app.core.fechas import formato_fecha, formato_pesos
 from app.models.acceso import Usuario
 from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import Multa
-from app.models.rifas import Rifa, Talonario
+from app.models.rifas import RIFA_FUERA, Rifa, Talonario
 from app.services import alumnos, auditoria, configuracion, notificaciones
 
 
@@ -46,7 +46,7 @@ def deudas_de(db: Session, alumno: Alumno) -> list[Deuda]:
         for m in db.scalars(select(Multa).where(Multa.alumno_id == alumno.id, Multa.estado == "pendiente")).unique()
     ]
     talonarios = db.scalars(
-        select(Talonario).join(Talonario.rifa).where(Talonario.alumno_id == alumno.id, Rifa.estado != "cancelada")
+        select(Talonario).join(Talonario.rifa).where(Talonario.alumno_id == alumno.id, Rifa.estado.not_in(RIFA_FUERA))
     ).unique()
     deudas += [
         Deuda(f"Talonario de «{t.rifa.nombre}»", t.saldo, t.rifa.fecha_sorteo) for t in talonarios if t.saldo > 0

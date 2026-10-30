@@ -1,4 +1,4 @@
-export type EstadoRifa = 'abierta' | 'sorteada' | 'cancelada';
+export type EstadoRifa = 'abierta' | 'sorteada' | 'cancelada'; // las eliminadas no llegan del servidor
 
 export interface Rifa {
   id: string;
@@ -18,7 +18,7 @@ export interface Rifa {
   esperado: number;
 }
 
-export interface PagoPuesto {
+export interface PagoTalonario {
   id: string;
   fecha: string;
   monto: number; // negativo si es una anulación
@@ -27,41 +27,31 @@ export interface PagoPuesto {
   creado_en: string;
 }
 
-export interface Puesto {
-  numero: number; // número interno del puesto en la rifa (el que usa la API)
-  boleta: number; // 1…20 dentro del talonario
-  comprador_nombre: string | null;
-  comprador_telefono: string | null;
-  monto_pagado: number;
-  saldo: number;
-  pagos: PagoPuesto[];
-}
-
 export interface Talonario {
   id: string;
   alumno_id: string;
   alumno_nombre: string;
   rama: string;
-  codigo: string; // F012: con el número de boleta forma la boleta F012-07
-  desde: number;
-  hasta: number;
+  codigo: string; // F012: sus boletas son F012-01 … F012-20
+  boletas: number;
   recaudado: number;
   saldo: number;
   pagado: boolean;
-  puestos: Puesto[];
+  pagos: PagoTalonario[];
 }
 
+/** Una jugada del sorteo (una rifa se puede jugar varias veces). */
 export interface Acta {
+  id: string;
   rifa_id: string;
-  numero_ganador: number;
+  orden: number;
   codigo: string;
   boleta: number;
-  alumno_id: string;
+  alumno_id: string; // dueño del talonario ganador
   alumno_nombre: string;
   rama: string;
-  comprador_nombre: string | null;
   total_participantes: number;
-  participantes: number[];
+  participantes: string[];
   huella: string;
   jugado_en: string;
 }

@@ -69,7 +69,7 @@ def crear(db: Session, *, datos: dict[str, Any], actor: Usuario, ip: str | None)
     return torneo
 
 
-def cancelar(db: Session, torneo: Torneo, *, motivo: str, actor: Usuario, ip: str | None) -> Torneo:
+def cancelar(db: Session, torneo: Torneo, *, motivo: str | None, actor: Usuario, ip: str | None) -> Torneo:
     if torneo.estado == "cancelado":
         raise Conflicto("El torneo ya estaba cancelado.")
     torneo.estado, torneo.motivo_cancelacion = "cancelado", motivo
@@ -138,7 +138,9 @@ def inscribir(db: Session, torneo: Torneo, *, datos: dict[str, Any], actor: Usua
     return equipo
 
 
-def retirar(db: Session, torneo: Torneo, equipo: EquipoTorneo, *, motivo: str, actor: Usuario, ip: str | None):
+def retirar(
+    db: Session, torneo: Torneo, equipo: EquipoTorneo, *, motivo: str | None, actor: Usuario, ip: str | None
+):
     """Retira un equipo. Si ocupaba cupo, entra el primero de la lista de espera. Devuelve el promovido (o None)."""
     _bloquear(db, torneo)
     if equipo.estado == "retirado":
@@ -192,7 +194,7 @@ def pagar(
 
 
 def anular_pago(
-    db: Session, equipo: EquipoTorneo, pago_id: uuid.UUID, *, motivo: str, actor: Usuario, ip: str | None
+    db: Session, equipo: EquipoTorneo, pago_id: uuid.UUID, *, motivo: str | None, actor: Usuario, ip: str | None
 ) -> EquipoTorneo:
     pago = next((p for p in equipo.pagos if p.id == pago_id), None)
     if pago is None:

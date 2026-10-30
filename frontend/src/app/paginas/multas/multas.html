@@ -97,7 +97,7 @@
             </span>
             <span class="mono chico">{{ m.valor | pesos }}</span>
             <span class="nota-chica historial-detalle">
-              @if (m.estado === 'pagada') { Pagada el {{ m.fecha_pago | date: 'd MMM y' }} } @else { {{ m.motivo_anulacion }} }
+              @if (m.estado === 'pagada') { Pagada el {{ m.fecha_pago | date: 'd MMM y' }} } @else { Anulada{{ m.motivo_anulacion ? ': ' + m.motivo_anulacion : '' }} }
             </span>
           </li>
         } @empty {
@@ -177,8 +177,8 @@
 @if (anulando(); as m) {
   <app-dialogo titulo="Anular multa" [descripcion]="m.alumno_nombre + ' · ' + (m.valor | pesos)" (cerrar)="anulando.set(null)">
     <form class="formulario" [formGroup]="formAnular" (ngSubmit)="guardarAnulacion()">
-      <p>La multa deja de cobrarse y queda en el historial con el motivo.</p>
-      <label class="campo"><span class="etiqueta">Motivo</span>
+      <p>La multa deja de cobrarse y queda en el historial.</p>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span>
         <textarea class="control" formControlName="motivo" maxlength="255" placeholder="Ej.: estaba con la selección departamental"></textarea></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">

@@ -153,7 +153,7 @@
             <span class="mono chico">{{ p.fecha | date: 'd MMM y' }}</span>
             <span class="mono">{{ p.monto | pesos }}</span>
             <span class="nota-chica movimiento-nota">
-              @if (p.monto < 0) { Anulación: {{ p.motivo }} } @else if (p.anulado) { Anulado } @else { Abono }
+              @if (p.monto < 0) { Anulación{{ p.motivo ? ': ' + p.motivo : '' }} } @else if (p.anulado) { Anulado } @else { Abono }
             </span>
             @if (anulable(i, p)) {
               <button type="button" class="enlace-rojo" (click)="abrirAnular(i, p)">Anular</button>
@@ -241,8 +241,8 @@
                (cerrar)="anulando.set(null)">
     <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarAnulacion()">
       <p>El abono no se borra: se registra un movimiento en negativo que lo revierte. Si la inscripción estaba activa, vuelve a quedar pendiente de pago.</p>
-      <label class="campo"><span class="etiqueta">Motivo</span>
-        <textarea class="control" formControlName="motivo" maxlength="500" placeholder="Ej.: se registró dos veces el mismo pago"></textarea></label>
+      <label class="campo"><span class="etiqueta">Motivo (opcional)</span>
+        <textarea class="control" formControlName="motivo" maxlength="255" placeholder="Ej.: se registró dos veces el mismo pago"></textarea></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="anulando.set(null)">Volver</button>

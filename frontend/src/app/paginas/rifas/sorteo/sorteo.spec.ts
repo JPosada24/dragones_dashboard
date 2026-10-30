@@ -26,20 +26,19 @@ const rifa = (id: string, extra: Partial<Rifa> = {}): Rifa => ({
   talonarios: 2, talonarios_pagados: 1, recaudado: 50000, esperado: 80000, ...extra,
 });
 
-const talonario = (codigo: string, desde: number, pagado: boolean, rama = 'femenina'): Talonario => ({
-  id: `t-${codigo}`, alumno_id: `a-${codigo}`, alumno_nombre: `Alumno ${codigo}`, rama, codigo, desde, hasta: desde + 19,
-  recaudado: pagado ? 40000 : 10000, saldo: pagado ? 0 : 30000, pagado,
-  puestos: Array.from({ length: 20 }, (_, i) => ({
-    numero: desde + i, boleta: i + 1, comprador_nombre: i === 6 ? 'Doña Rosa' : null,
-    comprador_telefono: i === 6 ? '300 123 4567' : null, monto_pagado: 2000, saldo: 0, pagos: [],
-  })),
+const talonario = (codigo: string, pagado: boolean, rama = 'femenina'): Talonario => ({
+  id: `t-${codigo}`, alumno_id: `a-${codigo}`, alumno_nombre: `Alumno ${codigo}`, rama, codigo, boletas: 20,
+  recaudado: pagado ? 40000 : 10000, saldo: pagado ? 0 : 30000, pagado, pagos: [],
 });
 
-const TALONARIOS = [talonario('M001', 20, false, 'masculina'), talonario('F001', 0, true)];
-const ACTA: Acta = {
-  rifa_id: '1', numero_ganador: 6, codigo: 'F001', boleta: 7, alumno_id: 'a-F001', alumno_nombre: 'Alumno F001',
-  rama: 'femenina', comprador_nombre: 'Doña Rosa', total_participantes: 20, participantes: [], huella: 'a'.repeat(64),
-  jugado_en: new Date().toISOString(),
+const TALONARIOS = [talonario('M001', false, 'masculina'), talonario('F001', true)];
+const acta = (orden: number, boleta: number): Acta => ({
+  id: `acta-${orden}`, rifa_id: '1', orden, codigo: 'F001', boleta, alumno_id: 'a-F001', alumno_nombre: 'Laura Pérez',
+  rama: 'femenina', total_participantes: 21 - orden, participantes: [], huella: 'a'.repeat(64), jugado_en: new Date().toISOString(),
+});
+const GANADORA = {
+  id: 'a-F001', codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', telefono: null,
+  acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '300 123 4567', parentesco: 'madre', principal: true }],
 };
 
 describe('SorteoPage', () => {
@@ -80,47 +79,49 @@ describe('SorteoPage', () => {
     await estable();
     expect(el().querySelector('.filtro[aria-pressed="true"]')?.textContent).toContain('Rifa 2'); // ya en fecha
     expect(el().querySelector('.en-urna')?.textContent).toContain('20');
-    const codigos = [...el().querySelectorAll('.talonario .codigo')].map((c) => c.textContent?.trim());
-    expect(codigos).toEqual(['F001', 'M001']);
+    expect([...el().querySelectorAll('.talonario .codigo')].map((c) => c.textContent?.trim())).toEqual(['F001', 'M001']);
     boton('Sin pagar')!.click();
     await estable();
     expect([...el().querySelectorAll('.talonario .codigo')].map((c) => c.textContent?.trim())).toEqual(['M001']);
     expect(el().querySelectorAll('.rama').length).toBe(2);
   });
 
-  it('juega la rifa (con confirmación) y muestra la boleta ganadora F001-07 que eligió el servidor', async () => {
+  it('juega (con confirmación), muestra la boleta F001-07 que eligió el servidor y avisa al acudiente', async () => {
     vi.stubGlobal('matchMedia', () => ({ matches: true })); // sin animación en la prueba
     await cargar(SUPERADMIN, [rifa('1')]);
     backend.expectOne(`${API}/rifas/1/talonarios`).flush(TALONARIOS);
     await estable();
     boton('casino Jugar la rifa')!.click();
     await estable();
-    const confirmar = el().querySelector('dialog')!;
-    expect(confirmar.textContent).toContain('no se repite');
-    boton('casino Jugar ahora', confirmar)!.click();
-    backend.expectOne((r) => r.method === 'POST' && r.url === `${API}/rifas/1/sorteo`).flush(ACTA);
+    boton('casino Jugar ahora', el().querySelector('dialog')!)!.click();
+    backend.expectOne((r) => r.method === 'POST' && r.url === `${API}/rifas/1/sorteo`).flush(acta(1, 7));
     await new Promise((r) => setTimeout(r, 0));
+    backend.expectOne(`${API}/alumnos/a-F001`).flush(GANADORA);
     backend.expectOne(`${API}/rifas/1`).flush(rifa('1', { estado: 'sorteada' }));
-    backend.expectOne(`${API}/rifas/1/acta`).flush(ACTA); // historial
+    backend.expectOne(`${API}/rifas/1/actas`).flush([acta(1, 7)]); // historial
     await estable();
     expect([...el().querySelectorAll('.pantalla-valor')].map((v) => v.textContent?.trim())).toEqual(['F001', '07']);
-    expect(el().querySelector('.ganador')?.textContent).toContain('Boleta ganadora · F001-07');
-    expect(el().querySelector('.ganador-nombre')?.textContent).toContain('Doña Rosa');
+    expect(el().querySelector('.ganador-nombre')?.textContent).toContain('Laura Pérez');
     const whatsapp = el().querySelector<HTMLAnchorElement>('a[href^="https://wa.me/"]')!;
     expect(whatsapp.href).toContain('https://wa.me/573001234567?text=');
-    expect(decodeURIComponent(whatsapp.href)).toContain('tu boleta F001-07 ganó «Televisor»');
-    expect(texto()).toContain('Sorteos de');
+    expect(decodeURIComponent(whatsapp.href)).toContain('¡Hola, Marta!');
+    expect(decodeURIComponent(whatsapp.href)).toContain('la boleta F001-07 del talonario de Laura ganó «Televisor»');
+    // Se puede volver a jugar: la urna ya no cuenta la boleta que ganó.
+    expect(boton('casino Jugar otra vez')!.disabled).toBe(false);
+    expect(el().querySelector('.en-urna')?.textContent).toContain('19');
   });
 
-  it('una rifa ya sorteada muestra su acta; sin "sorteo.jugar" no aparece el botón', async () => {
+  it('una rifa ya sorteada muestra sus jugadas; sin "sorteo.jugar" no aparece el botón', async () => {
     await cargar(ADMIN, [rifa('1', { estado: 'sorteada' })]);
     backend.expectOne(`${API}/rifas/1/talonarios`).flush(TALONARIOS);
-    const actas = backend.match(`${API}/rifas/1/acta`); // la del escenario y la del historial
-    actas.forEach((a) => a.flush(ACTA));
+    backend.match(`${API}/rifas/1/actas`).forEach((r) => r.flush([acta(1, 7), acta(2, 12)])); // escenario e historial
     await estable();
-    expect(boton('casino Jugar la rifa')).toBeUndefined();
-    expect(el().querySelector('.ganador')?.textContent).toContain('F001-07');
-    expect(el().querySelector('.historial')?.textContent).toContain('F001-07');
+    backend.expectOne(`${API}/alumnos/a-F001`).flush(GANADORA);
+    await estable();
+    expect(boton('casino Jugar')).toBeUndefined();
+    expect(el().querySelector('.ganador')?.textContent).toContain('2.ª jugada · boleta ganadora F001-12');
+    expect(el().querySelectorAll('.jugadas li').length).toBe(2);
+    expect(el().querySelectorAll('.historial').length).toBe(2);
   });
 
   it('antes de la fecha el botón está deshabilitado', async () => {

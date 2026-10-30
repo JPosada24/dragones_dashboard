@@ -54,9 +54,7 @@ export class MultasPage implements OnInit {
   protected readonly anulando = signal<Multa | null>(null);
 
   protected readonly formCobro = this.fb.group({ fecha_pago: [this.hoy, Validators.required] });
-  protected readonly formAnular = this.fb.group({
-    motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(255)]],
-  });
+  protected readonly formAnular = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
 
   // ---------- Derivados ----------
   protected readonly visibles = computed(() => {
@@ -172,8 +170,8 @@ export class MultasPage implements OnInit {
   protected guardarAnulacion(): void {
     const m = this.anulando();
     if (!m) return;
-    if (this.formAnular.invalid) return this.errorDialogo.set('Explica el motivo (al menos 10 caracteres).');
-    this.ejecutar(this.http.post<Multa>(`${multaUrl(m.id)}/anular`, this.formAnular.getRawValue()), () => {
+    const motivo = this.formAnular.getRawValue().motivo.trim() || null;
+    this.ejecutar(this.http.post<Multa>(`${multaUrl(m.id)}/anular`, { motivo }), () => {
       this.anulando.set(null);
       this.multas.update((lista) => lista?.filter((x) => x.id !== m.id) ?? lista);
       this.avisar(`Multa de ${m.alumno_nombre} anulada.`);

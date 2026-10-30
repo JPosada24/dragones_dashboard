@@ -14,7 +14,7 @@ import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
 import { boleta } from './boleta';
-import { FilaPazYSalvo, PagoPuesto, Puesto, Rifa, Talonario } from './rifas.modelos';
+import { FilaPazYSalvo, PagoTalonario, Rifa, Talonario } from './rifas.modelos';
 
 const rifaUrl = (id: string) => `${API}/rifas/${encodeURIComponent(id)}`;
 
@@ -60,28 +60,20 @@ export class RifasPage implements OnInit {
   /** Talonario abierto (con su rifa). */
   protected readonly abierto = signal<{ rifa: Rifa; talonarioId: string } | null>(null);
   protected readonly pagandoTalonario = signal(false);
-  protected readonly puestoAbierto = signal<number | null>(null);
-  protected readonly anulandoPago = signal<{ numero: number; pago: PagoPuesto } | null>(null);
+  protected readonly anulandoPago = signal<PagoTalonario | null>(null);
+  protected readonly eliminando = signal<Rifa | null>(null);
 
   protected readonly formRifa = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
     premio: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
     fecha_sorteo: ['', Validators.required],
   });
-  protected readonly formCancelar = this.fb.group({
-    motivo: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(255)]],
-  });
+  protected readonly formCancelar = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
   protected readonly formPago = this.fb.group({
     monto: [0, [Validators.required, Validators.min(1), Validators.max(10_000_000)]],
     fecha: [this.hoy, Validators.required],
   });
-  protected readonly formComprador = this.fb.group({
-    nombre: ['', [Validators.minLength(2), Validators.maxLength(120)]],
-    telefono: ['', Validators.maxLength(20)],
-  });
-  protected readonly formAnular = this.fb.group({
-    motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
-  });
+  protected readonly formAnular = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
 
   // ---------- Derivados ----------
   /** Rifas que cuentan para el paz y salvo (las canceladas no). */
@@ -129,11 +121,6 @@ export class RifasPage implements OnInit {
     return a ? ((this.talonarios()[a.rifa.id] ?? []).find((t) => t.id === a.talonarioId) ?? null) : null;
   });
 
-  protected readonly puesto = computed(() => {
-    const n = this.puestoAbierto();
-    return n === null ? null : (this.talonario()?.puestos.find((p) => p.numero === n) ?? null);
-  });
-
   ngOnInit(): void {
     this.cargar();
   }
@@ -179,24 +166,18 @@ export class RifasPage implements OnInit {
 
   protected readonly boleta = boleta;
 
-  /** Boleta (F012-07) de un puesto del talonario abierto. */
-  protected boletaDe(numero: number): string {
-    const t = this.talonario();
-    const p = t?.puestos.find((x) => x.numero === numero);
-    return t && p ? boleta(t.codigo, p.boleta) : String(numero);
-  }
 
   protected sorteable(r: Rifa): boolean {
-    return this.puedeSortear() && r.estado === 'abierta' && r.fecha_sorteo <= this.hoy;
+    return this.puedeSortear() && r.estado === 'abierta' && r.fecha_sorteo <= this.hoy; // las sorteadas: «Ver sorteos»
   }
 
   /** Un pago positivo que todavía no fue revertido por una anulación. */
-  protected anulable(p: Puesto, pago: PagoPuesto): boolean {
-    return this.puedeAnular() && pago.monto > 0 && !p.pagos.some((x) => x.anula_id === pago.id);
+  protected anulable(t: Talonario, pago: PagoTalonario): boolean {
+    return this.puedeAnular() && pago.monto > 0 && !this.anulado(t, pago);
   }
 
-  protected anulado(p: Puesto, pago: PagoPuesto): boolean {
-    return p.pagos.some((x) => x.anula_id === pago.id);
+  protected anulado(t: Talonario, pago: PagoTalonario): boolean {
+    return t.pagos.some((x) => x.anula_id === pago.id);
   }
 
   /** Reemplaza un talonario (respuesta de la API) y refresca los totales de su rifa. */
@@ -240,11 +221,25 @@ export class RifasPage implements OnInit {
   protected guardarCancelacion(): void {
     const r = this.cancelando();
     if (!r) return;
-    if (this.formCancelar.invalid) return this.errorDialogo.set('Indica el motivo (al menos 5 caracteres).');
-    this.ejecutar(this.http.post<Rifa>(`${rifaUrl(r.id)}/cancelar`, this.formCancelar.getRawValue()), () => {
+    const motivo = this.formCancelar.getRawValue().motivo.trim() || null;
+    this.ejecutar(this.http.post<Rifa>(`${rifaUrl(r.id)}/cancelar`, { motivo }), () => {
       this.cancelando.set(null);
       this.cargar();
       this.avisar(`«${r.nombre}» cancelada: ya no cuenta para el paz y salvo.`);
+    });
+  }
+
+  protected abrirEliminar(r: Rifa): void {
+    this.abrir(() => this.eliminando.set(r));
+  }
+
+  protected eliminar(): void {
+    const r = this.eliminando();
+    if (!r) return;
+    this.ejecutar(this.http.delete(rifaUrl(r.id)), () => {
+      this.eliminando.set(null);
+      this.cargar();
+      this.avisar(`«${r.nombre}» eliminada.`);
     });
   }
 
@@ -293,53 +288,19 @@ export class RifasPage implements OnInit {
     });
   }
 
-  // ---------- Puesto ----------
-  protected abrirPuesto(p: Puesto): void {
-    this.formComprador.reset({ nombre: p.comprador_nombre ?? '', telefono: p.comprador_telefono ?? '' });
-    this.formPago.reset({ monto: p.saldo, fecha: this.hoy });
-    this.errorDialogo.set(null);
-    this.puestoAbierto.set(p.numero);
-  }
-
-  protected guardarComprador(): void {
-    const a = this.abierto();
-    const n = this.puestoAbierto();
-    if (!a || n === null) return;
-    if (this.formComprador.invalid) return this.errorDialogo.set('Revisa el nombre y el teléfono del comprador.');
-    const f = this.formComprador.getRawValue();
-    const cuerpo = { nombre: f.nombre.trim() || null, telefono: f.telefono.trim() || null };
-    this.ejecutar(this.http.patch<Talonario>(`${rifaUrl(a.rifa.id)}/puestos/${n}`, cuerpo), (r) => {
-      this.actualizarTalonario(a.rifa, r);
-      this.avisar(`Boleta ${this.boletaDe(n)}: comprador guardado.`);
-    });
-  }
-
-  protected guardarPagoPuesto(): void {
-    const a = this.abierto();
-    const n = this.puestoAbierto();
-    if (!a || n === null) return;
-    if (this.formPago.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del pago.');
-    this.ejecutar(this.http.post<Talonario>(`${rifaUrl(a.rifa.id)}/puestos/${n}/pagos`, this.formPago.getRawValue()), (r) => {
-      this.actualizarTalonario(a.rifa, r);
-      const p = r.puestos.find((x) => x.numero === n);
-      this.formPago.reset({ monto: p?.saldo ?? 0, fecha: this.hoy });
-      this.avisar(`Pago de la boleta ${this.boletaDe(n)} registrado.`);
-    });
-  }
-
-  protected abrirAnularPago(numero: number, pago: PagoPuesto): void {
+  protected abrirAnularPago(pago: PagoTalonario): void {
     this.formAnular.reset({ motivo: '' });
     this.errorDialogo.set(null);
-    this.anulandoPago.set({ numero, pago });
+    this.anulandoPago.set(pago);
   }
 
   protected guardarAnulacion(): void {
     const a = this.abierto();
-    const x = this.anulandoPago();
-    if (!a || !x) return;
-    if (this.formAnular.invalid) return this.errorDialogo.set('Explica el motivo (al menos 10 caracteres).');
-    const url = `${rifaUrl(a.rifa.id)}/puestos/${x.numero}/pagos/${encodeURIComponent(x.pago.id)}/anular`;
-    this.ejecutar(this.http.post<Talonario>(url, this.formAnular.getRawValue()), (r) => {
+    const pago = this.anulandoPago();
+    if (!a || !pago) return;
+    const motivo = this.formAnular.getRawValue().motivo.trim() || null;
+    const url = `${rifaUrl(a.rifa.id)}/talonarios/${encodeURIComponent(a.talonarioId)}/pagos/${encodeURIComponent(pago.id)}/anular`;
+    this.ejecutar(this.http.post<Talonario>(url, { motivo }), (r) => {
       this.anulandoPago.set(null);
       this.actualizarTalonario(a.rifa, r);
       this.avisar('Pago anulado: queda en el historial como un movimiento en negativo.');

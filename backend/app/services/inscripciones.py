@@ -177,7 +177,7 @@ def registrar_pago(
 
 
 def anular_pago(
-    db: Session, i: Inscripcion, *, pago_id: uuid.UUID, motivo: str, actor: Usuario, ip: str | None
+    db: Session, i: Inscripcion, *, pago_id: uuid.UUID, motivo: str | None, actor: Usuario, ip: str | None
 ) -> Inscripcion:
     """Revierte un abono con un movimiento negativo. El abono original queda en el historial."""
     pago = next((p for p in i.pagos if p.id == pago_id), None)

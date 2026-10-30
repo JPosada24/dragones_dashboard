@@ -1,9 +1,9 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.comunes import normalizar_telefono
+from app.schemas.comunes import MotivoOpcional
 
 
 class _Entrada(BaseModel):
@@ -36,21 +36,11 @@ class RifaOut(BaseModel):
 
 
 class CancelarRifaIn(_Entrada):
-    motivo: str = Field(min_length=5, max_length=255)
+    motivo: MotivoOpcional = None
 
 
 class AsignadosOut(BaseModel):
     asignados: int
-
-
-class CompradorIn(_Entrada):
-    nombre: str | None = Field(default=None, min_length=2, max_length=120)
-    telefono: str | None = None
-
-    @field_validator("telefono")
-    @classmethod
-    def _telefono(cls, v: str | None) -> str | None:
-        return None if not v else normalizar_telefono(v)
 
 
 class PagoRifaIn(_Entrada):
@@ -59,28 +49,18 @@ class PagoRifaIn(_Entrada):
 
 
 class AnularPagoRifaIn(_Entrada):
-    motivo: str = Field(min_length=10, max_length=500)
+    motivo: MotivoOpcional = None
 
 
-class PagoPuestoOut(BaseModel):
+class PagoTalonarioOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     fecha: date
-    monto: int
+    monto: int  # negativo si es una anulación
     anula_id: uuid.UUID | None
     motivo: str | None
     creado_en: datetime
-
-
-class PuestoOut(BaseModel):
-    numero: int  # número interno del puesto en la rifa (el que usa la API)
-    boleta: int  # número de la boleta dentro del talonario: 1…20
-    comprador_nombre: str | None
-    comprador_telefono: str | None
-    monto_pagado: int
-    saldo: int
-    pagos: list[PagoPuestoOut]
 
 
 class TalonarioOut(BaseModel):
@@ -88,26 +68,25 @@ class TalonarioOut(BaseModel):
     alumno_id: uuid.UUID
     alumno_nombre: str
     rama: str
-    codigo: str  # código del alumno cuando recibió el talonario (F012)
-    desde: int
-    hasta: int
+    codigo: str  # código del alumno cuando recibió el talonario (F012); sus boletas son F012-01 … F012-20
+    boletas: int
     recaudado: int
     saldo: int
     pagado: bool
-    puestos: list[PuestoOut]
+    pagos: list[PagoTalonarioOut]
 
 
 class ActaOut(BaseModel):
+    id: uuid.UUID
     rifa_id: uuid.UUID
-    numero_ganador: int
+    orden: int  # 1.ª, 2.ª… jugada de la rifa
     codigo: str  # talonario ganador (F012)
     boleta: int  # boleta dentro del talonario: la ganadora se lee F012-07
     alumno_id: uuid.UUID
     alumno_nombre: str
     rama: str
-    comprador_nombre: str | None
     total_participantes: int
-    participantes: list[int]
+    participantes: list[str]
     huella: str
     jugado_en: datetime
 

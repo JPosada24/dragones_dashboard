@@ -1,5 +1,7 @@
 import re
-from typing import Literal
+from typing import Annotated, Literal
+
+from pydantic import AfterValidator, Field
 
 Rama = Literal["masculina", "femenina"]
 TipoDocumento = Literal["RC", "TI", "CC", "CE", "PA", "PPT"]
@@ -29,3 +31,11 @@ def normalizar_documento(valor: str) -> str:
     if not _DOCUMENTO.match(valor):
         raise ValueError("Número de documento inválido (4 a 20 letras o números)")
     return valor
+
+
+def _vacio_a_nulo(v: str | None) -> str | None:
+    return v.strip() or None if v is not None else None
+
+
+# Cancelar o anular no exige explicación (quién y cuándo queda igual en la auditoría); si la escriben, se guarda.
+MotivoOpcional = Annotated[str | None, Field(default=None, max_length=255), AfterValidator(_vacio_a_nulo)]

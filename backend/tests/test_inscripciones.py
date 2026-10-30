@@ -136,7 +136,7 @@ def test_superadmin_anula_un_abono_y_la_inscripcion_vuelve_a_pendiente(client, h
     assert _pagar(client, h_admin, i["id"], monto=50000).json()["estado"] == "activo"
 
 
-def test_anulacion_exige_superadmin_y_motivo_y_no_se_repite(
+def test_anulacion_exige_superadmin_no_exige_motivo_y_no_se_repite(
     client, h_admin, h_root, alumno, crear_usuario, auth_header
 ):
     i = inscribir(client, h_admin, alumno["id"]).json()
@@ -144,9 +144,9 @@ def test_anulacion_exige_superadmin_y_motivo_y_no_se_repite(
     crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")
     assert _anular(client, h_admin, i["id"], abono["id"]).status_code == 403
     assert _anular(client, auth_header("coach@club.com"), i["id"], abono["id"]).status_code == 403
-    assert _anular(client, h_root, i["id"], abono["id"], motivo="corto").status_code == 422
 
-    anulacion = _anular(client, h_root, i["id"], abono["id"]).json()["pagos"][1]
+    anulacion = _anular(client, h_root, i["id"], abono["id"], motivo=None).json()["pagos"][1]
+    assert anulacion["monto"] == -40000 and anulacion["motivo"] is None  # el motivo es opcional
     assert _anular(client, h_root, i["id"], abono["id"]).status_code == 409  # ya anulado
     assert _anular(client, h_root, i["id"], anulacion["id"]).status_code == 422  # no se anula una anulación
 

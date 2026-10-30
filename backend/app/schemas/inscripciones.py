@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.alumnos import AlumnoCrear
+from app.schemas.comunes import MotivoOpcional
 
 EstadoInscripcion = Literal["pendiente_pago", "activo", "a_expulsar", "expulsado", "rechazado"]
 
@@ -65,7 +66,7 @@ class ProrrogaOut(BaseModel):
 
 
 class AnulacionIn(_Entrada):
-    motivo: str = Field(min_length=10, max_length=500)
+    motivo: MotivoOpcional = None
 
 
 class PagoOut(BaseModel):

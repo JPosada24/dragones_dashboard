@@ -281,8 +281,7 @@ export class InscripcionesPage implements OnInit {
   protected guardarAnulacion(): void {
     const a = this.anulando();
     if (!a) return;
-    const motivo = this.formMotivo.getRawValue().motivo.trim();
-    if (motivo.length < 10) return this.errorDialogo.set('Explica el motivo (al menos 10 caracteres).');
+    const motivo = this.formMotivo.getRawValue().motivo.trim() || null;
     const url = `${inscripcionUrl(a.i.id)}/pagos/${encodeURIComponent(a.pago.id)}/anular`;
     this.ejecutar(this.http.post<Inscripcion>(url, { motivo }), (r) => {
       this.anulando.set(null);

@@ -77,7 +77,7 @@ class PagoEquipo(UUIDMixin, Base):
     __tablename__ = "pagos_equipo"
     __table_args__ = (
         CheckConstraint(
-            "(anula_id IS NULL AND monto > 0) OR (anula_id IS NOT NULL AND monto < 0 AND motivo IS NOT NULL)",
+            "(anula_id IS NULL AND monto > 0) OR (anula_id IS NOT NULL AND monto < 0)",
             name="ck_pagos_equipo_monto",
         ),
     )

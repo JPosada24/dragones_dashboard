@@ -114,9 +114,7 @@ export class AsistenciaPage implements OnInit {
   protected readonly formRechazar = this.fb.group({
     comentario: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
   });
-  protected readonly formCancelar = this.fb.group({
-    motivo: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(255)]],
-  });
+  protected readonly formCancelar = this.fb.group({ motivo: ['', Validators.maxLength(255)] });
 
   // ---------- Derivados ----------
   protected readonly domingo = computed(() => sumarDias(this.lunes(), 6));
@@ -346,7 +344,8 @@ export class AsistenciaPage implements OnInit {
   protected cancelarSesion(): void {
     const s = this.seleccionada();
     if (!s || this.formCancelar.invalid) return;
-    this.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/cancelar`, this.formCancelar.getRawValue()), (actualizada) => {
+    const motivo = this.formCancelar.getRawValue().motivo.trim() || null;
+    this.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/cancelar`, { motivo }), (actualizada) => {
       this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
       this.cancelandoSesion.set(false);
       this.avisar(null, 'Sesión cancelada.');
