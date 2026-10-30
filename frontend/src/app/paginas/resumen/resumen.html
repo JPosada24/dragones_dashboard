@@ -1,0 +1,206 @@
+@if (error()) {
+  <p class="panel vacio" role="alert">No se pudo cargar el resumen. Recarga la página.</p>
+} @else if (esStaff()) {
+  @if (resumen(); as r) {
+    <!-- Indicadores -->
+    <section class="kpis" aria-label="Indicadores">
+      <div class="kpi">
+        <div class="etiqueta">Alumnos activos</div>
+        <div class="kpi-valor">{{ r.indicadores.alumnos_activos }}</div>
+        <div class="kpi-nota">con inscripción vigente</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Inscripciones pendientes</div>
+        <div class="kpi-valor">{{ r.indicadores.inscripciones_pendientes }}</div>
+        <div class="kpi-nota" [class.naranja]="r.indicadores.inscripciones_vencen_pronto > 0">
+          {{ r.indicadores.inscripciones_vencen_pronto }} vencen esta semana
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Multas sin pagar</div>
+        <div class="kpi-valor">{{ r.indicadores.multas_saldo | pesos }}</div>
+        <div class="kpi-nota">{{ r.indicadores.multas_pendientes }} multas</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Alertas abiertas</div>
+        <div class="kpi-valor">{{ r.indicadores.alertas }}</div>
+        <div class="kpi-nota" [class.oro]="r.indicadores.alertas > 0">
+          {{ r.indicadores.alertas > 0 ? 'requieren decisión' : 'todo en orden' }}
+        </div>
+      </div>
+    </section>
+
+    <div class="columnas">
+      <div class="columna">
+        <!-- Alertas -->
+        <section class="panel">
+          <div class="panel-cabecera">
+            <div>
+              <h2>Alertas que requieren decisión</h2>
+              <p class="panel-sub">Expulsiones, justificaciones, plazos por vencer, inasistencias y mora</p>
+            </div>
+            <span class="insignia">{{ r.alertas.length }}</span>
+          </div>
+          @for (a of r.alertas; track $index) {
+            <div class="alerta" [attr.data-tipo]="a.tipo">
+              <span class="alerta-barra" aria-hidden="true"></span>
+              <div class="alerta-textos">
+                <div class="alerta-titulo">{{ a.titulo }}</div>
+                <div class="alerta-detalle">{{ a.detalle }}</div>
+              </div>
+              <span class="alerta-cuando mono">{{ a.cuando }}</span>
+              <a class="alerta-accion" [routerLink]="a.ruta">Revisar</a>
+            </div>
+          } @empty {
+            <p class="vacio">No hay nada pendiente. 🐉</p>
+          }
+        </section>
+
+        <!-- Rifas -->
+        <section class="panel relleno">
+          <div class="fila-base">
+            <h2>Las rifas del año</h2>
+            <span class="panel-sub">Paz y salvo = talonario pagado al 100 %</span>
+          </div>
+          <div class="rifas">
+            @for (f of r.rifas; track f.id) {
+              <div class="rifa">
+                <div class="fila-base">
+                  <span class="rifa-nombre">{{ f.nombre }}</span>
+                  <span class="rifa-estado mono">{{ f.estado }}</span>
+                </div>
+                <div class="rifa-valor">{{ f.pagados }}<span>/{{ f.talonarios }}</span></div>
+                <div class="barra" role="img" [attr.aria-label]="f.pagados + ' de ' + f.talonarios + ' talonarios pagados'">
+                  <div class="barra-relleno" [style.width]="pct(f.pagados, f.talonarios)"></div>
+                </div>
+                <div class="rifa-limite">Sorteo {{ f.fecha_sorteo | date: 'd MMM' }}</div>
+              </div>
+            } @empty {
+              <p class="vacio sin-borde">Aún no hay rifas este año.</p>
+            }
+          </div>
+        </section>
+      </div>
+
+      <div class="columna">
+        <!-- Hoy -->
+        <section class="panel relleno">
+          <div class="fila-base">
+            <h2>Entrenamiento de hoy</h2>
+            <span class="mono oro chico">cierra 11:59 pm</span>
+          </div>
+          @for (s of r.hoy; track s.id) {
+            <div class="sesion">
+              <div class="fila-base sesion-fila">
+                <span>Rama {{ s.rama }} · {{ s.horario }}</span>
+                <span class="mono">{{ s.presentes + s.justificados }}/{{ s.esperados }}</span>
+              </div>
+              <div class="barra apilada" role="img"
+                [attr.aria-label]="s.presentes + ' presentes, ' + s.justificados + ' justificados, ' + s.ausentes + ' ausentes, ' + s.sin_marcar + ' sin marcar'">
+                <div class="presente" [style.width]="pct(s.presentes, s.esperados)"></div>
+                <div class="justificado" [style.width]="pct(s.justificados, s.esperados)"></div>
+                <div class="ausente" [style.width]="pct(s.ausentes, s.esperados)"></div>
+              </div>
+            </div>
+          } @empty {
+            <p class="vacio sin-borde">No hay entrenamiento programado hoy.</p>
+          }
+          @if (r.hoy.length) {
+            <div class="leyenda mono">
+              <span><i class="presente"></i> presente</span>
+              <span><i class="justificado"></i> justificado</span>
+              <span><i class="ausente"></i> ausente</span>
+            </div>
+          }
+          <p class="nota">A las 11:59 pm el sistema cierra el día: quien no marcó ni justificó queda ausente y con multa.</p>
+        </section>
+
+        <!-- Cartera -->
+        <section class="panel relleno">
+          <h2>Cartera del club</h2>
+          @for (c of r.cartera; track c.concepto) {
+            <div class="cartera-fila">
+              <div>
+                <div class="cartera-concepto">{{ c.concepto }}</div>
+                <div class="cartera-nota">{{ c.nota }}</div>
+              </div>
+              <div class="mono cartera-monto" [class.oro]="c.monto > 0">{{ c.monto | pesos }}</div>
+            </div>
+          }
+        </section>
+
+        @if (r.proximo_torneo; as t) {
+          <section class="panel relleno destacado">
+            <div class="chico-titulo">Próximo torneo</div>
+            <div class="torneo-nombre">{{ t.nombre }}</div>
+            <div class="torneo-detalle">
+              {{ t.fecha_inicio | date: 'd MMM' }}–{{ t.fecha_fin | date: 'd MMM' }}
+              @if (t.lugar) { · {{ t.lugar }} } · {{ t.ocupados }} de {{ t.cupo }} cupos
+            </div>
+            <a routerLink="/torneos" class="enlace-oro">Gestionar inscritos →</a>
+          </section>
+        }
+      </div>
+    </div>
+  } @else {
+    <p class="panel vacio">Cargando…</p>
+  }
+} @else {
+  <!-- Familias -->
+  @if (familia(); as f) {
+    <div class="columnas">
+      <div class="columna">
+        @for (h of f; track h.alumno.id) {
+          <section class="panel relleno hijo">
+            <div class="fila-base">
+              <h2>{{ h.alumno.nombres }} {{ h.alumno.apellidos }}</h2>
+              <span class="chip" [class.ok]="h.cuenta.al_dia" [class.mal]="h.cuenta.en_mora">
+                {{ h.cuenta.en_mora ? 'En mora' : h.cuenta.al_dia ? 'A paz y salvo' : 'Con saldo' }}
+              </span>
+            </div>
+            <div class="panel-sub">
+              Rama {{ h.alumno.rama }} · Inscripción: {{ h.cuenta.inscripcion_estado ? estadoInscripcion[h.cuenta.inscripcion_estado] : 'sin inscripción este año' }}
+            </div>
+            <div class="cartera-fila">
+              <span class="cartera-concepto">Inscripción</span><span class="mono">{{ h.cuenta.inscripcion_saldo | pesos }}</span>
+            </div>
+            <div class="cartera-fila">
+              <span class="cartera-concepto">Multas ({{ h.cuenta.multas_pendientes }})</span><span class="mono">{{ h.cuenta.multas_saldo | pesos }}</span>
+            </div>
+            @for (d of h.cuenta.rifas; track d.rifa) {
+              <div class="cartera-fila">
+                <span class="cartera-concepto">{{ d.rifa }}</span><span class="mono">{{ d.saldo | pesos }}</span>
+              </div>
+            }
+            <div class="cartera-fila total">
+              <span>Total por pagar</span><span class="mono" [class.oro]="h.cuenta.total > 0">{{ h.cuenta.total | pesos }}</span>
+            </div>
+            @if (h.cuenta.entra_en_mora && !h.cuenta.al_dia && !h.cuenta.en_mora) {
+              <p class="nota">Si no se paga antes del {{ h.cuenta.entra_en_mora | date: 'd MMM y' }}, la inscripción pasa a revisión.</p>
+            }
+          </section>
+        } @empty {
+          <p class="panel vacio">Aún no hay alumnos asociados a tu cuenta. Habla con el club.</p>
+        }
+      </div>
+      <div class="columna">
+        <section class="panel relleno">
+          <h2>Próximos entrenamientos</h2>
+          @for (s of proximas(); track s.id) {
+            <div class="cartera-fila">
+              <div>
+                <div class="cartera-concepto">{{ s.fecha | date: 'EEEE d MMM' }}</div>
+                <div class="cartera-nota">Rama {{ s.rama }}@if (s.lugar) { · {{ s.lugar }} }</div>
+              </div>
+              <span class="mono">{{ s.hora_inicio.slice(0, 5) }}–{{ s.hora_fin.slice(0, 5) }}</span>
+            </div>
+          } @empty {
+            <p class="vacio sin-borde">No hay entrenamientos programados esta semana.</p>
+          }
+        </section>
+      </div>
+    </div>
+  } @else {
+    <p class="panel vacio">Cargando…</p>
+  }
+}

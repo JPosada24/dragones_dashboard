@@ -134,8 +134,13 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   por permisos desde `core/secciones.ts` (también genera las rutas), bandeja de avisos real, demás secciones
   "en construcción". 9 pruebas de frontend (token en memoria, renovación única ante 401, sin token a otros
   dominios, logout, menú por permisos, sin redirección abierta). CI: npm audit + build + tests.
-- SIGUIENTE (frontend F2+): una pantalla por sección, empezando por Resumen (necesita endpoint agregado),
-  Asistencia, Alumnos e Inscripciones. Las alertas se notificarán en la fase de notificaciones (Redis
+- HECHO (Resumen, 2026-10-29): `GET /api/v1/resumen` (staff; Entrenador su rama; `services/resumen.py`):
+  indicadores, alertas ordenadas por gravedad con `ruta` del frontend, sesiones de hoy, rifas del año, cartera y
+  próximo torneo (solo con `eventos.gestionar`). Pantalla Resumen: tablero del staff como el prototipo; las
+  familias ven a sus hijos (estado de cuenta) y próximos entrenamientos. 173 pruebas backend, 13 frontend.
+  Pipe `pesos` en `compartido/`. Pantallas construidas se registran en `PANTALLAS` de `app.routes.ts`.
+- SIGUIENTE (frontend): Asistencia, Alumnos, Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
+  Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.
 

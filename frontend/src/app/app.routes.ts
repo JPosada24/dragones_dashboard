@@ -1,9 +1,16 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 
 import { requierePermiso, requiereSesion, soloInvitado } from './core/auth/guards';
 import { SECCIONES } from './core/secciones';
 
-const enConstruccion = () => import('./paginas/en-construccion').then((m) => m.EnConstruccionPage);
+type Cargar = NonNullable<Route['loadComponent']>;
+
+const enConstruccion: Cargar = () => import('./paginas/en-construccion').then((m) => m.EnConstruccionPage);
+
+/** Pantallas ya construidas; las demás secciones muestran "en construcción". */
+const PANTALLAS: Record<string, Cargar> = {
+  '': () => import('./paginas/resumen/resumen').then((m) => m.ResumenPage),
+};
 
 export const routes: Routes = [
   {
@@ -24,7 +31,7 @@ export const routes: Routes = [
         pathMatch: 'full' as const,
         title: `${s.etiqueta} · Dragones`,
         data: { permisos: s.permisos, titulo: s.titulo, subtitulo: s.subtitulo, descripcion: s.descripcion },
-        loadComponent: enConstruccion,
+        loadComponent: PANTALLAS[s.ruta] ?? enConstruccion,
       })),
       {
         path: 'notificaciones',

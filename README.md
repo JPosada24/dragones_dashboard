@@ -71,7 +71,7 @@ La seguridad está en el diseño y en las pruebas, no en ocultar el código:
 
 ## Pruebas
 
-**168 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
+**173 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
 hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
 el Admin no confirma expulsiones). Las reglas con hora (cierre de las 11:59 pm, ventana para marcar
 asistencia) se prueban con un reloj simulado.
@@ -149,7 +149,8 @@ frontend/        Angular 22 (ver frontend/README.md)
 - [x] Notificaciones: correo, bandeja y WhatsApp con enlace
 - [x] Mora automática por deudas sin pagar
 - [x] Frontend F1 — ingreso, marco con menú por permisos, avisos
-- [ ] Frontend: una pantalla por sección (Resumen, Asistencia, Alumnos, Inscripciones, …)
+- [x] Frontend: Resumen (tablero del staff y vista de las familias)
+- [ ] Frontend: Asistencia, Alumnos, Inscripciones, Dinero, Torneos, Configuración…
 - [ ] Sitio público del club · asistente con IA · despliegue
 
 ## Licencia

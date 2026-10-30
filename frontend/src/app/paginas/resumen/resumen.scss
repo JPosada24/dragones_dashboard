@@ -1,0 +1,371 @@
+:host {
+  display: grid;
+  gap: 20px;
+}
+
+h2 {
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.panel-sub {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--texto-3);
+}
+
+.fila-base {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.relleno {
+  padding: 17px 18px;
+  display: grid;
+  gap: 13px;
+  align-content: start;
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+}
+
+.sin-borde {
+  padding: 0;
+}
+
+.nota {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.oro {
+  color: var(--oro);
+}
+
+.naranja {
+  color: var(--naranja);
+}
+
+.chico {
+  font-size: 10.5px;
+}
+
+/* ---------- Indicadores ---------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--borde);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.kpi {
+  background: var(--panel);
+  padding: 17px 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.kpi-valor {
+  font: 300 29px/1 var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.kpi-nota {
+  font: 500 11px var(--f-texto);
+  color: var(--texto-3);
+}
+
+/* ---------- Columnas ---------- */
+.columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.columna {
+  display: grid;
+  gap: 18px;
+}
+
+/* ---------- Alertas ---------- */
+.panel-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.insignia {
+  font: 600 10px var(--f-mono);
+  color: var(--fondo);
+  background: var(--oro);
+  padding: 4px 9px;
+  border-radius: 4px;
+}
+
+.alerta {
+  --tono: var(--naranja);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--borde-suave);
+
+  &[data-tipo='expulsion'] {
+    --tono: var(--rojo);
+  }
+
+  &[data-tipo='inasistencias'],
+  &[data-tipo='riesgo_mora'] {
+    --tono: var(--oro);
+  }
+}
+
+.alerta-barra {
+  width: 3px;
+  height: 34px;
+  border-radius: 2px;
+  background: var(--tono);
+}
+
+.alerta-titulo {
+  font: 600 12.5px var(--f-texto);
+}
+
+.alerta-detalle {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--texto-3);
+}
+
+.alerta-cuando {
+  font-size: 10.5px;
+  color: var(--texto-3);
+  white-space: nowrap;
+}
+
+.alerta-accion {
+  font: 600 11px var(--f-texto);
+  color: var(--tono);
+  border: 1px solid var(--tono);
+  padding: 6px 11px;
+  border-radius: 5px;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--tono);
+    background: rgba(242, 105, 30, 0.12);
+  }
+}
+
+/* ---------- Rifas ---------- */
+.rifas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.rifa {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 13px;
+  display: grid;
+  gap: 10px;
+}
+
+.rifa-nombre {
+  font: 700 12.5px var(--f-titulo);
+  color: var(--texto-blanco);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rifa-estado {
+  font-size: 9.5px;
+  color: var(--naranja);
+}
+
+.rifa-valor {
+  font: 300 22px/1 var(--f-titulo);
+  color: var(--texto-blanco);
+
+  span {
+    font-size: 13px;
+    color: var(--texto-3);
+  }
+}
+
+.rifa-limite {
+  font-size: 10.5px;
+  color: var(--texto-3);
+}
+
+.barra {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+
+  &.apilada {
+    height: 5px;
+  }
+}
+
+.barra-relleno {
+  background: var(--naranja);
+}
+
+.presente {
+  background: var(--naranja);
+}
+
+.justificado {
+  background: var(--oro);
+}
+
+.ausente {
+  background: var(--rojo-oscuro);
+}
+
+/* ---------- Hoy ---------- */
+.sesion {
+  display: grid;
+  gap: 6px;
+}
+
+.sesion-fila {
+  font: 500 12px var(--f-texto);
+  color: var(--texto-2);
+  text-transform: capitalize;
+
+  .mono {
+    color: var(--texto-3);
+  }
+}
+
+.leyenda {
+  display: flex;
+  gap: 14px;
+  font-size: 10px;
+  color: var(--texto-3);
+
+  i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 3px;
+  }
+}
+
+/* ---------- Cartera ---------- */
+.cartera-fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--borde-suave);
+
+  &.total {
+    border-bottom: 0;
+    font-weight: 600;
+  }
+}
+
+.cartera-concepto {
+  font: 500 12px var(--f-texto);
+  color: var(--texto-2);
+  text-transform: capitalize;
+}
+
+.cartera-nota {
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--texto-3);
+}
+
+.cartera-monto {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---------- Torneo ---------- */
+.destacado {
+  background: linear-gradient(155deg, rgba(242, 105, 30, 0.16), rgba(11, 14, 19, 0));
+  border-color: rgba(242, 105, 30, 0.3);
+  gap: 9px;
+}
+
+.chico-titulo {
+  font: 600 12.5px var(--f-titulo);
+}
+
+.torneo-nombre {
+  font: 300 19px/1.2 var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.torneo-detalle {
+  font-size: 11.5px;
+  color: var(--texto-2);
+}
+
+.enlace-oro {
+  font: 600 11.5px var(--f-texto);
+  color: var(--oro);
+}
+
+/* ---------- Familias ---------- */
+.chip {
+  font: 600 10.5px var(--f-texto);
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: var(--oro-tenue);
+  color: var(--oro);
+  white-space: nowrap;
+
+  &.ok {
+    background: var(--naranja-tenue);
+    color: var(--naranja);
+  }
+
+  &.mal {
+    background: var(--rojo-tenue);
+    color: var(--rojo);
+  }
+}
+
+@media (max-width: 1159px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .alerta {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+
+    .alerta-cuando {
+      display: none;
+    }
+  }
+}
