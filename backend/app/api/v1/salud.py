@@ -11,6 +11,6 @@ router = APIRouter(tags=["sistema"])
 def salud(db: Session = Depends(get_db)) -> dict[str, str]:
     try:
         db.execute(text("SELECT 1"))
-    except Exception:
-        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible") from e
     return {"estado": "ok"}

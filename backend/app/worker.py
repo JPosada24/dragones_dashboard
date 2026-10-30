@@ -26,7 +26,7 @@ from app.db.session import SessionLocal
 from app.services import asistencia, inscripciones, mora, notificaciones, programacion
 
 log = logging.getLogger("dragones.worker")
-LATIDO = Path("/tmp/worker_latido")  # lo revisa el healthcheck de Docker
+LATIDO = Path("/tmp/worker_latido")  # noqa: S108  (solo dentro del contenedor; lo revisa el healthcheck)
 PAUSA_SEGUNDOS = 15
 
 

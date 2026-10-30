@@ -37,7 +37,7 @@ def listar(
         try:
             documento = normalizar_documento(documento)
         except ValueError as e:
-            raise ErrorNegocio(str(e))
+            raise ErrorNegocio(str(e)) from e
     filas = servicio.listar_acudientes(
         db, usuario, tipo_documento=tipo_documento, documento=documento, buscar=buscar, skip=skip, limit=limit
     )

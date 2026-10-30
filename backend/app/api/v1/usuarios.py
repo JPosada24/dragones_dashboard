@@ -8,7 +8,8 @@ from app.api.deps import ip_cliente, requiere, usuario_a_out
 from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.schemas.auth import UsuarioActualizar, UsuarioCrear, UsuarioOut
-from app.services import auditoria, usuarios as servicio
+from app.services import auditoria
+from app.services import usuarios as servicio
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
@@ -37,9 +38,9 @@ def crear(
             rama=datos.rama,
         )
     except servicio.EmailDuplicado:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un usuario con ese correo")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un usuario con ese correo") from None
     except servicio.RolNoExiste:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "El rol no existe")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "El rol no existe") from None
     auditoria.registrar(
         db, accion="usuario.crear", entidad="usuario", entidad_id=str(usuario.id), usuario_id=actor.id,
         despues={"email": usuario.email, "rol": datos.rol, "rama": datos.rama}, ip=ip_cliente(request),
@@ -70,7 +71,7 @@ def actualizar(
         try:
             usuario.rol = servicio.obtener_rol(db, datos.rol)
         except servicio.RolNoExiste:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "El rol no existe")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "El rol no existe") from None
     if datos.activo is not None:
         usuario.activo = datos.activo
     if "rama" in datos.model_fields_set:  # null quita la rama

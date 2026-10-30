@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core import cifrado
 from app.models.alumnos import Alumno
 from app.models.sistema import Auditoria
-from tests.fabrica import A, AC, crear_acudiente, crear_alumno, crear_menor, datos_alumno, inscribir
+from tests.fabrica import AC, A, crear_acudiente, crear_alumno, crear_menor, datos_alumno, inscribir
 
 
 @pytest.fixture

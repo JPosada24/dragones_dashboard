@@ -9,7 +9,14 @@ from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.torneos import Torneo
 from app.schemas.torneos import (
-    AnularPagoEquipoIn, EquipoCrear, EquipoOut, MotivoIn, PagoEquipoIn, RetiroOut, TorneoCrear, TorneoOut,
+    AnularPagoEquipoIn,
+    EquipoCrear,
+    EquipoOut,
+    MotivoIn,
+    PagoEquipoIn,
+    RetiroOut,
+    TorneoCrear,
+    TorneoOut,
 )
 from app.services import torneos as servicio
 
@@ -28,7 +35,9 @@ def torneo_a_out(db: Session, t: Torneo) -> TorneoOut:
 
 
 @router.get("", response_model=list[TorneoOut])
-def listar(desde: date | None = None, _: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db)) -> list[TorneoOut]:
+def listar(
+    desde: date | None = None, _: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db)
+) -> list[TorneoOut]:
     return [torneo_a_out(db, t) for t in servicio.listar(db, desde=desde)]
 
 

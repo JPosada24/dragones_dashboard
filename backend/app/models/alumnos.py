@@ -2,7 +2,18 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, LargeBinary, String, Uuid, func, text,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Uuid,
+    func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

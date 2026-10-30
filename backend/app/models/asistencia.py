@@ -2,7 +2,17 @@ import uuid
 from datetime import date, datetime, time
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Time, UniqueConstraint, Uuid,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Time,
+    UniqueConstraint,
+    Uuid,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,7 +20,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.alumnos import Alumno
 from app.models.dominio import (
-    CAUSAS_CANCELACION, ESTADOS_ASISTENCIA, ESTADOS_JUSTIFICACION, ESTADOS_MULTA, ORIGENES_ASISTENCIA, en,
+    CAUSAS_CANCELACION,
+    ESTADOS_ASISTENCIA,
+    ESTADOS_JUSTIFICACION,
+    ESTADOS_MULTA,
+    ORIGENES_ASISTENCIA,
+    en,
 )
 from app.models.mixins import TiempoMixin, UUIDMixin
 

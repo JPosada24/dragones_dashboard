@@ -14,6 +14,7 @@ router = APIRouter(prefix="/resumen", tags=["resumen"])
 
 class IndicadoresOut(BaseModel):
     alumnos_activos: int
+    alumnos_sin_inscripcion: int
     inscripciones_pendientes: int
     inscripciones_vencen_pronto: int
     multas_pendientes: int
@@ -85,7 +86,8 @@ def ver(
     r = servicio.calcular(db, usuario)
     return ResumenOut(
         indicadores=IndicadoresOut(
-            alumnos_activos=r.alumnos_activos, inscripciones_pendientes=r.inscripciones_pendientes,
+            alumnos_activos=r.alumnos_activos, alumnos_sin_inscripcion=r.alumnos_sin_inscripcion,
+            inscripciones_pendientes=r.inscripciones_pendientes,
             inscripciones_vencen_pronto=r.inscripciones_vencen_pronto, multas_pendientes=r.multas_pendientes,
             multas_saldo=r.multas_saldo, alertas=len(r.alertas),
         ),

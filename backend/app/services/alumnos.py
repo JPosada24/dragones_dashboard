@@ -127,7 +127,7 @@ def obtener_visible(db: Session, usuario: Usuario, alumno_id: uuid.UUID) -> Alum
 
 
 def obtener_por_id(db: Session, alumno_id: uuid.UUID) -> Alumno:
-    """Sin filtro de visibilidad: solo para datos que ya son públicos dentro del club (p. ej. el ganador de una rifa)."""
+    """Sin filtro de visibilidad: solo para datos ya públicos dentro del club (p. ej. el ganador de una rifa)."""
     alumno = db.get(Alumno, alumno_id)
     if alumno is None:
         raise NoEncontrado("Alumno no encontrado.")

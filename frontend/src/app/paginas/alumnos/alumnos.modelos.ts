@@ -59,3 +59,13 @@ export interface RegistroHistorial {
   multa_valor: number | null;
   multa_estado: 'pendiente' | 'pagada' | 'anulada' | null;
 }
+
+/** Lo que esta pantalla usa de una inscripción (la gestión completa está en Inscripciones). */
+export interface InscripcionBasica {
+  id: string;
+  valor: number;
+  monto_pagado: number | null;
+  saldo: number;
+  estado: string;
+  fecha_limite_pago: string;
+}

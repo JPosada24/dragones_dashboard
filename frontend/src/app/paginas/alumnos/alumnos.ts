@@ -13,7 +13,9 @@ import { isoLocal } from '../../compartido/fechas';
 import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
-import { Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial } from './alumnos.modelos';
+import {
+  Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, InscripcionBasica, Rama, RegistroHistorial,
+} from './alumnos.modelos';
 
 const TIPOS_ARCHIVO: { valor: string; texto: string }[] = [
   { valor: 'identidad', texto: 'Documento de identidad' },
@@ -41,6 +43,8 @@ interface VinculoNuevo {
   principal: boolean;
 }
 
+type FormaPago = 'ninguno' | 'parcial' | 'completo';
+
 /** Resultado de buscar al acudiente por documento: encontrado, no existe (se crea) o sin buscar aún. */
 type BusquedaAcudiente = Acudiente | 'nuevo' | null;
 
@@ -57,11 +61,14 @@ export class AlumnosPage implements OnInit {
   private readonly ruta = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly pesos = new PesosPipe();
 
   // ---------- Permisos (la autorización real la hace el servidor) ----------
   protected readonly esStaff = computed(() => this.auth.tieneAlguno(['alumnos.ver_todos', 'alumnos.ver_rama']));
   protected readonly veTodasLasRamas = computed(() => this.auth.tiene('alumnos.ver_todos'));
   protected readonly puedeEditar = computed(() => this.auth.tiene('alumnos.editar'));
+  protected readonly puedeInscribir = computed(() => this.auth.tiene('inscripciones.crear'));
+  protected readonly puedeAbonar = computed(() => this.auth.tiene('inscripciones.abonar'));
   /** Rama fija para quien solo maneja la suya (el Entrenador). */
   protected readonly ramaPropia = computed(() => (this.veTodasLasRamas() ? null : (this.auth.usuario()?.rama ?? null)));
 
@@ -99,6 +106,7 @@ export class AlumnosPage implements OnInit {
   protected readonly quitandoAcudiente = signal<AcudienteVinculado | null>(null);
   protected readonly subiendoDocumento = signal(false);
   protected readonly eliminandoDocumento = signal<Documento | null>(null);
+  protected readonly inscribiendo = signal(false);
   protected readonly busquedaAcudiente = signal<BusquedaAcudiente>(null);
   protected readonly archivo = signal<File | null>(null);
 
@@ -126,6 +134,12 @@ export class AlumnosPage implements OnInit {
     email: ['', [Validators.email, Validators.maxLength(254)]],
   });
   protected readonly formDocumento = this.fb.group({ tipo: ['identidad', Validators.required] });
+  /** Inscripción del año (al crear el alumno o desde su ficha) y su primer abono. */
+  protected readonly formInscripcion = this.fb.group({
+    inscribir: true,
+    pago: this.fb.control<FormaPago>('ninguno'),
+    monto: [0, [Validators.min(1), Validators.max(100_000_000)]],
+  });
 
   // ---------- Derivados ----------
   protected readonly asistenciaResumen = computed(() => {
@@ -156,7 +170,8 @@ export class AlumnosPage implements OnInit {
         this.errorLista.set(false);
         this.alumnos.set(lista);
         // La familia con un solo alumno lo ve directo.
-        if (!this.esStaff() && lista.length === 1 && !this.seleccionadoId()) this.seleccionar(lista[0]!.id);
+        const [unico] = lista;
+        if (!this.esStaff() && unico && lista.length === 1 && !this.seleccionadoId()) this.seleccionar(unico.id);
       },
       error: () => this.errorLista.set(true),
     });
@@ -246,6 +261,7 @@ export class AlumnosPage implements OnInit {
   protected abrirNuevo(): void {
     this.formAlumno.reset({ rama: this.ramaPropia() === 'masculina' ? 'masculina' : 'femenina' });
     this.reiniciarAcudiente();
+    this.reiniciarInscripcion();
     this.abrir(() => this.editandoAlumno.set('nuevo'));
   }
 
@@ -285,11 +301,31 @@ export class AlumnosPage implements OnInit {
           }),
         ),
       );
+      const errorPago = this.problemaInscripcion();
+      if (errorPago) return this.errorDialogo.set(errorPago);
+      const inscribir = this.puedeInscribir() && this.formInscripcion.getRawValue().inscribir;
       this.ejecutar(peticion, (a) => {
-        this.editandoAlumno.set(null);
-        this.cargarLista();
-        this.seleccionar(a.id);
-        this.avisar(null, `${a.nombres} ${a.apellidos} quedó registrado.`);
+        const nombre = `${a.nombres} ${a.apellidos}`;
+        const terminar = (texto: string, error = false) => {
+          this.editandoAlumno.set(null);
+          this.cargarLista();
+          this.seleccionar(a.id);
+          this.mensaje.set({ error, texto });
+        };
+        if (!inscribir) return terminar(`${nombre} quedó registrado.`);
+        // El alumno ya existe: si la inscripción falla, se cierra el popup (reintentar lo duplicaría) y se avisa.
+        this.ocupado.set(true);
+        this.inscribir$(a.id).subscribe({
+          next: (i) => {
+            this.ocupado.set(false);
+            terminar(`${nombre} quedó registrado e inscrito. ${this.textoInscripcion(i)}`);
+          },
+          error: (e) => {
+            this.ocupado.set(false);
+            const detalle = `${nombre} quedó registrado, pero falló la inscripción: ${mensajeError(e)}`;
+            terminar(`${detalle} Puedes inscribirlo desde su ficha.`, true);
+          },
+        });
       }, true);
       return;
     }
@@ -304,6 +340,61 @@ export class AlumnosPage implements OnInit {
       this.reemplazar(a);
       this.documentoCompleto.set(null);
       this.avisar(null, 'Cambios guardados.');
+    }, true);
+  }
+
+  // ---------- Inscripción del año ----------
+  private reiniciarInscripcion(): void {
+    this.formInscripcion.reset({ inscribir: true, pago: 'ninguno', monto: 0 });
+  }
+
+  protected abrirInscribir(): void {
+    this.reiniciarInscripcion();
+    this.abrir(() => this.inscribiendo.set(true));
+  }
+
+  /** Qué falta en la forma de pago; null si está bien. */
+  private problemaInscripcion(): string | null {
+    const f = this.formInscripcion.getRawValue();
+    if (!f.inscribir || f.pago !== 'parcial') return null;
+    if (!Number.isInteger(f.monto) || f.monto < 1) return 'Escribe el valor del abono (en pesos, sin puntos).';
+    return null;
+  }
+
+  /** Inscribe al alumno en el año y, si se indicó, registra el primer abono con fecha de hoy. */
+  private inscribir$(alumnoId: string): Observable<InscripcionBasica> {
+    const f = this.formInscripcion.getRawValue();
+    return this.http.post<InscripcionBasica>(`${API}/inscripciones`, { alumno_id: alumnoId }).pipe(
+      switchMap((i) => {
+        const monto = f.pago === 'completo' ? i.saldo : f.pago === 'parcial' ? f.monto : 0;
+        if (!this.puedeAbonar() || monto <= 0 || i.saldo === 0) return of(i);
+        const url = `${API}/inscripciones/${encodeURIComponent(i.id)}/pagos`;
+        return this.http.post<InscripcionBasica>(url, { fecha_pago: this.hoy, monto });
+      }),
+    );
+  }
+
+  private textoInscripcion(i: InscripcionBasica): string {
+    if (i.saldo === 0) return 'La inscripción quedó paga y activa.';
+    const pagado = i.monto_pagado ? `Abonó ${this.pesos.transform(i.monto_pagado)}; ` : '';
+    return `${pagado}saldo ${this.pesos.transform(i.saldo)} hasta el ${this.fecha(i.fecha_limite_pago)}.`;
+  }
+
+  private fecha(iso: string): string {
+    const [a, m, d] = iso.split('-');
+    return `${d}/${m}/${a}`;
+  }
+
+  protected guardarInscripcion(): void {
+    const a = this.alumno();
+    if (!a) return;
+    const error = this.problemaInscripcion();
+    if (error) return this.errorDialogo.set(error);
+    this.ejecutar(this.inscribir$(a.id), (i) => {
+      this.inscribiendo.set(false);
+      this.seleccionar(a.id);
+      this.cargarLista();
+      this.avisar(null, `Inscripción registrada. ${this.textoInscripcion(i)}`);
     }, true);
   }
 

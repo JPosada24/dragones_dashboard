@@ -4,11 +4,7 @@ import pytest
 
 from app import worker
 from app.core.fechas import sumar_meses
-from tests.fabrica import A, I
-from tests.test_asistencia import (  # noqa: F401  (reloj, familia, h_admin y h_root son fixtures)
-    LUNES, M, _alumno_inscrito, _cerrar, _en, _sesion, familia, h_admin, h_root, reloj,
-)
-from tests.test_rifas import _rifa
+from tests.fabrica import LUNES, A, I, M, alumno_inscrito, cerrar_dia, crear_rifa, crear_sesion, en_hora
 
 MO = "/api/v1/mora"
 N = "/api/v1/notificaciones"
@@ -29,9 +25,9 @@ def con_multa(client, h_admin, familia, reloj):
     hija = familia["hija"]
     i = _inscripcion(client, h_admin, hija["id"])
     client.post(f"{I}/{i['id']}/pagos", json={"fecha_pago": LUNES.isoformat(), "monto": 90000}, headers=h_admin)
-    _sesion(client, h_admin)
-    reloj(_en(LUNES, 23, 59))
-    _cerrar(client, h_admin)
+    crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 23, 59))
+    cerrar_dia(client, h_admin)
     return hija
 
 
@@ -42,9 +38,9 @@ def test_sumar_meses_respeta_el_fin_de_mes():
 
 
 def test_aviso_a_la_familia_15_dias_antes_de_la_mora(client, familia, con_multa, reloj):
-    reloj(_en(EN_MORA - timedelta(days=16), 9))
+    reloj(en_hora(EN_MORA - timedelta(days=16), 9))
     assert worker.ejecutar(_tarea()) is None
-    reloj(_en(EN_MORA - timedelta(days=15), 9))
+    reloj(en_hora(EN_MORA - timedelta(days=15), 9))
     assert worker.ejecutar(_tarea()) == "0 a expulsar, 0 expulsados, 0 al día, 1 avisos de mora"
     assert worker.ejecutar(_tarea()) is None  # no se repite
     aviso = next(a for a in client.get(f"{N}/mias", headers=familia["h"]).json() if a["tipo"] == "aviso_mora")
@@ -52,11 +48,11 @@ def test_aviso_a_la_familia_15_dias_antes_de_la_mora(client, familia, con_multa,
 
 
 def test_con_tres_meses_de_deuda_pasa_a_expulsar_y_avisa(client, h_admin, familia, con_multa, reloj):
-    reloj(_en(EN_MORA - timedelta(days=1), 9))
+    reloj(en_hora(EN_MORA - timedelta(days=1), 9))
     worker.ejecutar(_tarea())
     assert _inscripcion(client, h_admin, con_multa["id"])["estado"] == "activo"
 
-    reloj(_en(EN_MORA, 9))
+    reloj(en_hora(EN_MORA, 9))
     assert worker.ejecutar(_tarea()) == "1 a expulsar, 0 expulsados, 0 al día, 0 avisos de mora"
     assert worker.ejecutar(_tarea()) is None
     i = _inscripcion(client, h_admin, con_multa["id"])
@@ -71,7 +67,7 @@ def test_con_tres_meses_de_deuda_pasa_a_expulsar_y_avisa(client, h_admin, famili
 
 
 def test_al_ponerse_al_dia_vuelve_a_activo(client, h_admin, familia, con_multa, reloj):
-    reloj(_en(EN_MORA, 9))
+    reloj(en_hora(EN_MORA, 9))
     worker.ejecutar(_tarea())
     multa = client.get(M, headers=h_admin).json()[0]
     client.post(f"{M}/{multa['id']}/pago", json={"fecha_pago": EN_MORA.isoformat()}, headers=h_admin)
@@ -83,7 +79,7 @@ def test_al_ponerse_al_dia_vuelve_a_activo(client, h_admin, familia, con_multa, 
 
 def test_con_expulsion_automatica_queda_expulsado(client, h_root, h_admin, con_multa, reloj):
     client.patch("/api/v1/configuracion/expulsion_automatica", json={"valor": True}, headers=h_root)
-    reloj(_en(EN_MORA, 9))
+    reloj(en_hora(EN_MORA, 9))
     assert worker.ejecutar(_tarea()) == "0 a expulsar, 1 expulsados, 0 al día, 0 avisos de mora"
     assert _inscripcion(client, h_admin, con_multa["id"])["estado"] == "expulsado"
 
@@ -99,16 +95,16 @@ def test_lo_marcado_a_mano_no_lo_revierte_el_sistema(client, h_admin, familia, r
 
 
 def test_el_talonario_se_debe_desde_el_sorteo(client, h_admin, reloj):
-    alumna = _alumno_inscrito(client, h_admin)
+    alumna = alumno_inscrito(client, h_admin)
     i = _inscripcion(client, h_admin, alumna["id"])
     client.post(f"{I}/{i['id']}/pagos", json={"fecha_pago": LUNES.isoformat(), "monto": 90000}, headers=h_admin)
     sorteo = LUNES + timedelta(days=10)
-    _rifa(client, h_admin, fecha=sorteo)
+    crear_rifa(client, h_admin, fecha=sorteo)
     assert client.get(MO, headers=h_admin).json() == []  # antes del sorteo aún no se debe
-    reloj(_en(sorteo, 9))
+    reloj(en_hora(sorteo, 9))
     [riesgo] = client.get(MO, headers=h_admin).json()
     assert riesgo["total_vencido"] == 40000 and riesgo["entra_en_mora"] == sumar_meses(sorteo, 3).isoformat()
-    reloj(_en(sumar_meses(sorteo, 3), 9))
+    reloj(en_hora(sumar_meses(sorteo, 3), 9))
     worker.ejecutar(_tarea())
     assert _inscripcion(client, h_admin, alumna["id"])["estado"] == "a_expulsar"
 

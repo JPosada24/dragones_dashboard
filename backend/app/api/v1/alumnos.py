@@ -10,13 +10,20 @@ from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.alumnos import Alumno
 from app.schemas.alumnos import (
-    AcudienteVinculadoOut, AlumnoActualizar, AlumnoCrear, AlumnoOut, DocumentoIdentidadOut, DocumentoOut,
-    TipoArchivo, VinculoIn,
+    AcudienteVinculadoOut,
+    AlumnoActualizar,
+    AlumnoCrear,
+    AlumnoOut,
+    DocumentoIdentidadOut,
+    DocumentoOut,
+    TipoArchivo,
+    VinculoIn,
 )
 from app.schemas.asistencia import HistorialOut
-from app.schemas.rifas import DeudaRifaOut, EstadoCuentaOut
 from app.schemas.comunes import Rama
-from app.services import alumnos as servicio, asistencia, configuracion, documentos, estado_cuenta
+from app.schemas.rifas import DeudaRifaOut, EstadoCuentaOut
+from app.services import alumnos as servicio
+from app.services import asistencia, configuracion, documentos, estado_cuenta
 from app.services.errores import Prohibido
 
 router = APIRouter(prefix="/alumnos", tags=["alumnos"])
@@ -231,7 +238,10 @@ def descargar_documento(
     return Response(
         datos,
         media_type=doc.mime,
-        headers={"Content-Disposition": documentos.content_disposition(doc.nombre_original), "Cache-Control": "no-store"},
+        headers={
+            "Content-Disposition": documentos.content_disposition(doc.nombre_original),
+            "Cache-Control": "no-store",
+        },
     )
 
 

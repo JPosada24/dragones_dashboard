@@ -525,6 +525,12 @@ h2 {
   color: var(--texto-3);
 }
 
+.acciones-ficha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
 /* ---------- Formularios (popups) ---------- */
 .formulario {
   display: grid;
@@ -594,6 +600,16 @@ h2 {
     font-size: 17px;
     color: var(--naranja);
   }
+}
+
+.opciones-pago {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.monto {
+  max-width: 240px;
 }
 
 .acciones {

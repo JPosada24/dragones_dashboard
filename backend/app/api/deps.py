@@ -36,7 +36,7 @@ def usuario_actual(
         payload = decodificar_access_token(credenciales.credentials)
         usuario_id = uuid.UUID(payload["sub"])
     except (jwt.PyJWTError, ValueError, KeyError):
-        raise _no_autenticado()
+        raise _no_autenticado() from None  # no se expone por qué falló el token
     usuario = db.get(Usuario, usuario_id)
     if usuario is None or not usuario.activo:
         raise _no_autenticado()

@@ -1,8 +1,21 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
-    acudientes, alumnos, auth, configuracion, inscripciones, justificaciones, mora, multas, notificaciones,
-    resumen, rifas, salud, sesiones, torneos, usuarios,
+    acudientes,
+    alumnos,
+    auth,
+    configuracion,
+    inscripciones,
+    justificaciones,
+    mora,
+    multas,
+    notificaciones,
+    resumen,
+    rifas,
+    salud,
+    sesiones,
+    torneos,
+    usuarios,
 )
 
 api_router = APIRouter()

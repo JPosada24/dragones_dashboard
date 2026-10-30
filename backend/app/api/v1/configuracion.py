@@ -26,5 +26,5 @@ def actualizar(
     try:
         fila = servicio.actualizar(db, clave=clave, valor=datos.valor, usuario_id=actor.id, ip=ip_cliente(request))
     except servicio.ConfigInvalida as e:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
     return ConfigOut(clave=fila.clave, valor=fila.valor, descripcion=fila.descripcion)

@@ -78,7 +78,8 @@ def test_configuracion_lectura_y_edicion(client, crear_usuario, auth_header):
     assert valores["puestos_por_talonario"] == 20 and valores["precio_puesto"] == 2000
 
     # El Admin NO puede cambiar parámetros críticos
-    assert client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": 5000}, headers=h_adm).status_code == 403
+    r = client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": 5000}, headers=h_adm)
+    assert r.status_code == 403
     # El SuperAdmin sí
     r = client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": 5000}, headers=h_root)
     assert r.status_code == 200 and r.json()["valor"] == 5000
@@ -87,8 +88,10 @@ def test_configuracion_lectura_y_edicion(client, crear_usuario, auth_header):
 def test_configuracion_valida_tipos(client, crear_usuario, auth_header):
     crear_usuario("root@club.com", "SUPERADMIN")
     h = auth_header("root@club.com")
-    assert client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": "mucho"}, headers=h).status_code == 422
+    r = client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": "mucho"}, headers=h)
+    assert r.status_code == 422
     assert client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": -1}, headers=h).status_code == 422
     assert client.patch("/api/v1/configuracion/expulsion_automatica", json={"valor": 1}, headers=h).status_code == 422
     assert client.patch("/api/v1/configuracion/no_existe", json={"valor": 1}, headers=h).status_code == 422
-    assert client.patch("/api/v1/configuracion/hora_cierre_asistencia", json={"valor": "25:99"}, headers=h).status_code == 422
+    r = client.patch("/api/v1/configuracion/hora_cierre_asistencia", json={"valor": "25:99"}, headers=h)
+    assert r.status_code == 422

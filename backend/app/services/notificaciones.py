@@ -200,7 +200,7 @@ def enviar_correos(db: Session, correo: Correo, *, ahora: datetime, lote: int = 
     for n in filas:
         try:
             correo.enviar(n.email_destino, f"[{asunto_club}] {n.titulo}", n.mensaje)
-        except Exception as e:  # noqa: BLE001  (cualquier error del proveedor se registra y se reintenta)
+        except Exception as e:
             n.email_intentos += 1
             n.email_error = f"{type(e).__name__}: {e}"[:255]
             if n.email_intentos >= MAX_INTENTOS_CORREO:

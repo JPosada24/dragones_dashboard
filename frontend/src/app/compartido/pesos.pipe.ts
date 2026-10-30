@@ -6,6 +6,6 @@ const FORMATO = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
 @Pipe({ name: 'pesos' })
 export class PesosPipe implements PipeTransform {
   transform(valor: number | null | undefined): string {
-    return valor == null ? '' : `$${FORMATO.format(valor)}`;
+    return valor === null || valor === undefined ? '' : `$${FORMATO.format(valor)}`;
   }
 }

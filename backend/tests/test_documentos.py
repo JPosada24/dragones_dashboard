@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.models.alumnos import DocumentoAlumno
 from app.models.sistema import Auditoria
-from tests.fabrica import A, PDF, crear_acudiente, crear_alumno, crear_menor
+from tests.fabrica import PDF, A, crear_acudiente, crear_alumno, crear_menor
 
 
 @pytest.fixture

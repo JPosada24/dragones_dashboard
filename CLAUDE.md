@@ -49,7 +49,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   las pruebas ahora construyen el esquema con `alembic upgrade head` (prueban migraciones y triggers);
   prueba nueva del trigger append-only de `auditoria`; `docker-compose.yml` ahora respeta `API_PORT`.
 - Notas: si cambias `POSTGRES_PASSWORD` con el volumen ya creado, hay que `docker compose down -v`
-  (Postgres solo usa la clave al inicializar). `ruff` aún no tiene configuración en el proyecto.
+  (Postgres solo usa la clave al inicializar).
 - HECHO (Fase 1 parte B, 2026-10-22): migración 0002 (alumnos, acudientes, alumno_acudiente, documentos_alumno,
   inscripciones, prorrogas + `usuarios.rama`) 0003 (abonos) y 0004 (anulación de abonos). **89 pruebas en verde** (incluye `tests/test_seguridad.py`), `alembic check` limpio.
   - Documento de identidad cifrado con Fernet (`DATA_ENCRYPTION_KEY` en `.env`; si se pierde, no se recupera) +
@@ -174,6 +174,15 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   Backend: `GET /alumnos` acepta `activo` y busca también por documento **completo** (índice ciego en cada tipo;
   nunca parcial) y trae `inscripcion_estado` del año; `GET /alumnos/{id}/asistencia` (historial + multa, mismo
   alcance que la ficha). Compartidos: `compartido/estados.ts`, `.boton.peligro` global. 184 pruebas backend, 34 frontend.
+- HECHO (revisión de calidad, 2026-10-30): **ESLint** (`frontend/eslint.config.js`: typescript-eslint strict +
+  angular-eslint con accesibilidad de plantillas; `npm run lint`) y **ruff** (`backend/ruff.toml`: E/W/F/I/B/UP/S/
+  SIM/C4/DTZ/RUF, línea 120; las migraciones no se reordenan) en limpio y en el CI. Fixtures compartidas (`reloj`,
+  `h_admin`, `h_root`, `familia`) en `tests/conftest.py` y acciones (`crear_sesion`, `alumno_inscrito`, `crear_rifa`…)
+  en `tests/fabrica.py`: **nunca importar de otro `test_*.py`**. `raise ... from` en los except.
+  Editor: `node_modules` del PC (`npm ci` en `frontend/`) y `backend/.venv` solo para que VS Code resuelva tipos;
+  Docker usa los suyos. Resumen: `alumnos_sin_inscripcion` ("registrados sin inscribir"). Alumnos: inscribir al
+  crear o desde la ficha ("Inscribir <año>") con sin pago / abono parcial / pago completo (`inscripciones.crear` y
+  `.abonar`); si la inscripción falla tras crear, se avisa sin reintentar el alta. 184 pruebas backend, 37 frontend.
 - SIGUIENTE (frontend): Inscripciones, Multas y mora, Rifas, Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
@@ -219,6 +228,8 @@ copy .env.example .env          # una vez; luego editar valores
 docker compose up --build
 docker compose run --rm --user root api sh -c "pip install -q -r requirements-dev.txt && pytest"
 docker compose exec frontend npx ng test --watch=false      # pruebas del frontend
+cd frontend; npm run lint                                    # ESLint (requiere npm ci en el PC)
+docker compose run --rm --user root api sh -c "pip install -q ruff && ruff check ."
 ```
 Si el puerto 8000 está ocupado: `API_PORT=8001` en `.env`.
 

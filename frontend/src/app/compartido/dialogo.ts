@@ -15,6 +15,8 @@ let siguienteId = 0;
 @Component({
   selector: 'app-dialogo',
   template: `
+    <!-- El clic en el fondo es un atajo de ratón; con teclado se cierra con Escape (evento "cancel"). -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
     <dialog #dialogo [attr.aria-labelledby]="idTitulo" (cancel)="$event.preventDefault(); cerrar.emit()"
             (click)="clicFondo($event)">
       <div class="contenido">
@@ -38,7 +40,7 @@ export class Dialogo {
   readonly titulo = input.required<string>();
   readonly descripcion = input<string>('');
   readonly ancho = input<'normal' | 'ancho'>('normal');
-  readonly cerrar = output<void>();
+  readonly cerrar = output();
 
   protected readonly idTitulo = `dialogo-titulo-${siguienteId++}`;
   private readonly dialogo = viewChild.required<ElementRef<HTMLDialogElement>>('dialogo');

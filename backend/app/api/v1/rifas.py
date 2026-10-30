@@ -8,10 +8,20 @@ from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.rifas import ActaSorteo, Rifa, Talonario
 from app.schemas.rifas import (
-    ActaOut, AnularPagoRifaIn, AsignadosOut, CancelarRifaIn, CompradorIn, PagoPuestoOut, PagoRifaIn, PuestoOut,
-    RifaCrear, RifaOut, TalonarioOut,
+    ActaOut,
+    AnularPagoRifaIn,
+    AsignadosOut,
+    CancelarRifaIn,
+    CompradorIn,
+    PagoPuestoOut,
+    PagoRifaIn,
+    PuestoOut,
+    RifaCrear,
+    RifaOut,
+    TalonarioOut,
 )
-from app.services import alumnos, rifas as servicio
+from app.services import alumnos
+from app.services import rifas as servicio
 
 router = APIRouter(prefix="/rifas", tags=["rifas"])
 
@@ -84,7 +94,9 @@ def cancelar(
     actor: Usuario = Depends(requiere("rifas.gestionar")),
     db: Session = Depends(get_db),
 ) -> RifaOut:
-    rifa = servicio.cancelar(db, servicio.obtener(db, rifa_id), motivo=datos.motivo, actor=actor, ip=ip_cliente(request))
+    rifa = servicio.cancelar(
+        db, servicio.obtener(db, rifa_id), motivo=datos.motivo, actor=actor, ip=ip_cliente(request)
+    )
     db.commit()
     return rifa_a_out(db, rifa)
 
@@ -103,7 +115,9 @@ def asignar_talonarios(
 
 
 @router.get("/{rifa_id}/talonarios", response_model=list[TalonarioOut])
-def talonarios(rifa_id: uuid.UUID, usuario: Usuario = Depends(VER), db: Session = Depends(get_db)) -> list[TalonarioOut]:
+def talonarios(
+    rifa_id: uuid.UUID, usuario: Usuario = Depends(VER), db: Session = Depends(get_db)
+) -> list[TalonarioOut]:
     rifa = servicio.obtener(db, rifa_id)
     return [talonario_a_out(t) for t in servicio.talonarios_visibles(db, usuario, rifa)]
 

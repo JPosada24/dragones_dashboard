@@ -3,7 +3,7 @@ import hashlib
 import re
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from argon2 import PasswordHasher
@@ -51,7 +51,7 @@ def verificar_password_falso(password: str) -> None:
 def crear_access_token(usuario_id: uuid.UUID, rol_codigo: str) -> tuple[str, int]:
     """Devuelve (token, segundos de vida)."""
     s = get_settings()
-    ahora = datetime.now(timezone.utc)
+    ahora = datetime.now(UTC)
     vida = timedelta(minutes=s.access_token_minutos)
     payload = {
         "sub": str(usuario_id),

@@ -4,6 +4,7 @@ from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.fechas import hoy
 from app.schemas.comunes import Rama, TipoDocumento, normalizar_documento, normalizar_email, normalizar_telefono
 
 TipoArchivo = Literal["identidad", "eps", "consentimiento", "certificado_medico", "foto", "otro"]
@@ -30,7 +31,7 @@ class _Entrada(BaseModel):
     @field_validator("fecha_nacimiento", check_fields=False)
     @classmethod
     def _nacimiento(cls, v: date | None) -> date | None:
-        if v is not None and not (date(1900, 1, 1) <= v <= date.today()):
+        if v is not None and not (date(1900, 1, 1) <= v <= hoy()):  # hoy en Bogotá, no en la zona del servidor
             raise ValueError("Fecha de nacimiento inválida")
         return v
 
@@ -105,7 +106,9 @@ class AlumnoCrear(_Entrada):
 
 
 class AlumnoActualizar(_SinNulos):
-    OBLIGATORIOS: ClassVar[tuple[str, ...]] = ("nombres", "apellidos", "tipo_documento", "documento", "fecha_nacimiento", "rama", "activo")
+    OBLIGATORIOS: ClassVar[tuple[str, ...]] = (
+        "nombres", "apellidos", "tipo_documento", "documento", "fecha_nacimiento", "rama", "activo",
+    )
 
     nombres: str | None = Field(default=None, min_length=2, max_length=80)
     apellidos: str | None = Field(default=None, min_length=2, max_length=80)

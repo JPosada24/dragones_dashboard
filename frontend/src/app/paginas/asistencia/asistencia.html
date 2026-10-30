@@ -69,8 +69,8 @@
         } @else if (planilla(); as todas) {
           @if (veTodasLasRamas() && todas.length) {
             <div class="filtros" role="group" aria-label="Filtrar por rama">
-              @for (op of [{ v: '', t: 'Todos' }, { v: 'femenina', t: 'Femenina' }, { v: 'masculina', t: 'Masculina' }]; track op.v) {
-                <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === op.v" (click)="filtroRama.set($any(op.v))">
+              @for (op of opcionesRama; track op.v) {
+                <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === op.v" (click)="filtroRama.set(op.v)">
                   {{ op.t }}
                 </button>
               }

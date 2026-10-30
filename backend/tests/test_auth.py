@@ -6,7 +6,6 @@ from sqlalchemy.exc import DBAPIError
 from app.core.config import get_settings
 from app.models.acceso import SesionRefresh, Usuario
 from app.models.sistema import Auditoria
-
 from tests.conftest import PASSWORD
 
 

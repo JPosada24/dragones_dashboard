@@ -178,7 +178,9 @@ def pagar(
     if fecha > fechas.hoy():
         raise ErrorNegocio("La fecha de pago no puede ser futura.")
     if monto > equipo.saldo:
-        raise ErrorNegocio(f"El pago ({formato_pesos(monto)}) supera el saldo pendiente ({formato_pesos(equipo.saldo)}).")
+        raise ErrorNegocio(
+            f"El pago ({formato_pesos(monto)}) supera el saldo pendiente ({formato_pesos(equipo.saldo)})."
+        )
     equipo.pagos.append(PagoEquipo(fecha=fecha, monto=monto, registrado_por=actor.id))
     equipo.monto_pagado += monto
     if equipo.saldo == 0:

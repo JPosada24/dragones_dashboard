@@ -1,0 +1,27 @@
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes: imports y variables sin usar, nombres indefinidos
+  "I",        # orden de imports
+  "B",        # bugbear: errores frecuentes
+  "UP",       # sintaxis moderna de Python
+  "S",        # bandit: seguridad
+  "SIM",      # simplificaciones
+  "C4",       # comprensiones
+  "DTZ",      # fechas sin zona horaria
+  "RUF",
+]
+ignore = [
+  "RUF001", "RUF002", "RUF003",  # textos en español con tildes, guiones largos y "·"
+  "B008",                        # Depends()/Query() en los parámetros es el estilo de FastAPI
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "DTZ"]  # assert, contraseñas de prueba y fechas fijas
+"alembic/versions/**" = ["E501", "I001"]  # las migraciones aplicadas no se editan
+
+[lint.isort]
+known-first-party = ["app", "tests"]

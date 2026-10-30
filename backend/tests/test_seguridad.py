@@ -1,6 +1,6 @@
 from app.core.config import get_settings
 from tests.conftest import PASSWORD
-from tests.fabrica import A, AC, PDF, crear_acudiente, crear_alumno, crear_menor
+from tests.fabrica import AC, PDF, A, crear_acudiente, crear_alumno, crear_menor
 
 
 # ---------- Límite de logins fallidos por IP ----------

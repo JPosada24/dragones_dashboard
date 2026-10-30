@@ -7,7 +7,13 @@
       <div class="kpi">
         <div class="etiqueta">Alumnos activos</div>
         <div class="kpi-valor">{{ r.indicadores.alumnos_activos }}</div>
-        <div class="kpi-nota">con inscripción vigente</div>
+        @if (r.indicadores.alumnos_sin_inscripcion > 0) {
+          <a class="kpi-nota oro" routerLink="/alumnos">
+            + {{ r.indicadores.alumnos_sin_inscripcion }} registrados sin inscribir
+          </a>
+        } @else {
+          <div class="kpi-nota">con inscripción vigente</div>
+        }
       </div>
       <div class="kpi">
         <div class="etiqueta">Inscripciones pendientes</div>

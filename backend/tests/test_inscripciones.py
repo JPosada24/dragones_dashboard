@@ -136,7 +136,9 @@ def test_superadmin_anula_un_abono_y_la_inscripcion_vuelve_a_pendiente(client, h
     assert _pagar(client, h_admin, i["id"], monto=50000).json()["estado"] == "activo"
 
 
-def test_anulacion_exige_superadmin_y_motivo_y_no_se_repite(client, h_admin, h_root, alumno, crear_usuario, auth_header):
+def test_anulacion_exige_superadmin_y_motivo_y_no_se_repite(
+    client, h_admin, h_root, alumno, crear_usuario, auth_header
+):
     i = inscribir(client, h_admin, alumno["id"]).json()
     abono = _pagar(client, h_admin, i["id"], monto=40000).json()["pagos"][0]
     crear_usuario("coach@club.com", "ENTRENADOR", rama="femenina")

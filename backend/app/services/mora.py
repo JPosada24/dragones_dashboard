@@ -48,7 +48,9 @@ def deudas_de(db: Session, alumno: Alumno) -> list[Deuda]:
     talonarios = db.scalars(
         select(Talonario).join(Talonario.rifa).where(Talonario.alumno_id == alumno.id, Rifa.estado != "cancelada")
     ).unique()
-    deudas += [Deuda(f"Talonario de «{t.rifa.nombre}»", t.saldo, t.rifa.fecha_sorteo) for t in talonarios if t.saldo > 0]
+    deudas += [
+        Deuda(f"Talonario de «{t.rifa.nombre}»", t.saldo, t.rifa.fecha_sorteo) for t in talonarios if t.saldo > 0
+    ]
     return sorted(deudas, key=lambda d: d.vence)
 
 
@@ -151,7 +153,8 @@ def revisar(db: Session) -> ResultadoMora:
             )
             notificaciones.avisar(
                 db, familia, tipo="fin_mora", clave=f"fin_mora:{i.id}:{hoy.isoformat()}", alumno_id=alumno.id,
-                titulo="Ya estás al día", mensaje=f"{alumno.nombres} ya no tiene deudas en mora: su inscripción sigue activa.",
+                titulo="Ya estás al día",
+                mensaje=f"{alumno.nombres} ya no tiene deudas en mora: su inscripción sigue activa.",
             )
             r.al_dia += 1
 

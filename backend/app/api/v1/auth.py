@@ -50,7 +50,7 @@ def login(datos: LoginIn, request: Request, response: Response, db: Session = De
         usuario = servicio.autenticar(db, datos.email, datos.password, ip)
     except servicio.ErrorAuth:
         limitador.registrar_fallo(ip or "desconocida")
-        raise _no_autorizado("Credenciales inválidas")
+        raise _no_autorizado("Credenciales inválidas") from None
     access, vida, refresh = servicio.emitir_sesion(db, usuario, ip, agente)
     db.commit()
     _poner_cookie(response, refresh)
@@ -65,13 +65,13 @@ def refrescar(
     db: Session = Depends(get_db),
 ) -> TokenOut:
     if not refresh_token:
-        raise _no_autorizado("Sesión expirada")
+        raise _no_autorizado("Sesión expirada") from None
     agente = (request.headers.get("user-agent") or "")[:255] or None
     try:
         usuario, access, vida, nuevo = servicio.rotar_refresh(db, refresh_token, ip_cliente(request), agente)
     except servicio.ErrorAuth:
         response.delete_cookie(COOKIE_REFRESH, path=RUTA_COOKIE)
-        raise _no_autorizado("Sesión expirada")
+        raise _no_autorizado("Sesión expirada") from None
     _poner_cookie(response, nuevo)
     return TokenOut(access_token=access, expires_in=vida, usuario=usuario_a_out(usuario))
 

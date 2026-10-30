@@ -8,9 +8,16 @@ from app.core import fechas
 from app.core.correo import correo_registro
 from app.models.notificaciones import Notificacion
 from app.services import notificaciones
-from tests.fabrica import crear_acudiente, crear_menor, inscribir
-from tests.test_asistencia import (  # noqa: F401  (reloj, familia, h_admin y h_root son fixtures)
-    J, LUNES, S, _alumno_inscrito, _cerrar, _en, _justificar, _sesion, familia, h_admin, h_root, reloj,
+from tests.fabrica import (
+    LUNES,
+    J,
+    cerrar_dia,
+    crear_acudiente,
+    crear_menor,
+    crear_sesion,
+    en_hora,
+    inscribir,
+    justificar,
 )
 
 N = "/api/v1/notificaciones"
@@ -26,9 +33,9 @@ def _tarea(nombre):
 
 
 def _multa_para_la_familia(client, h_admin, reloj):
-    _sesion(client, h_admin)
-    reloj(_en(LUNES, 23, 59))
-    _cerrar(client, h_admin)
+    crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 23, 59))
+    cerrar_dia(client, h_admin)
 
 
 # ---------- Avisos por evento ----------
@@ -71,8 +78,8 @@ def test_un_correo_que_falla_se_reintenta_y_luego_queda_fallido(client, h_admin,
 
 
 def test_justificacion_rechazada_avisa_con_el_motivo(client, h_admin, familia):
-    sesion = _sesion(client, h_admin)
-    j = _justificar(client, familia["h"], sesion["id"], familia["hija"]["id"]).json()
+    sesion = crear_sesion(client, h_admin)
+    j = justificar(client, familia["h"], sesion["id"], familia["hija"]["id"]).json()
     client.post(f"{J}/{j['id']}/revisar", json={"aprobar": False, "comentario": "Sin soporte médico"}, headers=h_admin)
     [aviso] = client.get(f"{N}/mias", headers=familia["h"]).json()
     assert aviso["titulo"] == "Justificación rechazada" and "Sin soporte médico" in aviso["mensaje"]
@@ -81,7 +88,7 @@ def test_justificacion_rechazada_avisa_con_el_motivo(client, h_admin, familia):
 
 
 def test_inscripcion_vencida_avisa_a_la_familia(client, h_admin, familia, reloj):
-    reloj(_en(LUNES + timedelta(days=31), 9))
+    reloj(en_hora(LUNES + timedelta(days=31), 9))
     worker.ejecutar(_tarea("vencer_inscripciones"))
     tipos = [a["tipo"] for a in client.get(f"{N}/mias", headers=familia["h"]).json()]
     assert tipos == ["inscripcion_vencida"]
@@ -90,12 +97,12 @@ def test_inscripcion_vencida_avisa_a_la_familia(client, h_admin, familia, reloj)
 # ---------- Avisos programados ----------
 def test_recordatorios_de_pago_7_y_1_dia_antes_sin_duplicar(client, h_admin, familia, reloj):
     tarea = _tarea("avisos_programados")
-    reloj(_en(LUNES + timedelta(days=22), 9))  # faltan 8 días: aún no
+    reloj(en_hora(LUNES + timedelta(days=22), 9))  # faltan 8 días: aún no
     assert worker.ejecutar(tarea) is None
-    reloj(_en(LUNES + timedelta(days=23), 9))  # faltan 7
+    reloj(en_hora(LUNES + timedelta(days=23), 9))  # faltan 7
     assert worker.ejecutar(tarea) == "1 recordatorios de pago, 0 alertas de inasistencia"
     assert worker.ejecutar(tarea) is None  # idempotente
-    reloj(_en(LUNES + timedelta(days=29), 9))  # falta 1
+    reloj(en_hora(LUNES + timedelta(days=29), 9))  # falta 1
     worker.ejecutar(tarea)
     mensajes = [a["mensaje"] for a in client.get(f"{N}/mias", headers=familia["h"]).json()]
     assert len(mensajes) == 2 and "vence mañana" in mensajes[0] and "en 7 días" in mensajes[1]
@@ -104,9 +111,9 @@ def test_recordatorios_de_pago_7_y_1_dia_antes_sin_duplicar(client, h_admin, fam
 
 def test_alerta_de_inasistencias_llega_al_staff_una_vez_por_racha(client, h_admin, familia, reloj, auth_header):
     for n in range(4):
-        _sesion(client, h_admin, dia=LUNES + timedelta(days=n))
-    reloj(_en(LUNES + timedelta(days=3), 23, 59))
-    _cerrar(client, h_admin)
+        crear_sesion(client, h_admin, dia=LUNES + timedelta(days=n))
+    reloj(en_hora(LUNES + timedelta(days=3), 23, 59))
+    cerrar_dia(client, h_admin)
     tarea = _tarea("avisos_programados")
     assert worker.ejecutar(tarea) == "0 recordatorios de pago, 1 alertas de inasistencia"
     assert worker.ejecutar(tarea) is None
@@ -132,8 +139,8 @@ def test_acudiente_sin_cuenta_ni_correo_solo_recibe_lo_que_va_por_whatsapp(clien
     sin_cuenta = crear_acudiente(client, h_admin, documento="7000000001")
     hija = crear_menor(client, h_admin, documento="7000000002", acudiente=sin_cuenta)
     inscribir(client, h_admin, hija["id"])
-    sesion = _sesion(client, h_admin)
-    j = _justificar(client, h_admin, sesion["id"], hija["id"]).json()
+    sesion = crear_sesion(client, h_admin)
+    j = justificar(client, h_admin, sesion["id"], hija["id"]).json()
     client.post(f"{J}/{j['id']}/revisar", json={"aprobar": True}, headers=h_admin)
     assert db.scalars(select(Notificacion)).all() == []  # la justificación no tiene por dónde llegarle
 

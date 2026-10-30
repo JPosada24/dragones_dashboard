@@ -5,10 +5,7 @@ from sqlalchemy import text
 
 from app import worker
 from app.db.session import engine
-from tests.fabrica import I
-from tests.test_asistencia import (  # noqa: F401  (reloj y h_admin son fixtures)
-    LUNES, M, _alumno_inscrito, _en, _sesion, h_admin, reloj,
-)
+from tests.fabrica import LUNES, I, M, alumno_inscrito, crear_sesion, en_hora
 
 
 def _tarea(nombre: str) -> worker.Tarea:
@@ -16,23 +13,23 @@ def _tarea(nombre: str) -> worker.Tarea:
 
 
 def test_el_worker_cierra_la_asistencia_y_genera_multas(client, h_admin, reloj):
-    _alumno_inscrito(client, h_admin)
-    _sesion(client, h_admin)
+    alumno_inscrito(client, h_admin)
+    crear_sesion(client, h_admin)
     tarea = _tarea("cierre_asistencia")
     assert worker.ejecutar(tarea) is None  # a las 10:00 aún no hay nada que cerrar
 
-    reloj(_en(LUNES, 23, 59))
+    reloj(en_hora(LUNES, 23, 59))
     assert worker.ejecutar(tarea) == "1 sesiones cerradas, 1 ausencias, 1 multas"
     assert worker.ejecutar(tarea) is None  # idempotente
     assert len(client.get(M, headers=h_admin).json()) == 1
 
 
 def test_el_worker_vence_inscripciones_sin_pagar(client, h_admin, reloj):
-    alumna = _alumno_inscrito(client, h_admin, documento="2000000005")
+    alumna = alumno_inscrito(client, h_admin, documento="2000000005")
     tarea = _tarea("vencer_inscripciones")
-    reloj(_en(LUNES + timedelta(days=30), 9))  # último día del plazo: aún no vence
+    reloj(en_hora(LUNES + timedelta(days=30), 9))  # último día del plazo: aún no vence
     assert worker.ejecutar(tarea) is None
-    reloj(_en(LUNES + timedelta(days=31), 9))
+    reloj(en_hora(LUNES + timedelta(days=31), 9))
     assert worker.ejecutar(tarea) == "1 inscripciones vencidas"
     i = client.get(I, params={"alumno_id": alumna["id"]}, headers=h_admin).json()[0]
     assert i["estado"] == "rechazado" and i["causa_rechazo"] == "vencimiento"

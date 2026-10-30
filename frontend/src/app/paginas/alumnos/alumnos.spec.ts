@@ -16,6 +16,12 @@ registerLocaleData(localeEsCo);
 const ADMIN = ['alumnos.ver_todos', 'alumnos.editar'];
 const ENTRENADOR = ['alumnos.ver_rama', 'alumnos.editar'];
 const FAMILIA = ['alumnos.ver_propios'];
+const INSCRIBE = [...ADMIN, 'inscripciones.crear', 'inscripciones.abonar'];
+
+const inscripcion = (extra: Record<string, unknown> = {}) => ({
+  id: 'i1', valor: 90000, monto_pagado: null, saldo: 90000, estado: 'pendiente_pago', fecha_limite_pago: '2026-11-29',
+  ...extra,
+});
 
 const alumno = (id: string, extra: Partial<Alumno> = {}): Alumno => ({
   id, nombres: 'Laura', apellidos: 'Pérez', tipo_documento: 'TI', documento: '****4321', fecha_nacimiento: '2013-05-04',
@@ -202,5 +208,68 @@ describe('AlumnosPage', () => {
     await estable();
     expect(el().querySelector('dialog')).toBeNull();
     expect(texto()).toContain('quedó registrado');
+  });
+
+  it('registra un alumno mayor, lo inscribe y anota un abono parcial', async () => {
+    crear(INSCRIBE);
+    pedirLista().flush([]);
+    await estable();
+    (el().querySelector('[aria-label="Nuevo alumno"]') as HTMLButtonElement).click();
+    await estable();
+    escribir('dialog [formcontrolname="nombres"]', 'Sara');
+    escribir('dialog [formcontrolname="apellidos"]', 'Ríos');
+    escribir('dialog [formcontrolname="documento"]', '1012345678');
+    escribir('dialog [formcontrolname="fecha_nacimiento"]', '2000-01-01');
+    (dialogo().querySelector('input[type="radio"][value="parcial"]') as HTMLInputElement).click();
+    await estable();
+    escribir('dialog [formcontrolname="monto"]', '40000');
+    await estable();
+
+    boton('Registrar alumno', dialogo())!.click();
+    backend.expectOne((r) => r.method === 'POST' && r.url === `${API}/alumnos`)
+      .flush(alumno('a8', { nombres: 'Sara', apellidos: 'Ríos', inscripcion_estado: null, acudientes: [] }));
+    const alta = backend.expectOne((r) => r.method === 'POST' && r.url === `${API}/inscripciones`);
+    expect(alta.request.body).toEqual({ alumno_id: 'a8' });
+    alta.flush(inscripcion());
+    const pago = backend.expectOne(`${API}/inscripciones/i1/pagos`);
+    expect(pago.request.body.monto).toBe(40000);
+    pago.flush(inscripcion({ monto_pagado: 40000, saldo: 50000 }));
+    pedirLista().flush([]);
+    responderFicha(alumno('a8'));
+    await estable();
+    expect(texto()).toContain('quedó registrado e inscrito');
+    expect(texto()).toContain('Abonó $40.000; saldo $50.000 hasta el 29/11/2026');
+  });
+
+  it('inscribe desde la ficha a quien no tiene inscripción, con pago completo', async () => {
+    crear(INSCRIBE);
+    pedirLista().flush([alumno('a1', { inscripcion_estado: null })]);
+    await estable();
+    (el().querySelector('.item') as HTMLButtonElement).click();
+    responderFicha(alumno('a1', { inscripcion_estado: null }));
+    await estable();
+    boton(`how_to_reg Inscribir ${new Date().getFullYear()}`)!.click();
+    await estable();
+    (dialogo().querySelector('input[type="radio"][value="completo"]') as HTMLInputElement).click();
+    await estable();
+    boton('Inscribir', dialogo())!.click();
+    backend.expectOne((r) => r.method === 'POST' && r.url === `${API}/inscripciones`).flush(inscripcion());
+    const pago = backend.expectOne(`${API}/inscripciones/i1/pagos`);
+    expect(pago.request.body.monto).toBe(90000); // el saldo que informó el servidor
+    pago.flush(inscripcion({ monto_pagado: 90000, saldo: 0, estado: 'activo' }));
+    responderFicha(alumno('a1'));
+    pedirLista().flush([alumno('a1')]);
+    await estable();
+    expect(texto()).toContain('quedó paga y activa');
+  });
+
+  it('sin permiso de inscribir no aparece la opción', async () => {
+    crear(ADMIN);
+    pedirLista().flush([alumno('a1', { inscripcion_estado: null })]);
+    await estable();
+    (el().querySelector('.item') as HTMLButtonElement).click();
+    responderFicha(alumno('a1', { inscripcion_estado: null }));
+    await estable();
+    expect(el().querySelector('.acciones-ficha')?.textContent).not.toContain('Inscribir');
   });
 });

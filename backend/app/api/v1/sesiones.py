@@ -10,8 +10,21 @@ from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.asistencia import Sesion
 from app.schemas.asistencia import (
-    AlertaOut, CancelarIn, CierreOut, CorreccionIn, DiaHorarioOut, FilaPlanillaOut, HorarioActualizadoOut, HorarioIn,
-    HorarioOut, JustificacionOut, JustificarIn, MarcarGrupoIn, MarcarPropiaIn, SesionCrear, SesionOut,
+    AlertaOut,
+    CancelarIn,
+    CierreOut,
+    CorreccionIn,
+    DiaHorarioOut,
+    FilaPlanillaOut,
+    HorarioActualizadoOut,
+    HorarioIn,
+    HorarioOut,
+    JustificacionOut,
+    JustificarIn,
+    MarcarGrupoIn,
+    MarcarPropiaIn,
+    SesionCrear,
+    SesionOut,
 )
 from app.services import asistencia as servicio
 from app.services import configuracion, programacion
@@ -225,6 +238,8 @@ def justificar(
     db: Session = Depends(get_db),
 ) -> JustificacionOut:
     sesion = servicio.obtener_visible(db, actor, sesion_id)
-    j = servicio.justificar(db, sesion, alumno_id=datos.alumno_id, motivo=datos.motivo, actor=actor, ip=ip_cliente(request))
+    j = servicio.justificar(
+        db, sesion, alumno_id=datos.alumno_id, motivo=datos.motivo, actor=actor, ip=ip_cliente(request)
+    )
     db.commit()
     return justificacion_a_out(j)

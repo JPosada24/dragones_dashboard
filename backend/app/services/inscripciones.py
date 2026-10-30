@@ -140,7 +140,8 @@ def registrar_pago(
     """Registra un abono (total o parcial). Todos los abonos deben caer dentro del plazo vigente."""
     if i.estado == "rechazado":
         raise ErrorNegocio(
-            "La inscripción está rechazada. Un Admin o SuperAdmin debe conceder una prórroga antes de registrar el pago."
+            "La inscripción está rechazada. Un Admin o SuperAdmin debe conceder una prórroga "
+            "antes de registrar el pago."
         )
     if i.estado != "pendiente_pago":
         raise Conflicto(f"La inscripción ya no está pendiente de pago (estado: {ETIQUETAS[i.estado]}).")
@@ -227,7 +228,8 @@ def conceder_prorroga(
     ))
     i.fecha_limite_pago = nuevo_limite
     db.flush()
-    _auditar(db, "inscripcion.prorroga", i, actor.id, ip, antes=antes, despues={**_resumen(i), "motivo_prorroga": motivo})
+    despues = {**_resumen(i), "motivo_prorroga": motivo}
+    _auditar(db, "inscripcion.prorroga", i, actor.id, ip, antes=antes, despues=despues)
     return i
 
 

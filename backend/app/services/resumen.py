@@ -60,6 +60,7 @@ class RifaAnio:
 @dataclass
 class Resumen:
     alumnos_activos: int = 0
+    alumnos_sin_inscripcion: int = 0  # registrados y activos, pero sin inscripción vigente este año
     inscripciones_pendientes: int = 0
     inscripciones_vencen_pronto: int = 0
     multas_pendientes: int = 0
@@ -87,6 +88,8 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
             visibles, Alumno.activo.is_(True), Inscripcion.anio == hoy.year, Inscripcion.estado.in_(ESTADOS_VIGENTES)
         )
     )
+    registrados = db.scalar(select(func.count(Alumno.id)).where(visibles, Alumno.activo.is_(True))) or 0
+    r.alumnos_sin_inscripcion = registrados - (r.alumnos_activos or 0)
     pendientes = db.scalars(
         select(Inscripcion).join(Inscripcion.alumno).where(visibles, Inscripcion.estado == "pendiente_pago")
         .order_by(Inscripcion.fecha_limite_pago)

@@ -1,6 +1,6 @@
 """Inicio de sesión, emisión y rotación de refresh tokens."""
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ class ErrorAuth(Exception):
 
 def autenticar(db: Session, email: str, password: str, ip: str | None) -> Usuario:
     s = get_settings()
-    ahora = datetime.now(timezone.utc)
+    ahora = datetime.now(UTC)
     usuario = db.scalar(select(Usuario).where(Usuario.email == email))
 
     if usuario is None:
@@ -79,7 +79,7 @@ def emitir_sesion(
             usuario_id=usuario.id,
             familia_id=familia_id or uuid.uuid4(),
             token_hash=security.hash_refresh_token(refresh),
-            expira_en=datetime.now(timezone.utc) + timedelta(days=s.refresh_token_dias),
+            expira_en=datetime.now(UTC) + timedelta(days=s.refresh_token_dias),
             user_agent=user_agent,
             ip=ip,
         )
@@ -91,7 +91,7 @@ def rotar_refresh(
     db: Session, token_plano: str, ip: str | None, user_agent: str | None
 ) -> tuple[Usuario, str, int, str]:
     """Canjea un refresh token por uno nuevo. Si se reutiliza uno ya usado, se revoca toda la familia."""
-    ahora = datetime.now(timezone.utc)
+    ahora = datetime.now(UTC)
     sesion = db.scalar(
         select(SesionRefresh)
         .where(SesionRefresh.token_hash == security.hash_refresh_token(token_plano))
@@ -136,6 +136,6 @@ def cerrar_sesion(db: Session, token_plano: str) -> None:
     db.execute(
         update(SesionRefresh)
         .where(SesionRefresh.familia_id == sesion.familia_id, SesionRefresh.revocado_en.is_(None))
-        .values(revocado_en=datetime.now(timezone.utc))
+        .values(revocado_en=datetime.now(UTC))
     )
     db.commit()

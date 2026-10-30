@@ -71,7 +71,7 @@ class Settings(BaseSettings):
             raise ValueError(
                 "DATA_ENCRYPTION_KEY inválida. Genera una con: "
                 'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
-            )
+            ) from None
         return v
 
     @property

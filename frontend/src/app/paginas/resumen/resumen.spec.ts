@@ -20,7 +20,7 @@ const conPermisos = (permisos: string[]): Usuario => ({
 
 const RESUMEN: ResumenStaff = {
   indicadores: {
-    alumnos_activos: 42, inscripciones_pendientes: 5, inscripciones_vencen_pronto: 2,
+    alumnos_activos: 42, alumnos_sin_inscripcion: 3, inscripciones_pendientes: 5, inscripciones_vencen_pronto: 2,
     multas_pendientes: 3, multas_saldo: 6000, alertas: 1,
   },
   alertas: [{ tipo: 'expulsion', titulo: 'Kevin · marcado para expulsión', detalle: 'Mora', cuando: '', ruta: '/inscripciones' }],
@@ -54,6 +54,7 @@ describe('ResumenPage', () => {
     await fixture.whenStable();
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(texto).toContain('42');
+    expect(texto).toContain('3 registrados sin inscribir');
     expect(texto).toContain('$6.000');
     expect(texto).toContain('Kevin · marcado para expulsión');
     expect(texto).toContain('7/10'); // presentes + justificados sobre esperados

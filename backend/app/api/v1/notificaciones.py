@@ -11,9 +11,15 @@ from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.notificaciones import Notificacion
 from app.schemas.notificaciones import (
-    ConteoOut, CorreoEstadoOut, MarcarWhatsAppIn, NotificacionOut, ResultadoPruebaOut, WhatsAppOut,
+    ConteoOut,
+    CorreoEstadoOut,
+    MarcarWhatsAppIn,
+    NotificacionOut,
+    ResultadoPruebaOut,
+    WhatsAppOut,
 )
-from app.services import auditoria, notificaciones as servicio
+from app.services import auditoria
+from app.services import notificaciones as servicio
 
 router = APIRouter(prefix="/notificaciones", tags=["notificaciones"])
 GESTIONAR = requiere("notificaciones.gestionar")
@@ -113,7 +119,7 @@ def correo_prueba(
         get_correo().enviar(actor.email, f"[{get_settings().club_nombre}] Correo de prueba",
                             "Si recibes este mensaje, el correo del club quedó bien configurado.")
         resultado = ResultadoPruebaOut(enviado=True, modo=modo, detalle=f"Enviado a {_enmascarar_email(actor.email)}.")
-    except Exception as e:  # noqa: BLE001  (se muestra al SuperAdmin para que corrija la configuración)
+    except Exception as e:
         resultado = ResultadoPruebaOut(enviado=False, modo=modo, detalle=f"{type(e).__name__}: {e}"[:300])
     auditoria.registrar(db, accion="notificacion.correo_prueba", entidad="configuracion", usuario_id=actor.id,
                         despues={"enviado": resultado.enviado, "modo": modo}, ip=ip_cliente(request))

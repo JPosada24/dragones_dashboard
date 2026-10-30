@@ -10,7 +10,15 @@ from app.models.acceso import Usuario
 from app.models.alumnos import Inscripcion
 from app.schemas.comunes import Rama
 from app.schemas.inscripciones import (
-    AnulacionIn, EstadoIn, EstadoInscripcion, InscripcionCrear, InscripcionOut, PagoIn, PagoOut, ProrrogaIn, ProrrogaOut,
+    AnulacionIn,
+    EstadoIn,
+    EstadoInscripcion,
+    InscripcionCrear,
+    InscripcionOut,
+    PagoIn,
+    PagoOut,
+    ProrrogaIn,
+    ProrrogaOut,
     VencidasOut,
 )
 from app.services import inscripciones as servicio

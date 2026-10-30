@@ -2,12 +2,9 @@ from datetime import date, timedelta
 
 from app import worker
 from app.core import festivos
-from tests.test_asistencia import (  # noqa: F401  (reloj, familia, h_admin y h_root son fixtures)
-    LUNES, S, _alumno_inscrito, _en, _justificar, familia, h_admin, h_root, reloj,
-)
+from tests.fabrica import LUNES, S, T, en_hora, justificar
 
 H = f"{S}/horario"
-T = "/api/v1/torneos"
 MIERCOLES = LUNES + timedelta(days=2)  # 4 nov 2026
 HORARIO = {"dias": [
     {"dia_semana": 0, "hora_inicio": "18:00", "hora_fin": "20:00"},
@@ -56,7 +53,7 @@ def test_la_programacion_es_idempotente(client, h_admin, reloj):
     tarea = next(t for t in worker.tareas() if t.nombre == "programar_sesiones")
     assert worker.ejecutar(tarea) is None
     total = len(_sesiones(client, h_admin))
-    reloj(_en(LUNES + timedelta(days=7), 10))  # una semana después aparece la semana siguiente
+    reloj(en_hora(LUNES + timedelta(days=7), 10))  # una semana después aparece la semana siguiente
     assert worker.ejecutar(tarea) == "3 sesiones creadas, 0 canceladas, 0 reactivadas"
     assert len(_sesiones(client, h_admin)) == total + 3
 
@@ -64,7 +61,7 @@ def test_la_programacion_es_idempotente(client, h_admin, reloj):
 def test_cambiar_el_horario_reprograma_y_conserva_lo_que_tiene_registros(client, h_admin, familia, reloj):
     client.put(H, json=HORARIO, headers=h_admin)
     miercoles = _sesiones(client, h_admin)[MIERCOLES.isoformat()]
-    _justificar(client, familia["h"], miercoles["id"], familia["hija"]["id"])  # ya tiene una justificación
+    justificar(client, familia["h"], miercoles["id"], familia["hija"]["id"])  # ya tiene una justificación
 
     nuevo = {"dias": [
         {"dia_semana": 0, "hora_inicio": "18:00", "hora_fin": "21:00"},  # mismo inicio: solo se ajusta
@@ -93,7 +90,8 @@ def test_un_torneo_cancela_los_entrenamientos_y_vuelven_si_se_cancela(client, h_
     }, headers=h_admin).json()
     sesiones = _sesiones(client, h_admin)
     for f in ("2026-11-11", "2026-11-14"):
-        assert sesiones[f]["causa_cancelacion"] == "torneo" and sesiones[f]["motivo_cancelacion"] == "Torneo: Copa Dragones"
+        assert sesiones[f]["causa_cancelacion"] == "torneo"
+        assert sesiones[f]["motivo_cancelacion"] == "Torneo: Copa Dragones"
     assert not sesiones["2026-11-09"]["cancelada"]
 
     client.post(f"{T}/{torneo['id']}/cancelar", json={"motivo": "Coliseo en obras"}, headers=h_admin)

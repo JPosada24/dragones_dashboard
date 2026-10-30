@@ -87,6 +87,14 @@ h2 {
   color: var(--texto-3);
 }
 
+a.kpi-nota {
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 /* ---------- Columnas ---------- */
 .columnas {
   display: grid;

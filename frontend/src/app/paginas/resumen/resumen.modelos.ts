@@ -1,6 +1,7 @@
 export interface ResumenStaff {
   indicadores: {
     alumnos_activos: number;
+    alumnos_sin_inscripcion: number;
     inscripciones_pendientes: number;
     inscripciones_vencen_pronto: number;
     multas_pendientes: number;

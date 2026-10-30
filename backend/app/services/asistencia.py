@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import ColumnElement, false, or_, select, true
+from sqlalchemy import ColumnElement, false, select, true
 from sqlalchemy.orm import Session
 
 from app.core import fechas
@@ -12,7 +12,8 @@ from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import Asistencia, Justificacion, Multa, Sesion
 from app.models.dominio import ESTADOS_VIGENTES
 from app.services import alumnos, auditoria, configuracion, multas, notificaciones
-from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado, Prohibido
+from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado
+
 
 def _auditar(db: Session, accion: str, entidad: str, entidad_id, actor_id, ip, **extra) -> None:
     auditoria.registrar(
@@ -180,9 +181,11 @@ class FilaPlanilla:
 def planilla(db: Session, usuario: Usuario, sesion: Sesion) -> list[FilaPlanilla]:
     """Estado de cada alumno esperado que el usuario puede ver (Entrenador: su rama; Miembro: los suyos)."""
     lista = esperados_visibles(db, usuario, sesion)
-    asistencias = {a.alumno_id: a.estado for a in db.scalars(select(Asistencia).where(Asistencia.sesion_id == sesion.id))}
+    registros = db.scalars(select(Asistencia).where(Asistencia.sesion_id == sesion.id))
+    asistencias = {a.alumno_id: a.estado for a in registros}
     justificaciones: dict[uuid.UUID, str] = {}
-    for j in db.scalars(select(Justificacion).where(Justificacion.sesion_id == sesion.id).order_by(Justificacion.creado_en)):
+    q = select(Justificacion).where(Justificacion.sesion_id == sesion.id).order_by(Justificacion.creado_en)
+    for j in db.scalars(q):
         justificaciones[j.alumno_id] = j.estado  # queda la más reciente
     multas_ = {
         m.alumno_id: m.estado
@@ -275,7 +278,8 @@ def justificar(
         plazo = sesion.fecha + timedelta(days=configuracion.obtener(db, "dias_para_justificar"))
         if fechas.hoy() > plazo:
             raise ErrorNegocio(
-                f"El plazo para justificar esta sesión venció el {fechas.formato_fecha(plazo)}. Habla con el entrenador."
+                f"El plazo para justificar esta sesión venció el {fechas.formato_fecha(plazo)}. "
+                "Habla con el entrenador."
             )
     asistencia = _asistencia(db, sesion.id, alumno_id)
     if asistencia is not None and asistencia.estado == "presente":
@@ -353,7 +357,9 @@ class ResultadoCierre:
     multas: int = 0
 
 
-def cerrar(db: Session, *, ahora: datetime, actor_id: uuid.UUID | None = None, ip: str | None = None) -> ResultadoCierre:
+def cerrar(
+    db: Session, *, ahora: datetime, actor_id: uuid.UUID | None = None, ip: str | None = None
+) -> ResultadoCierre:
     """Cierra las sesiones cuya hora de cierre ya pasó: quien no marcó ni justificó queda ausente y con multa.
 
     Una justificación pendiente deja la decisión para cuando se revise. La llamará el worker cada noche.

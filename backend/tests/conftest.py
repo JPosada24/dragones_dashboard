@@ -25,20 +25,23 @@ with _admin.connect() as _c:
 _admin.dispose()
 os.environ["DATABASE_URL"] = _url.set(database=_nombre_test).render_as_string(hide_password=False)
 
+from datetime import datetime  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import pytest  # noqa: E402
-from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-import app.models  # noqa: E402,F401  (antes de "from app.main import app": si no, "app" sería el paquete)
+import app.models  # noqa: E402  (antes de "from app.main import app": si no, "app" sería el paquete)
+from alembic import command  # noqa: E402
+from app.core import fechas  # noqa: E402
+from app.core.limites import limitador_login  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal, engine  # noqa: E402
-from app.core.limites import limitador_login  # noqa: E402
 from app.main import app  # noqa: E402
 from app.services import usuarios as servicio_usuarios  # noqa: E402
 from app.services.catalogos import sembrar_catalogos  # noqa: E402
+from tests.fabrica import LUNES, crear_acudiente, crear_menor, en_hora, inscribir  # noqa: E402
 
 PASSWORD = "ClaveSegura123"
 
@@ -107,3 +110,38 @@ def auth_header(login):
         return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
     return _header
+
+
+# ---------- Reloj simulado y usuarios con él (pruebas de asistencia, rifas, torneos, mora...) ----------
+@pytest.fixture
+def reloj(monkeypatch):
+    """Reloj simulado del club: arranca el lunes de referencia a las 10:00 y se mueve con reloj(datetime)."""
+    actual = {"ahora": en_hora(LUNES, 10)}
+    monkeypatch.setattr(fechas, "ahora", lambda: actual["ahora"])
+
+    def mover(momento: datetime) -> None:
+        actual["ahora"] = momento
+
+    return mover
+
+
+@pytest.fixture
+def h_root(crear_usuario, auth_header, reloj):
+    crear_usuario("root@club.com", "SUPERADMIN")
+    return auth_header("root@club.com")
+
+
+@pytest.fixture
+def h_admin(crear_usuario, auth_header, reloj):
+    crear_usuario("adm@club.com", "ADMIN")
+    return auth_header("adm@club.com")
+
+
+@pytest.fixture
+def familia(client, h_admin, crear_usuario, auth_header):
+    """Un acudiente con cuenta (Miembro) y su hija inscrita en la rama femenina."""
+    padre = crear_usuario("padre@club.com", "MIEMBRO")
+    acudiente = crear_acudiente(client, h_admin, usuario_id=str(padre.id))
+    hija = crear_menor(client, h_admin, documento="3000000001", acudiente=acudiente)
+    inscribir(client, h_admin, hija["id"])
+    return {"hija": hija, "h": auth_header("padre@club.com")}

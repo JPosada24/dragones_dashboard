@@ -57,6 +57,9 @@ export class AsistenciaPage implements OnInit {
   protected readonly diasLargos = DIAS_LARGOS;
   protected readonly estadoTexto = ESTADO;
   protected readonly hoy = isoLocal(new Date());
+  protected readonly opcionesRama: { v: Rama | ''; t: string }[] = [
+    { v: '', t: 'Todos' }, { v: 'femenina', t: 'Femenina' }, { v: 'masculina', t: 'Masculina' },
+  ];
 
   // ---------- Estado ----------
   protected readonly lunes = signal(lunesDe(new Date()));
@@ -229,11 +232,10 @@ export class AsistenciaPage implements OnInit {
   }
 
   protected marcar(f: FilaPlanilla, marca: Marca): void {
+    // Volver a la marca guardada quita el cambio pendiente.
     this.cambios.update((c) => {
-      const nuevo = { ...c };
-      if (f.asistencia === marca) delete nuevo[f.alumno_id];
-      else nuevo[f.alumno_id] = marca;
-      return nuevo;
+      const resto = Object.fromEntries(Object.entries(c).filter(([id]) => id !== f.alumno_id));
+      return f.asistencia === marca ? resto : { ...resto, [f.alumno_id]: marca };
     });
   }
 
@@ -265,7 +267,7 @@ export class AsistenciaPage implements OnInit {
   protected marcarPropia(f: FilaPlanilla): void {
     const s = this.seleccionada();
     if (!s) return;
-    this.ejecutar(this.http.post<void>(`${sesionUrl(s.id)}/asistencia/propia`, { alumno_id: f.alumno_id }), () => {
+    this.ejecutar(this.http.post(`${sesionUrl(s.id)}/asistencia/propia`, { alumno_id: f.alumno_id }), () => {
       this.recargarPlanilla();
       this.avisar(null, `Asistencia de ${f.alumno_nombre} registrada.`);
     });

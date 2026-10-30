@@ -62,7 +62,7 @@ export class Aviso {
   readonly error = input(false);
   /** Milisegundos antes de cerrarse solo (0 = no se cierra solo). Los errores nunca se cierran solos. */
   readonly duracion = input(6000);
-  readonly cerrar = output<void>();
+  readonly cerrar = output();
 
   constructor() {
     effect((alLimpiar) => {

@@ -3,7 +3,8 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.security import validar_politica_password
-from app.schemas.comunes import Rama, normalizar_email as _normalizar_email
+from app.schemas.comunes import Rama
+from app.schemas.comunes import normalizar_email as _normalizar_email
 
 
 class LoginIn(BaseModel):
@@ -30,7 +31,7 @@ class UsuarioOut(BaseModel):
 
 class TokenOut(BaseModel):
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # noqa: S105  (tipo de token OAuth2, no es una contraseña)
     expires_in: int
     usuario: UsuarioOut
 

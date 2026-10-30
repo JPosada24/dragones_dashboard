@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -40,5 +40,5 @@ def revocar_sesiones(db: Session, usuario_id: uuid.UUID) -> None:
     db.execute(
         update(SesionRefresh)
         .where(SesionRefresh.usuario_id == usuario_id, SesionRefresh.revocado_en.is_(None))
-        .values(revocado_en=datetime.now(timezone.utc))
+        .values(revocado_en=datetime.now(UTC))
     )

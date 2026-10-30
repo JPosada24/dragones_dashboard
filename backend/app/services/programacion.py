@@ -102,7 +102,8 @@ def generar(db: Session) -> ResultadoProgramacion:
             sesion = Sesion(fecha=d, hora_inicio=h.hora_inicio, hora_fin=h.hora_fin, lugar=h.lugar, automatica=True)
             festivo = festivos.festivo(d)
             if festivo:
-                sesion.cancelada, sesion.causa_cancelacion, sesion.motivo_cancelacion = True, "festivo", f"Festivo: {festivo}"
+                sesion.cancelada, sesion.causa_cancelacion = True, "festivo"
+                sesion.motivo_cancelacion = f"Festivo: {festivo}"
             elif d in torneos:
                 sesion.cancelada, sesion.causa_cancelacion = True, "torneo"
                 sesion.motivo_cancelacion = f"Torneo: {torneos[d]}"
