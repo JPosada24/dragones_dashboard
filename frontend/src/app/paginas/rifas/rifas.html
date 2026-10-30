@@ -1,0 +1,366 @@
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<section class="controles" aria-label="Año">
+  <div class="anio">
+    <button type="button" class="boton secundario chico" (click)="cambiarAnio(-1)" aria-label="Año anterior">
+      <span class="icono" aria-hidden="true">chevron_left</span>
+    </button>
+    <span class="anio-texto mono" aria-live="polite">{{ anio() }}</span>
+    <button type="button" class="boton secundario chico" (click)="cambiarAnio(1)" aria-label="Año siguiente">
+      <span class="icono" aria-hidden="true">chevron_right</span>
+    </button>
+  </div>
+  @if (puedeGestionar()) {
+    <button type="button" class="boton chico" (click)="abrirNueva()">
+      <span class="icono" aria-hidden="true">add</span> Nueva rifa
+    </button>
+  }
+</section>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudieron cargar las rifas. Recarga la página.</p>
+} @else if (rifas(); as lista) {
+  @if (esStaff() && vigentes().length) {
+    @let k = indicadores();
+    <section class="kpis" aria-label="Indicadores del año">
+      <div class="kpi">
+        <div class="etiqueta">Rifas del año</div>
+        <div class="kpi-valor">{{ k.rifas }}</div>
+        <div class="kpi-nota">sin contar canceladas</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Recaudado</div>
+        <div class="kpi-valor">{{ k.recaudado | pesos }}</div>
+        <div class="kpi-nota">en todas las rifas del año</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Por recaudar</div>
+        <div class="kpi-valor" [class.oro]="k.porRecaudar > 0">{{ k.porRecaudar | pesos }}</div>
+        <div class="kpi-nota">en rifas abiertas</div>
+      </div>
+      <div class="kpi">
+        <div class="etiqueta">Talonarios a paz y salvo</div>
+        <div class="kpi-valor">{{ k.pagados }}<span class="kpi-de">/{{ k.talonarios }}</span></div>
+        <div class="kpi-nota">{{ pct(k.pagados, k.talonarios) }} pagados al 100 %</div>
+      </div>
+    </section>
+  }
+
+  <!-- ---------- Rifas del año ---------- -->
+  <section class="tarjetas" aria-label="Rifas del año">
+    @for (r of lista; track r.id) {
+      <article class="panel tarjeta" [attr.data-estado]="r.estado">
+        <div class="tarjeta-cabecera">
+          <span class="mono numero">R{{ r.numero }}</span>
+          <span class="chip-estado">{{ r.estado === 'abierta' ? 'Abierta' : r.estado === 'sorteada' ? 'Sorteada' : 'Cancelada' }}</span>
+        </div>
+        <h2>{{ r.nombre }}</h2>
+        <p class="premio"><span class="icono" aria-hidden="true">redeem</span> {{ r.premio }}</p>
+        @if (r.estado === 'cancelada') {
+          <p class="nota-chica">{{ r.motivo_cancelacion }}</p>
+        } @else {
+          <div class="avance">
+            <div class="fila-base">
+              <span class="nota-chica">Paz y salvo</span>
+              <span class="mono chico">{{ r.talonarios_pagados }}/{{ r.talonarios }}</span>
+            </div>
+            <span class="barra" role="img" [attr.aria-label]="r.talonarios_pagados + ' de ' + r.talonarios + ' talonarios pagados'">
+              <span [style.width]="pct(r.talonarios_pagados, r.talonarios)"></span>
+            </span>
+          </div>
+          <dl class="datos">
+            <div><dt>Recaudado</dt><dd class="mono">{{ r.recaudado | pesos }} <span class="apagado">/ {{ r.esperado | pesos }}</span></dd></div>
+            <div><dt>Sorteo</dt><dd>{{ r.fecha_sorteo | date: 'd MMM y' }} @if (r.estado === 'abierta') { <span class="apagado">· {{ cuando(r.fecha_sorteo) }}</span> }</dd></div>
+            <div><dt>Talonario</dt><dd class="mono">{{ r.puestos_por_talonario }} × {{ r.precio_puesto | pesos }}</dd></div>
+          </dl>
+          <div class="tarjeta-acciones">
+            @if (r.estado === 'sorteada') {
+              <button type="button" class="boton chico" (click)="verActa(r)">
+                <span class="icono" aria-hidden="true">workspace_premium</span> Ver acta
+              </button>
+            }
+            @if (sorteable(r)) {
+              <button type="button" class="boton chico" (click)="abrirSorteo(r)">
+                <span class="icono" aria-hidden="true">casino</span> Jugar sorteo
+              </button>
+            }
+            @if (puedeGestionar() && r.estado === 'abierta') {
+              <button type="button" class="boton secundario chico" [disabled]="ocupado()" (click)="asignar(r)"
+                      title="Da talonario a quienes se inscribieron después de crear la rifa">Asignar a nuevos</button>
+              <button type="button" class="enlace-rojo" (click)="abrirCancelar(r)">Cancelar</button>
+            }
+          </div>
+        }
+      </article>
+    } @empty {
+      <p class="panel vacio">
+        No hay rifas en {{ anio() }}.
+        @if (puedeGestionar()) { Crea la primera con «Nueva rifa»: cada alumno inscrito recibe su talonario. }
+      </p>
+    }
+  </section>
+
+  <!-- ---------- Paz y salvo por alumno ---------- -->
+  @if (vigentes().length) {
+    <section class="panel matriz" aria-label="Paz y salvo por alumno">
+      <div class="panel-cabecera">
+        <div>
+          <h2>{{ esStaff() ? 'Paz y salvo por alumno' : 'Talonarios' }}</h2>
+          <p class="nota-chica">Toca una celda para ver el talonario: puestos, compradores y pagos.</p>
+        </div>
+        @if (esStaff()) {
+          <div class="filtros" role="group" aria-label="Filtros">
+            <button type="button" class="filtro" [attr.aria-pressed]="soloConDeuda()" (click)="soloConDeuda.set(!soloConDeuda())">Con deuda</button>
+            @if (veTodasLasRamas()) {
+              <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'femenina'"
+                      (click)="filtroRama.set(filtroRama() === 'femenina' ? '' : 'femenina')">Femenina</button>
+              <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'masculina'"
+                      (click)="filtroRama.set(filtroRama() === 'masculina' ? '' : 'masculina')">Masculina</button>
+            }
+          </div>
+        }
+      </div>
+      <div class="tabla-desliza">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Alumno</th>
+              @for (r of vigentes(); track r.id) { <th scope="col" class="centro" [title]="r.nombre">R{{ r.numero }}</th> }
+              <th scope="col" class="derecha">Deuda</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of filas(); track f.alumno_id) {
+              <tr>
+                <th scope="row">
+                  <span class="alumno-nombre">{{ f.alumno_nombre }}</span>
+                  <span class="nota-chica capital">{{ f.rama }}</span>
+                </th>
+                @for (t of f.celdas; track $index) {
+                  <td class="centro">
+                    @if (t) {
+                      @let r = vigentes()[$index]!;
+                      <button type="button" class="celda" [class.pagada]="t.pagado" (click)="abrirTalonario(r, t)"
+                              [attr.aria-label]="r.nombre + ': ' + (t.pagado ? 'a paz y salvo' : 'debe ' + (t.saldo | pesos)) + '. Ver talonario de ' + f.alumno_nombre">
+                        @if (t.pagado) { <span class="icono" aria-hidden="true">check</span> } @else { {{ t.saldo | pesos }} }
+                      </button>
+                    } @else {
+                      <span class="apagado" title="Sin talonario en esta rifa">—</span>
+                    }
+                  </td>
+                }
+                <td class="derecha mono" [class.oro]="f.deuda > 0">{{ f.deuda | pesos }}</td>
+              </tr>
+            } @empty {
+              <tr><td class="vacio" [attr.colspan]="vigentes().length + 2">{{ soloConDeuda() ? 'Nadie debe talonarios. 🎉' : 'No hay talonarios para mostrar.' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+} @else {
+  <p class="panel vacio">Cargando…</p>
+}
+
+<!-- ---------- Nueva rifa ---------- -->
+@if (creando()) {
+  <app-dialogo titulo="Nueva rifa" descripcion="Cada alumno con inscripción vigente recibe un talonario. Puestos y precio salen de la configuración."
+               (cerrar)="creando.set(false)">
+    <form class="formulario" [formGroup]="formRifa" (ngSubmit)="guardarRifa()">
+      <label class="campo"><span class="etiqueta">Nombre</span><input class="control" formControlName="nombre" /></label>
+      <label class="campo"><span class="etiqueta">Premio</span>
+        <input class="control" formControlName="premio" placeholder="Ej.: balón oficial + uniforme" /></label>
+      <label class="campo monto"><span class="etiqueta">Fecha del sorteo</span>
+        <input class="control" type="date" formControlName="fecha_sorteo" [min]="hoy" [max]="anio() + '-12-31'" /></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="creando.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Crear rifa</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Cancelar rifa ---------- -->
+@if (cancelando(); as r) {
+  <app-dialogo titulo="Cancelar rifa" [descripcion]="r.nombre" (cerrar)="cancelando.set(null)">
+    <form class="formulario" [formGroup]="formCancelar" (ngSubmit)="guardarCancelacion()">
+      <p>La rifa deja de contar para el paz y salvo y no se podrá sortear. Los pagos registrados quedan en el historial.</p>
+      <label class="campo"><span class="etiqueta">Motivo</span><textarea class="control" formControlName="motivo" maxlength="255"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="cancelando.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Cancelar rifa</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Talonario ---------- -->
+@if (abierto(); as a) {
+  @if (talonario(); as t) {
+    <app-dialogo [titulo]="'Talonario de ' + t.alumno_nombre" ancho="ancho"
+                 [descripcion]="a.rifa.nombre + ' · puestos ' + numeroPuesto(t.desde) + '–' + numeroPuesto(t.hasta)"
+                 (cerrar)="abierto.set(null)">
+      <div class="talonario">
+        <div class="talonario-resumen">
+          <div class="avance crece">
+            <div class="fila-base">
+              <span>{{ t.pagado ? 'A paz y salvo' : 'Recaudado' }}</span>
+              <span class="mono">{{ t.recaudado | pesos }} / {{ a.rifa.valor_talonario | pesos }}</span>
+            </div>
+            <span class="barra"><span [style.width]="pct(t.recaudado, a.rifa.valor_talonario)"></span></span>
+          </div>
+          @if (puedeCobrar() && a.rifa.estado === 'abierta' && t.saldo > 0 && !pagandoTalonario()) {
+            <button type="button" class="boton chico" (click)="abrirPagoTalonario(t)">
+              <span class="icono" aria-hidden="true">payments</span> Registrar pago
+            </button>
+          }
+        </div>
+
+        @if (pagandoTalonario()) {
+          <form class="formulario recuadro" [formGroup]="formPago" (ngSubmit)="guardarPagoTalonario()">
+            <p class="nota-chica">El pago se reparte entre los puestos con saldo, en orden de número.</p>
+            <div class="rejilla">
+              <label class="campo"><span class="etiqueta">Valor (pesos)</span>
+                <input class="control mono" type="number" min="1" [max]="t.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
+              <label class="campo"><span class="etiqueta">Fecha</span>
+                <input class="control" type="date" formControlName="fecha" [max]="hoy" /></label>
+            </div>
+            @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+            <div class="acciones">
+              <button type="button" class="boton secundario chico" (click)="pagandoTalonario.set(false)">Cancelar</button>
+              <button type="submit" class="boton chico" [disabled]="ocupado()">Registrar</button>
+            </div>
+          </form>
+        }
+
+        <ul class="puestos">
+          @for (p of t.puestos; track p.numero) {
+            <li>
+              <button type="button" class="puesto" [class.pagado]="p.saldo === 0" [class.parcial]="p.saldo > 0 && p.monto_pagado > 0"
+                      (click)="abrirPuesto(p)" [attr.aria-label]="'Puesto ' + numeroPuesto(p.numero) + (p.comprador_nombre ? ', ' + p.comprador_nombre : ', sin comprador') + (p.saldo === 0 ? ', pagado' : '')">
+                <span class="mono puesto-numero">{{ numeroPuesto(p.numero) }}</span>
+                <span class="puesto-comprador">{{ p.comprador_nombre || 'Sin comprador' }}</span>
+                <span class="mono puesto-estado">
+                  @if (p.saldo === 0) { <span class="icono" aria-hidden="true">check</span> } @else { {{ p.monto_pagado | pesos }} }
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    </app-dialogo>
+  }
+}
+
+<!-- ---------- Puesto ---------- -->
+@if (puesto(); as p) {
+  @let a = abierto()!;
+  <app-dialogo [titulo]="'Puesto ' + numeroPuesto(p.numero)" [descripcion]="a.rifa.nombre + ' · ' + (p.saldo === 0 ? 'pagado' : 'saldo ' + (p.saldo | pesos))"
+               (cerrar)="puestoAbierto.set(null)">
+    <div class="formulario">
+      @if (puedeGestionar() && a.rifa.estado === 'abierta') {
+        <form class="formulario" [formGroup]="formComprador" (ngSubmit)="guardarComprador()">
+          <div class="rejilla">
+            <label class="campo"><span class="etiqueta">Comprador</span><input class="control" formControlName="nombre" autocomplete="off" /></label>
+            <label class="campo"><span class="etiqueta">Teléfono</span><input class="control" type="tel" formControlName="telefono" autocomplete="off" /></label>
+          </div>
+          <div class="acciones"><button type="submit" class="boton secundario chico" [disabled]="ocupado()">Guardar comprador</button></div>
+        </form>
+      } @else {
+        <dl class="datos">
+          <div><dt>Comprador</dt><dd>{{ p.comprador_nombre || '—' }}</dd></div>
+          <div><dt>Teléfono</dt><dd class="mono">{{ p.comprador_telefono || '—' }}</dd></div>
+        </dl>
+      }
+
+      @if (puedeCobrar() && a.rifa.estado === 'abierta' && p.saldo > 0) {
+        <form class="formulario recuadro" [formGroup]="formPago" (ngSubmit)="guardarPagoPuesto()">
+          <div class="rejilla">
+            <label class="campo"><span class="etiqueta">Pago (pesos)</span>
+              <input class="control mono" type="number" min="1" [max]="p.saldo" step="1" inputmode="numeric" formControlName="monto" /></label>
+            <label class="campo"><span class="etiqueta">Fecha</span><input class="control" type="date" formControlName="fecha" [max]="hoy" /></label>
+          </div>
+          <div class="acciones"><button type="submit" class="boton chico" [disabled]="ocupado()">Registrar pago</button></div>
+        </form>
+      }
+
+      <div class="movimientos">
+        <h3>Pagos</h3>
+        @for (pago of p.pagos; track pago.id) {
+          <div class="movimiento" [class.negativo]="pago.monto < 0" [class.anulado]="anulado(p, pago)">
+            <span class="mono chico">{{ pago.fecha | date: 'd MMM y' }}</span>
+            <span class="mono">{{ pago.monto | pesos }}</span>
+            <span class="nota-chica">@if (pago.monto < 0) { Anulación: {{ pago.motivo }} } @else if (anulado(p, pago)) { Anulado } @else { Pago }</span>
+            @if (anulable(p, pago) && a.rifa.estado === 'abierta') {
+              <button type="button" class="enlace-rojo" (click)="abrirAnularPago(p.numero, pago)">Anular</button>
+            }
+          </div>
+        } @empty {
+          <p class="nota-chica">Sin pagos todavía.</p>
+        }
+      </div>
+      @if (errorDialogo() && !anulandoPago()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+    </div>
+  </app-dialogo>
+}
+
+<!-- ---------- Anular pago de un puesto ---------- -->
+@if (anulandoPago(); as x) {
+  <app-dialogo titulo="Anular pago" [descripcion]="'Puesto ' + numeroPuesto(x.numero) + ' · ' + (x.pago.monto | pesos)" (cerrar)="anulandoPago.set(null)">
+    <form class="formulario" [formGroup]="formAnular" (ngSubmit)="guardarAnulacion()">
+      <p>El pago no se borra: se registra un movimiento en negativo que lo revierte.</p>
+      <label class="campo"><span class="etiqueta">Motivo</span><textarea class="control" formControlName="motivo" maxlength="500"></textarea></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="anulandoPago.set(null)">Volver</button>
+        <button type="submit" class="boton peligro" [disabled]="ocupado()">Anular pago</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Sorteo ---------- -->
+@if (sorteando(); as r) {
+  <app-dialogo [titulo]="'Sorteo · ' + r.nombre" [descripcion]="'Premio: ' + r.premio" (cerrar)="sorteando.set(null)">
+    <div class="formulario">
+      <div class="urna">
+        <span class="etiqueta">Puestos en la urna</span>
+        <span class="urna-valor mono">{{ r.talonarios_pagados * r.puestos_por_talonario }}</span>
+        <span class="nota-chica">{{ r.talonarios_pagados }} de {{ r.talonarios }} talonarios pagados al 100 %</span>
+      </div>
+      <p>Solo participan los talonarios pagados por completo. El ganador sale al azar y queda un acta que no se puede modificar. El sorteo no se repite.</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="sorteando.set(null)">Todavía no</button>
+        <button type="button" class="boton" [disabled]="ocupado() || !r.talonarios_pagados" (click)="jugar()">
+          <span class="icono" aria-hidden="true">casino</span> Jugar sorteo
+        </button>
+      </div>
+    </div>
+  </app-dialogo>
+}
+
+<!-- ---------- Acta ---------- -->
+@if (acta(); as x) {
+  <app-dialogo [titulo]="'Acta del sorteo · ' + x.rifa.nombre" [descripcion]="'Premio: ' + x.rifa.premio" (cerrar)="acta.set(null)">
+    <div class="formulario">
+      <div class="ganador" [class.recien]="x.recien">
+        <span class="etiqueta">Puesto ganador</span>
+        <span class="ganador-numero mono">{{ numeroPuesto(x.acta.numero_ganador) }}</span>
+        <span class="ganador-nombre">{{ x.acta.comprador_nombre || 'Sin comprador registrado' }}</span>
+        <span class="nota-chica">Talonario de {{ x.acta.alumno_nombre }}</span>
+      </div>
+      <dl class="datos">
+        <div><dt>Jugado</dt><dd>{{ x.acta.jugado_en | date: 'd MMM y, h:mm a' }}</dd></div>
+        <div><dt>Participantes</dt><dd class="mono">{{ x.acta.total_participantes }} puestos</dd></div>
+        <div><dt>Huella (SHA-256)</dt><dd class="mono huella" title="Huella de la lista de participantes: prueba que no se modificó">{{ x.acta.huella }}</dd></div>
+      </dl>
+      <div class="acciones"><button type="button" class="boton chico" (click)="acta.set(null)">Cerrar</button></div>
+    </div>
+  </app-dialogo>
+}

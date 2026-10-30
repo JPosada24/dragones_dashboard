@@ -1,0 +1,445 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+h3 {
+  margin: 0;
+  font: 600 12px var(--f-titulo);
+  color: var(--texto);
+}
+
+.capital {
+  text-transform: capitalize;
+}
+
+.chico {
+  font-size: 10.5px;
+}
+
+.apagado {
+  color: var(--texto-3);
+}
+
+.oro {
+  color: var(--oro);
+}
+
+.crece {
+  flex: 1 1 220px;
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+}
+
+.nota-chica {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.fila-base {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.anio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .boton .icono {
+    font-size: 18px;
+  }
+}
+
+.anio-texto {
+  min-width: 48px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kpi-de {
+  font-size: 16px;
+  color: var(--texto-3);
+}
+
+.barra {
+  display: block;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--naranja);
+  }
+}
+
+.avance {
+  display: grid;
+  gap: 6px;
+}
+
+.datos {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  dt {
+    font-size: 11px;
+    color: var(--texto-3);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 12px;
+    color: var(--texto);
+    text-align: right;
+    min-width: 0;
+  }
+}
+
+/* ---------- Tarjetas de rifas ---------- */
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 14px;
+}
+
+.tarjeta {
+  --tono: var(--naranja);
+  display: grid;
+  gap: 11px;
+  align-content: start;
+  padding: 16px;
+  border-top: 2px solid var(--tono);
+
+  &[data-estado='sorteada'] {
+    --tono: var(--oro);
+  }
+
+  &[data-estado='cancelada'] {
+    --tono: var(--texto-3);
+    opacity: 0.6;
+  }
+}
+
+.tarjeta-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.numero {
+  font-size: 11px;
+  color: var(--tono);
+  font-weight: 600;
+}
+
+.chip-estado {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tono) 14%, transparent);
+  color: var(--tono);
+  font: 600 10px var(--f-texto);
+}
+
+.premio {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--texto-2);
+
+  .icono {
+    font-size: 16px;
+    color: var(--oro);
+  }
+}
+
+.tarjeta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+/* ---------- Matriz de paz y salvo ---------- */
+.matriz {
+  overflow: hidden;
+}
+
+.panel-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tabla-desliza {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th,
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  text-align: left;
+}
+
+thead th {
+  font: 600 10px var(--f-texto);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-3);
+}
+
+tbody th {
+  font-weight: 400;
+  display: grid;
+  gap: 1px;
+  min-width: 150px;
+}
+
+.alumno-nombre {
+  font: 600 12px var(--f-texto);
+  color: var(--texto);
+}
+
+.centro {
+  text-align: center;
+}
+
+.derecha {
+  text-align: right;
+}
+
+.celda {
+  min-width: 64px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--oro) 35%, transparent);
+  border-radius: 5px;
+  background: var(--oro-tenue);
+  color: var(--oro);
+  font: 600 10.5px var(--f-mono);
+  cursor: pointer;
+
+  &.pagada {
+    border-color: color-mix(in srgb, var(--naranja) 35%, transparent);
+    background: var(--naranja-tenue);
+    color: var(--naranja);
+  }
+
+  .icono {
+    font-size: 15px;
+    vertical-align: middle;
+  }
+
+  &:hover {
+    filter: brightness(1.2);
+  }
+}
+
+/* ---------- Talonario ---------- */
+.talonario {
+  display: grid;
+  gap: 14px;
+}
+
+.talonario-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.recuadro {
+  padding: 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+}
+
+.puestos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.puesto {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: transparent;
+  color: var(--texto-2);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--borde-fuerte);
+  }
+
+  &.parcial {
+    border-color: color-mix(in srgb, var(--oro) 40%, transparent);
+  }
+
+  &.pagado {
+    border-color: color-mix(in srgb, var(--naranja) 40%, transparent);
+    background: var(--naranja-tenue);
+
+    .puesto-estado {
+      color: var(--naranja);
+    }
+  }
+}
+
+.puesto-numero {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.puesto-comprador {
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.puesto-estado {
+  font-size: 10.5px;
+
+  .icono {
+    font-size: 16px;
+  }
+}
+
+.movimientos {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde);
+}
+
+.movimiento {
+  display: grid;
+  grid-template-columns: 88px 72px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+
+  &.negativo .mono {
+    color: var(--rojo);
+  }
+
+  &.anulado .mono {
+    text-decoration: line-through;
+    color: var(--texto-3);
+  }
+}
+
+/* ---------- Sorteo y acta ---------- */
+.urna,
+.ganador {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--panel-hundido);
+  text-align: center;
+}
+
+.urna-valor,
+.ganador-numero {
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--oro);
+}
+
+.ganador-nombre {
+  font: 600 15px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.ganador.recien {
+  border-color: var(--oro);
+  animation: brillo 1.2s ease-out 1;
+}
+
+@keyframes brillo {
+  from {
+    box-shadow: 0 0 0 0 var(--oro-tenue);
+  }
+
+  to {
+    box-shadow: 0 0 0 18px transparent;
+  }
+}
+
+.huella {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 599px) {
+  .movimiento {
+    grid-template-columns: auto auto minmax(0, 1fr);
+
+    .enlace-rojo {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
+}

@@ -14,6 +14,7 @@ const PANTALLAS: Record<string, Cargar> = {
   asistencia: () => import('./paginas/asistencia/asistencia').then((m) => m.AsistenciaPage),
   alumnos: () => import('./paginas/alumnos/alumnos').then((m) => m.AlumnosPage),
   multas: () => import('./paginas/multas/multas').then((m) => m.MultasPage),
+  rifas: () => import('./paginas/rifas/rifas').then((m) => m.RifasPage),
   'alumnos/inscripciones': () => import('./paginas/inscripciones/inscripciones').then((m) => m.InscripcionesPage),
 };
 

@@ -208,7 +208,14 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   en mora primero, "entra en mora en N d") e indicadores. Backend: `POST /multas/pagos` cobra varias en una
   transacción (todas o ninguna, filas bloqueadas en orden), `MultaOut.rama`, y `obtener_visible` bloquea la multa
   (`with_for_update`). Estilos globales nuevos: `.filtros/.filtro`, `.enlace-rojo`. 190 pruebas backend, 53 frontend.
-- SIGUIENTE (frontend): Rifas, Torneos, Avisos, Configuración,
+- HECHO (Rifas, 2026-10-30): pantalla `paginas/rifas/`: año navegable, indicadores, tarjetas por rifa (premio,
+  paz y salvo, recaudo, sorteo "en N d"; acciones: jugar sorteo desde la fecha con `sorteo.jugar`, ver acta, asignar
+  talonarios a nuevos inscritos, cancelar con motivo) y matriz "Paz y salvo por alumno" (alumno × rifa, ✓ o saldo,
+  deuda total, filtros con deuda/rama). Talonario en popup: 20 puestos, "Registrar pago" (se reparte en orden);
+  popup por puesto: comprador (`rifas.gestionar`), pago (`pagos.registrar`), historial y anular (`pagos.anular`).
+  Sorteo: puestos en la urna y acta (ganador, comprador, participantes, huella SHA-256). Sin cambios en backend.
+  190 pruebas backend, 60 frontend.
+- SIGUIENTE (frontend): Torneos, Avisos, Configuración,
   Usuarios. Las alertas se notificarán en la fase de notificaciones (Redis
   llegará ahí para colas y para el limitador de logins).
 - Después: frontend Angular, club público, IA, producción.
