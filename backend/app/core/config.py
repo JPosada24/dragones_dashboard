@@ -54,6 +54,11 @@ class Settings(BaseSettings):
             raise ValueError("SMTP_SEGURIDAD debe ser 'starttls' o 'ssl'.")
         return self
 
+    # Asistente de IA (API de Claude). Sin clave, el asistente responde "no configurado".
+    anthropic_api_key: str | None = None
+    agente_modelo: str = "claude-opus-5-5"
+    agente_esfuerzo: str = "medium"  # low | medium | high: más alto = más preciso, más lento y más caro
+
     superadmin_email: str | None = None
     superadmin_password: str | None = None
     superadmin_nombre: str = "Administrador"

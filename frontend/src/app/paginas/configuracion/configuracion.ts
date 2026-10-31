@@ -68,10 +68,11 @@ const RIFAS: Grupo = {
 };
 
 const OTROS: Grupo = {
-  titulo: 'Alumnos y entrenamientos', parametros: [
+  titulo: 'Otros parámetros', parametros: [
     { clave: 'edad_mayoria', titulo: 'Mayoría de edad', nota: 'Desde esta edad no necesita acudiente', tipo: 'numero', unidad: 'años' },
     { clave: 'documento_max_mb', titulo: 'Tamaño máximo por documento', nota: 'PDF, JPG o PNG', tipo: 'numero', unidad: 'MB' },
     { clave: 'dias_programacion_anticipada', titulo: 'Programar entrenamientos con', nota: 'Días hacia adelante desde el horario semanal', tipo: 'numero', unidad: 'días' },
+    { clave: 'agente_mensajes_por_dia', titulo: 'Preguntas al asistente de IA', nota: 'Por usuario y por día; 0 = asistente apagado', tipo: 'numero', unidad: 'al día' },
   ],
 };
 

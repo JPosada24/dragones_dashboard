@@ -39,6 +39,11 @@ export const SECCIONES: Seccion[] = [
     descripcion: 'Inscripciones pendientes de pago, abonos, prórrogas y cambios de estado.',
   },
   {
+    ruta: 'asistente', etiqueta: 'Asistente', icono: 'smart_toy', grupo: 'Día a día', permisos: ['agente.usar'],
+    titulo: 'Asistente', subtitulo: 'Pregunta en tus palabras: consulta los datos por ti',
+    descripcion: 'Asistente de IA que responde preguntas sobre alumnos, deudas, asistencia, rifas y torneos.',
+  },
+  {
     ruta: 'rifas', etiqueta: 'Rifas', icono: 'payments', grupo: 'Dinero', permisos: VER_ALUMNOS,
     titulo: 'Rifas', subtitulo: 'Talonarios, pagos y sorteo',
     descripcion: 'Rifas del año, talonarios por alumno, pagos de puestos, sorteo y acta.',

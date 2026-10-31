@@ -1,0 +1,63 @@
+@if (error(); as e) {
+  <app-aviso [texto]="e" [error]="true" (cerrar)="error.set(null)" />
+}
+
+<section class="panel chat" aria-label="Conversación con el asistente">
+  <header class="cabecera">
+    <div class="marca-ia" aria-hidden="true"><span class="icono">smart_toy</span></div>
+    <div class="cabecera-textos">
+      <h2>Asistente del club</h2>
+      <p class="sub">
+        @if (estado() === null) { Cargando… }
+        @else if (!estado()!.configurado) { No está configurado todavía. }
+        @else if (estado()!.limite_diario <= 0) { Está apagado. El SuperAdmin puede activarlo en Configuración. }
+        @else { Solo consulta · {{ restantes() }} {{ restantes() === 1 ? 'pregunta' : 'preguntas' }} disponibles hoy }
+      </p>
+    </div>
+    @if (mensajes().length) {
+      <button type="button" class="boton secundario chico" [disabled]="pensando()" (click)="nueva()">
+        <span class="icono" aria-hidden="true">add_comment</span> Nueva conversación
+      </button>
+    }
+  </header>
+
+  <div class="mensajes" #lista aria-live="polite">
+    @for (m of mensajes(); track $index) {
+      <div class="mensaje-chat" [attr.data-rol]="m.rol">
+        <!-- Texto plano: la respuesta nunca se interpreta como HTML. -->
+        <p class="burbuja">{{ m.texto }}</p>
+        @if (m.rol === 'assistant' && m.herramientas?.length) {
+          <span class="consulto"><span class="icono" aria-hidden="true">database</span> Consultó: {{ consultadas(m) }}</span>
+        }
+      </div>
+    } @empty {
+      <div class="bienvenida">
+        <p class="saludo">¿Qué quieres saber?</p>
+        <p class="sub">Pregunta en tus palabras. El asistente consulta los datos del club que tu cuenta puede ver.</p>
+        @if (disponible()) {
+          <div class="sugerencias">
+            @for (s of sugerencias(); track s) {
+              <button type="button" class="sugerencia" (click)="usar(s)">{{ s }}</button>
+            }
+          </div>
+        }
+      </div>
+    }
+    @if (pensando()) {
+      <div class="mensaje-chat" data-rol="assistant">
+        <p class="burbuja pensando" role="status"><span class="puntos" aria-hidden="true"><i></i><i></i><i></i></span> Consultando…</p>
+      </div>
+    }
+  </div>
+
+  <form class="redactar" (ngSubmit)="enviar()">
+    <label class="solo-lectores" for="pregunta">Tu pregunta</label>
+    <textarea id="pregunta" class="control" name="pregunta" rows="2" maxlength="2000" [(ngModel)]="borrador"
+              [disabled]="!disponible()" (keydown)="teclado($event)"
+              placeholder="Ej.: ¿cuánto debe Laura Pérez?"></textarea>
+    <button type="submit" class="boton" [disabled]="!disponible() || pensando() || !borrador.trim()" aria-label="Enviar pregunta">
+      <span class="icono" aria-hidden="true">send</span>
+    </button>
+  </form>
+  <p class="aviso-ia">Respuestas generadas por IA: pueden tener errores. Verifica antes de cobrar o decidir.</p>
+</section>

@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     acudientes,
+    agente,
     alumnos,
     auth,
     configuracion,
@@ -34,3 +35,4 @@ api_router.include_router(torneos.router)
 api_router.include_router(notificaciones.router)
 api_router.include_router(mora.router)
 api_router.include_router(resumen.router)
+api_router.include_router(agente.router)

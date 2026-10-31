@@ -92,6 +92,15 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Entrenamientos', texto: 'Los días de torneo se cancelan los entrenamientos; si el torneo se cancela, vuelven.' },
     ],
   },
+  asistente: {
+    titulo: 'Cómo funciona el asistente',
+    pasos: [
+      { titulo: 'Pregunta normal', texto: 'Escribe como le preguntarías a alguien del club: "¿quién debe multas?", "¿cuánto le falta a F012 para estar a paz y salvo?". El asistente consulta los datos y responde.' },
+      { titulo: 'Solo consulta', texto: 'No registra pagos ni cambia nada: te dice en qué pantalla hacerlo. Ve solo lo que tu cuenta puede ver.' },
+      { titulo: 'Verifica', texto: 'Las respuestas las genera una IA y pueden equivocarse: confirma en la pantalla correspondiente antes de cobrar o decidir.' },
+      { titulo: 'Privacidad', texto: 'La conversación no se guarda: se borra al recargar o al empezar una nueva. Nunca se envían documentos, teléfonos ni correos a la IA.' },
+    ],
+  },
   avisos: {
     titulo: 'Cómo funcionan los avisos',
     pasos: [

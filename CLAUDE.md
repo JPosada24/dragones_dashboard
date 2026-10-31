@@ -9,7 +9,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   `Dashboard Dragones (standalone).html` (oscuro, naranja #f2691e / oro #f5b731, Sora + Public Sans + IBM Plex Mono,
   Material Symbols; fuentes servidas localmente). Adaptaciones: Categoría→Rama, 20 puestos, Eventos→Torneos.
 - Todo en **Docker Compose**. El PC de desarrollo es **Windows** (comandos en PowerShell).
-- Agente de IA (API de Claude) y Redis/worker llegan en fases posteriores.
+- Agente de IA: API de Claude (SDK `anthropic`), solo consulta. Redis llega con producción.
 
 ## Decisiones de negocio (ya acordadas)
 - Deporte: voleibol. **Solo dos ramas: masculina y femenina** (no hay categorías).
@@ -283,7 +283,19 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   Aviso antes del inicio del entrenamiento → `aprobada` automática, asistencia `justificado`, sin multa; aviso ya
   empezado o después (dentro de `dias_para_justificar`) → `pendiente` y lo revisa el staff como antes. En
   Configuración se quitaron las políticas fijas (solo queda el interruptor real de expulsión). 199 pruebas backend, 89 frontend.
-- SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), agente de IA, endurecer
+- HECHO (asistente de IA, 2026-10-31): migración 0017 (`uso_agente` + parámetro `agente_mensajes_por_dia`, 40;
+  0 = apagado). SDK `anthropic` 2.x; `ANTHROPIC_API_KEY` en `.env` (sin clave → 503 «no configurado»), modelo
+  `AGENTE_MODELO` (claude-opus-5-5) y `AGENTE_ESFUERZO` (medium). `services/agente.py`: bucle manual de herramientas
+  (máx. 6 rondas) con `beta.messages.create` + `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`),
+  caché del sistema+herramientas, negativa (`refusal`) manejada. **Solo consulta**: 11 herramientas que llaman a
+  las mismas rutas GET con el usuario que pregunta (respetan su alcance) y solo se ofrecen/ejecutan si tiene el
+  permiso; los resultados salen sin documento, teléfono, correo, dirección, EPS, motivos ni ids. No se guarda la
+  conversación (el navegador la tiene en memoria y reenvía hasta 20 mensajes de texto); `uso_agente` solo guarda
+  tokens y herramientas. `POST /agente/preguntar`, `GET /agente/estado` (`agente.usar`). Límite diario → 429; fallo
+  de la API → 502. Pantalla `paginas/asistente/` (chat, sugerencias por rol, «Consultó: …», respuestas como
+  texto plano). `mensajeError` muestra el detalle del 429. Pruebas con un cliente falso (`tests/test_agente.py`).
+  207 pruebas backend, 92 frontend.
+- SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), endurecer
   para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)

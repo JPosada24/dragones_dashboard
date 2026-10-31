@@ -28,6 +28,7 @@ DEFAULTS: dict[str, tuple[Any, str]] = {
     "puestos_por_talonario": (20, "Boletas por talonario de rifa"),
     "precio_puesto": (2000, "Precio de cada boleta de rifa (COP)"),
     "cupo_equipos_sugerido": (18, "Cupo sugerido de equipos por rama en un torneo"),
+    "agente_mensajes_por_dia": (40, "Preguntas al asistente de IA por usuario y día (0 = apagado)"),
 }
 
 
