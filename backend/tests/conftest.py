@@ -35,7 +35,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 import app.models  # noqa: E402  (antes de "from app.main import app": si no, "app" sería el paquete)
 from alembic import command  # noqa: E402
 from app.core import fechas  # noqa: E402
-from app.core.limites import limitador_login  # noqa: E402
+from app.core.limites import limitador_login, limitador_sitio  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
@@ -66,6 +66,7 @@ def _base_limpia():
     with SessionLocal() as db:
         sembrar_catalogos(db)
     limitador_login().reiniciar()
+    limitador_sitio().reiniciar()
 
 
 @pytest.fixture

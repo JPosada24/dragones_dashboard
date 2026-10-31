@@ -15,6 +15,7 @@ DEFAULTS: dict[str, tuple[Any, str]] = {
     "valor_inscripcion": (90000, "Valor de la inscripción anual (COP)"),
     "edad_mayoria": (18, "Edad desde la que el alumno no necesita acudiente"),
     "documento_max_mb": (5, "Tamaño máximo de cada documento subido (MB)"),
+    "foto_max_mb": (12, "Tamaño máximo de cada foto que se sube a la galería del sitio (MB)"),
     "meses_mora_expulsion": (3, "Meses con una deuda sin pagar (multas, rifas) antes de marcar 'A expulsar'"),
     "expulsion_automatica": (False, "Expulsar automáticamente (false = requiere confirmación)"),
     "dias_aviso_mora": (15, "Días antes de entrar en mora en que se avisa a la familia"),

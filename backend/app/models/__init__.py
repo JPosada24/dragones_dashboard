@@ -9,15 +9,44 @@ from app.models.alumnos import (
     Prorroga,
 )
 from app.models.asistencia import Asistencia, HorarioEntrenamiento, Justificacion, Multa, Sesion
+from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, Video
 from app.models.notificaciones import Notificacion
 from app.models.rifas import ActaSorteo, PagoTalonario, Rifa, Talonario
-from app.models.sistema import Auditoria, Configuracion
+from app.models.sistema import Auditoria, Configuracion, UsoAgente
 from app.models.torneos import EquipoTorneo, PagoEquipo, Torneo
 
 __all__ = [
-    "ActaSorteo", "Acudiente", "Alumno", "AlumnoAcudiente", "Asistencia", "Auditoria", "Configuracion",
-    "DocumentoAlumno", "EquipoTorneo", "HorarioEntrenamiento", "Inscripcion", "Justificacion", "Multa", "Notificacion",
+    "ActaSorteo",
+    "Acudiente",
+    "Album",
+    "Alumno",
+    "AlumnoAcudiente",
+    "Asistencia",
+    "Auditoria",
+    "Configuracion",
+    "DocumentoAlumno",
+    "EquipoTorneo",
+    "Foto",
+    "HorarioEntrenamiento",
+    "Inscripcion",
+    "IntegranteEquipo",
+    "Justificacion",
+    "Multa",
+    "Notificacion",
     "PagoEquipo",
-    "PagoInscripcion", "PagoTalonario", "Permiso", "Prorroga", "Rifa", "Rol", "Sesion", "SesionRefresh",
-    "Talonario", "Torneo", "Usuario", "roles_permisos",
+    "PagoInscripcion",
+    "PagoTalonario",
+    "PerfilClub",
+    "Permiso",
+    "Prorroga",
+    "Rifa",
+    "Rol",
+    "Sesion",
+    "SesionRefresh",
+    "Talonario",
+    "Torneo",
+    "UsoAgente",
+    "Usuario",
+    "Video",
+    "roles_permisos",
 ]

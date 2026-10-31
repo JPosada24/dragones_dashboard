@@ -87,6 +87,13 @@ class LimitadorFallos:
 
 
 @lru_cache
+def limitador_sitio() -> LimitadorFallos:
+    """Formularios del sitio público (sin sesión): intentos por IP y hora."""
+    s = get_settings()
+    return LimitadorFallos(s.sitio_envios_por_hora, 3600)
+
+
+@lru_cache
 def limitador_login() -> LimitadorFallos:
     s = get_settings()
     return LimitadorFallos(s.login_fallos_por_ip, s.login_ventana_minutos * 60)

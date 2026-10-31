@@ -44,6 +44,7 @@ class EquipoTorneo(UUIDMixin, TiempoMixin, Base):
     __table_args__ = (
         CheckConstraint(en("estado", ESTADOS_EQUIPO), name="ck_equipos_torneo_estado"),
         CheckConstraint("monto_pagado >= 0", name="ck_equipos_torneo_monto"),
+        CheckConstraint("origen IN ('staff', 'sitio')", name="ck_equipos_torneo_origen"),
         # Un club no se inscribe dos veces al mismo torneo (sin importar mayúsculas), salvo que se haya retirado.
         Index(
             "ux_equipos_torneo_club", "torneo_id", text("lower(nombre_club)"), unique=True,
@@ -62,6 +63,10 @@ class EquipoTorneo(UUIDMixin, TiempoMixin, Base):
     monto_pagado: Mapped[int] = mapped_column(Integer, default=0)
     motivo_retiro: Mapped[str | None] = mapped_column(String(255))
     inscrito_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
+    # "staff" (desde el panel) o "sitio" (el club se inscribió solo en el sitio público).
+    origen: Mapped[str] = mapped_column(String(10), default="staff", server_default=text("'staff'"))
+    # Autorización de tratamiento de datos del delegado (Ley 1581 de 2012), cuando se inscribe desde el sitio.
+    autoriza_datos_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     torneo: Mapped[Torneo] = relationship(lazy="joined")
     pagos: Mapped[list["PagoEquipo"]] = relationship(lazy="selectin", order_by="PagoEquipo.creado_en")

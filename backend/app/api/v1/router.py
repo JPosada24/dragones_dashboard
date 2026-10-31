@@ -5,12 +5,14 @@ from app.api.v1 import (
     agente,
     alumnos,
     auth,
+    club,
     configuracion,
     inscripciones,
     justificaciones,
     mora,
     multas,
     notificaciones,
+    publico,
     resumen,
     rifas,
     salud,
@@ -36,3 +38,5 @@ api_router.include_router(notificaciones.router)
 api_router.include_router(mora.router)
 api_router.include_router(resumen.router)
 api_router.include_router(agente.router)
+api_router.include_router(club.router)
+api_router.include_router(publico.router)

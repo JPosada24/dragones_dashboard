@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     # Límite por IP (además del bloqueo por cuenta): fallos de login permitidos por ventana.
     login_fallos_por_ip: int = 30
     login_ventana_minutos: int = 15
+    # Envíos de formularios del sitio público (inscripción de clubes) por IP y hora.
+    sitio_envios_por_hora: int = 5
     # Tope duro del tamaño de cualquier petición (MB). Gana sobre "documento_max_mb" de la configuración.
     max_cuerpo_mb: int = 25
 

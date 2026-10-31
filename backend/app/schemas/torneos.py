@@ -108,6 +108,7 @@ class EquipoOut(BaseModel):
     monto_pagado: int
     saldo: int
     motivo_retiro: str | None
+    origen: str  # staff | sitio
     pagos: list[PagoEquipoOut]
 
 

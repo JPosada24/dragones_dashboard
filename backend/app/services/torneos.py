@@ -163,7 +163,10 @@ def _estado_con_cupo(torneo: Torneo) -> str:
     return "confirmado" if torneo.valor_inscripcion == 0 else "pendiente_pago"
 
 
-def inscribir(db: Session, torneo: Torneo, *, datos: dict[str, Any], actor: Usuario, ip: str | None) -> EquipoTorneo:
+def inscribir(
+    db: Session, torneo: Torneo, *, datos: dict[str, Any], actor: Usuario | None, ip: str | None
+) -> EquipoTorneo:
+    """Inscribe un club. `actor` es None cuando el club se inscribe solo desde el sitio público."""
     _bloquear(db, torneo)
     if torneo.estado != "programado":
         raise ErrorNegocio("El torneo fue cancelado.")
@@ -179,12 +182,12 @@ def inscribir(db: Session, torneo: Torneo, *, datos: dict[str, Any], actor: Usua
     hay_cupo = _ocupados(db, torneo) < torneo.cupo_equipos
     equipo = EquipoTorneo(
         torneo_id=torneo.id, **datos, estado=_estado_con_cupo(torneo) if hay_cupo else "en_espera",
-        valor=torneo.valor_inscripcion, monto_pagado=0, inscrito_por=actor.id,
+        valor=torneo.valor_inscripcion, monto_pagado=0, inscrito_por=actor.id if actor else None,
     )
     db.add(equipo)
     db.flush()
     _auditar(
-        db, "torneo.inscribir_equipo", "equipo_torneo", equipo.id, actor.id, ip,
+        db, "torneo.inscribir_equipo", "equipo_torneo", equipo.id, actor.id if actor else None, ip,
         despues={"torneo_id": str(torneo.id), "club": equipo.nombre_club, "estado": equipo.estado},
     )
     return equipo
