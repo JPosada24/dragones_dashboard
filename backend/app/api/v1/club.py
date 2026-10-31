@@ -104,7 +104,7 @@ def eliminar_album(
     almacen: Almacen = Depends(get_almacen),
 ) -> Response:
     a = servicio.obtener_album(db, album_id)
-    claves = servicio.claves_de(a.fotos)
+    claves = servicio.claves_de(a.fotos) + ([a.portada_clave] if a.portada_clave else [])
     servicio.auditar(db, "club.album_eliminar", "album", a.id, actor, ip_cliente(request),
                       antes={"nombre": a.nombre, "fotos": len(a.fotos)})
     db.delete(a)
@@ -334,3 +334,57 @@ def ver_foto_integrante(
     if not i.foto_clave:
         raise NoEncontrado("Sin foto.")
     return Response(almacen.leer(i.foto_clave), media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+
+# ---------- Portada propia del álbum (no es una foto del álbum) ----------
+@router.post("/albumes/{album_id}/portada", response_model=AlbumOut)
+def subir_portada(
+    album_id: uuid.UUID,
+    request: Request,
+    archivo: UploadFile = File(),
+    autorizacion: bool = Form(),
+    actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> AlbumOut:
+    if not autorizacion:
+        raise ErrorNegocio("Confirma que tienes autorización de los acudientes de los menores que aparecen.")
+    a = servicio.obtener_album(db, album_id)
+    maximo = configuracion.obtener(db, "foto_max_mb") * 1024 * 1024
+    datos = archivo.file.read(maximo + 1)
+    if len(datos) > maximo:
+        raise ErrorNegocio(f"La foto supera el máximo de {configuracion.obtener(db, 'foto_max_mb')} MB.")
+    nueva, anterior = uuid.uuid4().hex, a.portada_clave
+    almacen.guardar(nueva, servicio.procesar_portada(datos))
+    a.portada_clave = nueva
+    servicio.auditar(db, "club.album_portada", "album", a.id, actor, ip_cliente(request))
+    db.commit()
+    if anterior:  # después del commit: si la transacción falla, la portada anterior sigue
+        almacen.borrar(anterior)
+    return AlbumOut.model_validate(a)
+
+
+@router.delete("/albumes/{album_id}/portada", response_model=AlbumOut)
+def quitar_portada(
+    album_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> AlbumOut:
+    a = servicio.obtener_album(db, album_id)
+    anterior, a.portada_clave = a.portada_clave, None
+    servicio.auditar(db, "club.album_portada_quitar", "album", a.id, actor, ip_cliente(request))
+    db.commit()
+    if anterior:
+        almacen.borrar(anterior)
+    return AlbumOut.model_validate(a)
+
+
+@router.get("/albumes/{album_id}/portada")
+def ver_portada(
+    album_id: uuid.UUID, _: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    a = servicio.obtener_album(db, album_id)
+    if not a.portada_clave:
+        raise NoEncontrado("El álbum no tiene portada propia.")
+    return Response(almacen.leer(a.portada_clave), media_type="image/jpeg",
+                    headers={"Cache-Control": "private, no-store"})

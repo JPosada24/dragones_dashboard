@@ -127,6 +127,17 @@ class AlbumOut(BaseModel):
     fecha: date | None
     publicado: bool
     fotos: list[FotoOut]
+    portada: str | None = None  # versión de la portada propia; None = se usa la primera foto
+
+    @model_validator(mode="before")
+    @classmethod
+    def _version_portada(cls, datos: Any) -> Any:
+        """Solo una versión corta de la clave (para refrescar la caché), nunca la clave entera."""
+        clave = getattr(datos, "portada_clave", None)
+        if clave is not None:
+            return {**{k: getattr(datos, k) for k in ("id", "nombre", "fecha", "publicado", "fotos")},
+                    "portada": clave[:8]}
+        return datos
 
 
 class VideoIn(_Entrada):

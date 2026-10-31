@@ -158,6 +158,11 @@
   align-items: center;
   gap: 10px;
 
+  .crece {
+    flex: 1;
+    min-width: 220px;
+  }
+
   .control {
     flex: 1;
     min-width: 200px;

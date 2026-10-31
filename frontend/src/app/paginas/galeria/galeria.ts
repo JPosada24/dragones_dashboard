@@ -12,6 +12,7 @@ import { AlbumClub, FotoClub, VideoClub, miniaturaYoutube } from '../../comparti
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
+import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { API } from '../../core/modelos';
 
 const URL_CLUB = `${API}/club`;
@@ -19,7 +20,7 @@ const URL_CLUB = `${API}/club`;
 /** Galería del sitio: álbumes (cada uno con sus fotos) y videos de YouTube. */
 @Component({
   selector: 'app-galeria',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, Aviso, Dialogo, Pestanas],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink, Aviso, Dialogo, Pestanas, ZonaArchivos],
   templateUrl: './galeria.html',
   styleUrl: './galeria.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +44,8 @@ export class GaleriaPage implements OnInit {
   protected readonly ocupado = signal(false);
   /** Miniaturas (blob:, pedidas con el token: un álbum sin publicar no es público). */
   protected readonly miniaturas = signal<Record<string, string>>({});
+  /** Portadas propias de los álbumes (blob:), por "id:versión". */
+  protected readonly portadas = signal<Record<string, string>>({});
   /** Fotos marcadas en el álbum abierto. */
   protected readonly seleccion = signal<ReadonlySet<string>>(new Set());
 
@@ -58,6 +61,8 @@ export class GaleriaPage implements OnInit {
   // Ventanas
   protected readonly editandoAlbum = signal<AlbumClub | 'nuevo' | null>(null);
   protected readonly subiendo = signal(false);
+  protected readonly eligiendoPortada = signal(false);
+  protected archivoPortada: File | null = null;
   protected readonly progreso = signal<string | null>(null);
   protected readonly creandoVideo = signal(false);
   protected readonly confirmando = signal<{ titulo: string; texto: string; boton: string; accion: () => void } | null>(null);
@@ -75,13 +80,18 @@ export class GaleriaPage implements OnInit {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => Object.values(this.miniaturas()).forEach((u) => URL.revokeObjectURL(u)));
+    inject(DestroyRef).onDestroy(() => {
+      Object.values(this.miniaturas()).forEach((u) => URL.revokeObjectURL(u));
+      Object.values(this.portadas()).forEach((u) => URL.revokeObjectURL(u));
+    });
     // Al cambiar de vista: en la lista solo hacen falta las portadas; dentro del álbum, todas sus fotos.
     effect(() => {
       const lista = this.albumes();
       if (!lista) return;
       const a = this.abierto();
-      this.cargarMiniaturas(a ? a.fotos : lista.flatMap((x) => x.fotos.slice(0, 1)));
+      // Portada propia si la hay; si no, la primera foto.
+      this.cargarPortadas(a ? [a] : lista);
+      this.cargarMiniaturas(a ? a.fotos : lista.filter((x) => !x.portada).flatMap((x) => x.fotos.slice(0, 1)));
     });
     effect(() => {
       this.album();
@@ -106,10 +116,58 @@ export class GaleriaPage implements OnInit {
     }
   }
 
+  private cargarPortadas(lista: AlbumClub[]): void {
+    for (const a of lista) {
+      const clave = `${a.id}:${a.portada}`;
+      if (!a.portada || this.portadas()[clave]) continue;
+      this.http.get(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`, { responseType: 'blob' }).subscribe({
+        next: (blob) => this.portadas.update((p) => ({ ...p, [clave]: URL.createObjectURL(blob) })),
+      });
+    }
+  }
+
+  /** Portada propia del álbum si la tiene; si no, su primera foto. */
   protected portada(a: AlbumClub): string | null {
+    if (a.portada) return this.portadas()[`${a.id}:${a.portada}`] ?? null;
     const f = a.fotos[0];
     return f ? (this.miniaturas()[f.id] ?? null) : null;
   }
+
+  // ---------- Portada propia (no es una foto del álbum) ----------
+  protected abrirPortada(): void {
+    this.formFotos.reset();
+    this.archivoPortada = null;
+    this.abrirVentana(() => this.eligiendoPortada.set(true));
+  }
+
+  protected elegirPortada(archivos: File[]): void {
+    this.archivoPortada = archivos[0] ?? null;
+  }
+
+  protected guardarPortada(): void {
+    const a = this.abierto();
+    if (!a) return;
+    if (!this.archivoPortada) return this.errorDialogo.set('Elige o arrastra la foto de la portada.');
+    if (!this.formFotos.getRawValue().autorizacion) {
+      return this.errorDialogo.set('Confirma que tienes autorización de los acudientes.');
+    }
+    const datos = new FormData();
+    datos.append('archivo', this.archivoPortada);
+    datos.append('autorizacion', 'true');
+    this.ejecutar(this.http.post<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`, datos), (nuevo) => {
+      this.reemplazar(nuevo);
+      this.eligiendoPortada.set(false);
+      this.exito(`Portada de «${nuevo.nombre}» actualizada.`);
+    });
+  }
+
+  protected quitarPortada(a: AlbumClub): void {
+    this.ejecutar(this.http.delete<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`), (nuevo) => {
+      this.reemplazar(nuevo);
+      this.exito('Se quitó la portada: ahora se usa la primera foto del álbum.');
+    }, false);
+  }
+
 
   private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = true): void {
     this.ocupado.set(true);
@@ -196,8 +254,8 @@ export class GaleriaPage implements OnInit {
     this.abrirVentana(() => this.subiendo.set(true));
   }
 
-  protected elegirArchivos(e: Event): void {
-    this.archivos = Array.from((e.target as HTMLInputElement).files ?? []);
+  protected elegirArchivos(archivos: File[]): void {
+    this.archivos = archivos;
   }
 
   /** Sube las fotos una por una (así una que falle no tumba las demás y se ve el avance). */

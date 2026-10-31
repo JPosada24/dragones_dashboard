@@ -34,6 +34,27 @@
       </button>
     </header>
 
+    <div class="bloque-portada">
+      <span class="portada-previa">
+        @if (portada(a); as src) {
+          <img [src]="src" alt="" />
+        } @else {
+          <span class="icono" aria-hidden="true">image</span>
+        }
+      </span>
+      <div class="portada-textos">
+        <strong>Portada</strong>
+        <span class="sub">
+          {{ a.portada ? 'Foto propia de portada: no está dentro del álbum.'
+            : (a.fotos.length ? 'Se está usando la primera foto del álbum.' : 'Sin portada: elige una foto o sube fotos al álbum.') }}
+        </span>
+      </div>
+      <button type="button" class="boton secundario chico" (click)="abrirPortada()">{{ a.portada ? 'Cambiar portada' : 'Elegir portada' }}</button>
+      @if (a.portada) {
+        <button type="button" class="enlace-rojo" [disabled]="ocupado()" (click)="quitarPortada(a)">Quitar</button>
+      }
+    </div>
+
     @if (a.fotos.length) {
       <div class="barra-seleccion" [class.activa]="seleccion().size">
         <button type="button" class="enlace" (click)="marcarTodas()">{{ todasMarcadas() ? 'Quitar selección' : 'Seleccionar todas' }}</button>
@@ -157,8 +178,7 @@
                descripcion="JPG, PNG o WebP. Puedes elegir varias. Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación)."
                (cerrar)="ocupado() ? null : subiendo.set(false)">
     <form class="formulario" [formGroup]="formFotos" (ngSubmit)="subirFotos()">
-      <label class="campo"><span class="etiqueta">Fotos</span>
-        <input class="control" type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="elegirArchivos($event)" /></label>
+      <app-zona-archivos [multiple]="true" etiqueta="Elegir fotos" (elegidos)="elegirArchivos($event)" />
       <label class="casilla">
         <input type="checkbox" formControlName="autorizacion" />
         <span>Tengo autorización de los acudientes de los menores que aparecen en estas fotos.</span>
@@ -168,6 +188,25 @@
       <div class="acciones">
         <button type="button" class="boton secundario" [disabled]="ocupado()" (click)="subiendo.set(false)">Cerrar</button>
         <button type="submit" class="boton" [disabled]="ocupado()">Subir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (eligiendoPortada() && abierto(); as a) {
+  <app-dialogo [titulo]="'Portada · ' + a.nombre"
+               descripcion="Solo se usa como portada del álbum (no aparece entre sus fotos). Se recorta 4:3 y se le quitan los datos ocultos."
+               (cerrar)="ocupado() ? null : eligiendoPortada.set(false)">
+    <form class="formulario" [formGroup]="formFotos" (ngSubmit)="guardarPortada()">
+      <app-zona-archivos etiqueta="Elegir foto de portada" (elegidos)="elegirPortada($event)" />
+      <label class="casilla">
+        <input type="checkbox" formControlName="autorizacion" />
+        <span>Tengo autorización de los acudientes de los menores que aparecen en esta foto.</span>
+      </label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" [disabled]="ocupado()" (click)="eligiendoPortada.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar portada</button>
       </div>
     </form>
   </app-dialogo>

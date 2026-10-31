@@ -98,3 +98,13 @@ def foto_integrante(
     i = servicio.integrante_publico(db, integrante_id)
     return Response(almacen.leer(i.foto_clave), media_type="image/jpeg",
                     headers={"Cache-Control": "public, max-age=604800"})
+
+
+@router.get("/albumes/{album_id}/portada")
+def portada_album(
+    album_id: uuid.UUID, db: Session = Depends(get_db), almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    """Portada propia de un álbum publicado. El enlace lleva ?v=… y cambia con cada portada nueva."""
+    a = servicio.portada_publica(db, album_id)
+    return Response(almacen.leer(a.portada_clave), media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=604800"})

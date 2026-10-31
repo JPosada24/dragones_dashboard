@@ -95,4 +95,26 @@ describe('GaleriaPage', () => {
     expect(el().textContent).toContain('Este álbum aún no tiene fotos');
     expect(boton('Seleccionar todas')).toBeUndefined();
   });
+
+  it('elige una portada propia que no queda entre las fotos', async () => {
+    await cargar('a1');
+    for (const f of FOTOS) backend.expectOne(`${C}/fotos/${f.id}?tam=mini`).flush(new Blob(['x']));
+    await estable();
+    expect(el().textContent).toContain('Se está usando la primera foto del álbum');
+    boton('Elegir portada')!.click();
+    await estable();
+    const input = dialogo().querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'portada.jpg', { type: 'image/jpeg' })] });
+    input.dispatchEvent(new Event('change'));
+    dialogo().querySelector<HTMLInputElement>('[formcontrolname="autorizacion"]')!.click();
+    boton('Guardar portada', dialogo())!.click();
+    const r = backend.expectOne(`${C}/albumes/a1/portada`);
+    expect((r.request.body as FormData).get('autorizacion')).toBe('true');
+    r.flush({ ...ALBUMES[0], portada: 'abcd1234' });
+    await estable();
+    backend.expectOne(`${C}/albumes/a1/portada`).flush(new Blob(['p'])); // vista previa con el token
+    await estable();
+    expect(el().textContent).toContain('Foto propia de portada');
+    expect(el().querySelectorAll('button.foto').length).toBe(3); // las fotos del álbum siguen siendo 3
+  });
 });

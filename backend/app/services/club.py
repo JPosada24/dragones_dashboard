@@ -71,6 +71,14 @@ def abrir_imagen(datos: bytes) -> Image.Image:
         raise ErrorNegocio("El archivo no es una imagen válida o es demasiado grande.") from e
 
 
+def procesar_portada(datos: bytes) -> bytes:
+    """Portada de un álbum: recorte 4:3 de 1200×900 (como las tarjetas del sitio), sin metadatos."""
+    imagen = ImageOps.fit(abrir_imagen(datos), (1200, 900), centering=(0.5, 0.45))
+    salida = io.BytesIO()
+    imagen.save(salida, "JPEG", quality=85, optimize=True, progressive=True)
+    return salida.getvalue()
+
+
 def procesar_retrato(datos: bytes) -> bytes:
     """Foto de un integrante: recorte cuadrado de 600 px centrado arriba (donde suele estar la cara), sin metadatos."""
     imagen = ImageOps.fit(abrir_imagen(datos), (600, 600), centering=(0.5, 0.35))
@@ -240,3 +248,11 @@ def integrante_publico(db: Session, integrante_id: uuid.UUID) -> IntegranteEquip
     if i is None or not i.publicado or not i.foto_clave or not perfil(db).publicado:
         raise NoEncontrado("Foto no encontrada.")
     return i
+
+
+def portada_publica(db: Session, album_id: uuid.UUID) -> Album:
+    """Álbum cuya portada se puede ver en el sitio: publicado, con portada y con el sitio publicado."""
+    a = db.get(Album, album_id)
+    if a is None or not a.publicado or not a.portada_clave or not perfil(db).publicado:
+        raise NoEncontrado("Portada no encontrada.")
+    return a

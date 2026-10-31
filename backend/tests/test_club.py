@@ -265,3 +265,29 @@ def test_listar_videos_del_panel(client, h_admin, crear_usuario, auth_header):
     assert client.get(f"{C}/albumes", headers=h).status_code == 403
     assert client.post(f"{C}/fotos/eliminar", json={"ids": [
         "00000000-0000-0000-0000-000000000000"]}, headers=h).status_code == 403
+
+
+def test_portada_propia_del_album_no_cuenta_como_foto(client, h_admin):
+    publicar(client, h_admin)
+    a = album(client, h_admin, publicado=False)
+    subir(client, h_admin, a["id"], jpeg_con_gps(400, 300))
+    url = f"{C}/albumes/{a['id']}/portada"
+    archivo = {"archivo": ("portada.jpg", jpeg_con_gps(2000, 1000), "image/jpeg")}
+    assert client.post(url, data={"autorizacion": "false"}, files=archivo, headers=h_admin).status_code == 422
+    r = client.post(url, data={"autorizacion": "true"}, files=archivo, headers=h_admin)
+    assert r.status_code == 200, r.text
+    version = r.json()["portada"]
+    assert version and len(version) == 8 and len(r.json()["fotos"]) == 1  # sigue con 1 foto
+    previa = client.get(url, headers=h_admin)
+    with Image.open(io.BytesIO(previa.content)) as im:
+        assert im.size == (1200, 900) and not im.getexif()
+    # En el sitio: solo con el álbum publicado.
+    publica = f"{P}/albumes/{a['id']}/portada"
+    assert client.get(publica).status_code == 404
+    client.patch(f"{C}/albumes/{a['id']}", json={"publicado": True}, headers=h_admin)
+    assert client.get(publica).status_code == 200
+    [en_sitio] = client.get(f"{P}/club").json()["albumes"]
+    assert en_sitio["portada"] == version and len(en_sitio["fotos"]) == 1
+    # Quitarla vuelve a la primera foto.
+    assert client.delete(url, headers=h_admin).json()["portada"] is None
+    assert client.get(publica).status_code == 404

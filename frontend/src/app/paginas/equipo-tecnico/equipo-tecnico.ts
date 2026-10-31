@@ -8,6 +8,7 @@ import { IntegranteClub, iniciales } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
+import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { API } from '../../core/modelos';
 
 const URL_EQUIPO = `${API}/club/equipo`;
@@ -15,7 +16,7 @@ const URL_EQUIPO = `${API}/club/equipo`;
 /** «Nuestro equipo técnico» del sitio: entrenadores con cargo, presentación y foto. */
 @Component({
   selector: 'app-equipo-tecnico',
-  imports: [ReactiveFormsModule, Aviso, Dialogo, Pestanas],
+  imports: [ReactiveFormsModule, Aviso, Dialogo, Pestanas, ZonaArchivos],
   templateUrl: './equipo-tecnico.html',
   styleUrl: './equipo-tecnico.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,8 +112,8 @@ export class EquipoTecnicoPage implements OnInit {
     this.editando.set(i);
   }
 
-  protected elegirRetrato(e: Event): void {
-    this.archivoRetrato = (e.target as HTMLInputElement).files?.[0] ?? null;
+  protected elegirRetrato(archivos: File[]): void {
+    this.archivoRetrato = archivos[0] ?? null;
     if (this.archivoRetrato) this.quitarRetrato.set(false);
   }
 

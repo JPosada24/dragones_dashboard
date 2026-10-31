@@ -29,6 +29,7 @@ export interface AlbumClub {
   fecha: string | null;
   publicado: boolean;
   fotos: FotoClub[];
+  portada: string | null; // versión de la portada propia; null = se usa la primera foto
 }
 
 export interface VideoClub {

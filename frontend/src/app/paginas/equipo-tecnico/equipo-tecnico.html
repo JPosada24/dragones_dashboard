@@ -71,8 +71,7 @@
           @if (i !== 'nuevo' && retrato(i) && !quitarRetrato()) {
             <img class="retrato-previa" [src]="retrato(i)" alt="Foto actual" width="56" height="56" />
           }
-          <input class="control" type="file" accept="image/jpeg,image/png,image/webp" (change)="elegirRetrato($event)"
-                 aria-label="Elegir foto" />
+          <app-zona-archivos class="crece" etiqueta="Elegir foto" (elegidos)="elegirRetrato($event)" />
           @if (i !== 'nuevo' && i.foto && !quitarRetrato()) {
             <button type="button" class="enlace-rojo" (click)="quitarRetrato.set(true)">Quitar foto</button>
           }

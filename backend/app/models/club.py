@@ -52,6 +52,8 @@ class Album(UUIDMixin, TiempoMixin, Base):
     nombre: Mapped[str] = mapped_column(String(120))
     fecha: Mapped[date | None] = mapped_column(Date)
     publicado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Portada propia (no es una foto del álbum): 1200×900 sin metadatos. Sin ella, la portada es la primera foto.
+    portada_clave: Mapped[str | None] = mapped_column(String(32))
 
     fotos: Mapped[list["Foto"]] = relationship(
         lazy="selectin", order_by="Foto.creado_en", cascade="all, delete-orphan", passive_deletes=True

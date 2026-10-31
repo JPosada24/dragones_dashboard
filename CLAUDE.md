@@ -332,7 +332,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   como carpetas con portada (solo se pide la miniatura de la primera foto), `?album=id` abre uno (fotos, subir,
   editar, publicar, eliminar) con **selección múltiple** («Seleccionar todas», `POST /club/fotos/eliminar`
   {ids ≤500}, todo o nada) y videos. `GET /club/albumes` y `/club/videos`. Contenido del sitio queda con estado,
-  textos, formación y contacto. 231 pruebas backend, 101 frontend.
+  textos, formación y contacto. Migración 0021 (`albumes.portada_clave`): portada propia del álbum, **no cuenta como
+  foto** (1200×900, sin metadatos, exige autorización de acudientes); sin ella, la portada es la primera foto. Panel
+  `POST/DELETE/GET /club/albumes/{id}/portada`, público `GET /publico/albumes/{id}/portada`; `AlbumOut.portada` =
+  versión de 8 caracteres. `compartido/zona-archivos.ts`: campo de archivos con **arrastrar y soltar** (filtra por tipo,
+  `<input type=file>` real por dentro) usado en fotos, portada y foto del entrenador. 232 pruebas backend, 105 frontend.
   Migración 0019 (`perfil_club.fundado_en`): `GET /publico/club` trae `cifras` (solo totales: deportistas con
   inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
   portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno
