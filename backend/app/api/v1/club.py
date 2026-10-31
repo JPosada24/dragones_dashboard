@@ -10,12 +10,13 @@ from app.core.almacen import Almacen, get_almacen
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.acceso import Usuario
-from app.models.club import Album, IntegranteEquipo, Video
+from app.models.club import Album, Foto, IntegranteEquipo, Video
 from app.schemas.club import (
     AlbumCambios,
     AlbumIn,
     AlbumOut,
     ClubPanelOut,
+    EliminarFotosIn,
     FotoOut,
     IntegranteCambios,
     IntegranteIn,
@@ -63,6 +64,12 @@ def actualizar_perfil(
 
 
 # ---------- Álbumes y fotos ----------
+@router.get("/albumes", response_model=list[AlbumOut])
+def listar_albumes(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[AlbumOut]:
+    filas = db.scalars(select(Album).order_by(Album.fecha.desc().nulls_last(), Album.creado_en.desc()))
+    return [AlbumOut.model_validate(a) for a in filas]
+
+
 @router.post("/albumes", response_model=AlbumOut, status_code=status.HTTP_201_CREATED)
 def crear_album(
     datos: AlbumIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
@@ -138,6 +145,24 @@ def ver_foto(
     return Response(datos, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
 
 
+@router.post("/fotos/eliminar")
+def eliminar_fotos(
+    datos: EliminarFotosIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> dict[str, int]:
+    """Elimina varias fotos de una vez (todas o ninguna). Las que ya no existen se ignoran."""
+    fotos = list(db.scalars(select(Foto).where(Foto.id.in_(set(datos.ids)))))
+    claves = servicio.claves_de(fotos)
+    for f in fotos:
+        db.delete(f)
+    servicio.auditar(db, "club.fotos_eliminar", "foto", len(fotos), actor, ip_cliente(request),
+                     antes={"ids": [str(f.id) for f in fotos]})
+    db.commit()
+    for c in claves:  # después del commit: si la transacción falla, los archivos siguen ahí
+        almacen.borrar(c)
+    return {"eliminadas": len(fotos)}
+
+
 @router.delete("/fotos/{foto_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_foto(
     foto_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
@@ -159,6 +184,11 @@ def _video(db: Session, video_id: uuid.UUID) -> Video:
     if v is None:
         raise NoEncontrado("Video no encontrado.")
     return v
+
+
+@router.get("/videos", response_model=list[VideoOut])
+def listar_videos(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[VideoOut]:
+    return [VideoOut.model_validate(v) for v in db.scalars(select(Video).order_by(Video.creado_en.desc()))]
 
 
 @router.post("/videos", response_model=VideoOut, status_code=status.HTTP_201_CREATED)

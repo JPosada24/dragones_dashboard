@@ -101,6 +101,15 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Torneos', texto: 'Los torneos con inscripciones abiertas aparecen en el sitio y los clubes externos se inscriben solos; quedan en Torneos marcados «desde el sitio» y te llega un aviso.' },
     ],
   },
+  'perfil-club/galeria': {
+    titulo: 'Cómo funciona la galería',
+    pasos: [
+      { titulo: 'Álbumes', texto: 'Cada álbum es una carpeta (un torneo, un entrenamiento…). Ábrelo para ver y subir sus fotos. En el sitio se ve como una tarjeta con su portada (la primera foto).' },
+      { titulo: 'Publicar', texto: 'Un álbum en borrador no se ve en el sitio. Puedes subirle fotos con calma y publicarlo cuando esté listo.' },
+      { titulo: 'Eliminar varias', texto: 'Dentro del álbum toca las fotos para marcarlas (o «Seleccionar todas») y elimínalas juntas.' },
+      { titulo: 'Fotos', texto: 'Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación). Sube solo fotos con autorización de los acudientes de los menores que aparecen.' },
+    ],
+  },
   'perfil-club/equipo': {
     titulo: 'Cómo funciona el equipo técnico',
     pasos: [

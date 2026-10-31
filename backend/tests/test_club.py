@@ -241,3 +241,27 @@ def test_listar_equipo_tecnico_en_orden(client, h_admin):
         client.post(f"{C}/equipo", json={"nombre": nombre, "cargo": "Entrenador", "orden": orden}, headers=h_admin)
     assert [i["nombre"] for i in client.get(f"{C}/equipo", headers=h_admin).json()] == [
         "Ana Ruiz", "Beto Gil", "Carlos Vélez"]
+
+
+def test_eliminar_varias_fotos_de_una_vez(client, h_admin):
+    publicar(client, h_admin)
+    a = album(client, h_admin)
+    ids = [subir(client, h_admin, a["id"], jpeg_con_gps(400, 300)).json()["id"] for _ in range(3)]
+    [listado] = client.get(f"{C}/albumes", headers=h_admin).json()
+    assert len(listado["fotos"]) == 3
+    r = client.post(f"{C}/fotos/eliminar", json={"ids": [*ids[:2], "00000000-0000-0000-0000-000000000000"]},
+                    headers=h_admin)
+    assert r.status_code == 200 and r.json() == {"eliminadas": 2}
+    assert [f["id"] for f in client.get(f"{C}/albumes", headers=h_admin).json()[0]["fotos"]] == [ids[2]]
+    assert client.get(f"{P}/fotos/{ids[0]}").status_code == 404
+    assert client.post(f"{C}/fotos/eliminar", json={"ids": []}, headers=h_admin).status_code == 422
+
+
+def test_listar_videos_del_panel(client, h_admin, crear_usuario, auth_header):
+    client.post(f"{C}/videos", json={"titulo": "Resumen", "enlace": "https://youtu.be/dQw4w9WgXcQ"}, headers=h_admin)
+    assert [v["titulo"] for v in client.get(f"{C}/videos", headers=h_admin).json()] == ["Resumen"]
+    crear_usuario("coach@club.com", "ENTRENADOR")
+    h = auth_header("coach@club.com")
+    assert client.get(f"{C}/albumes", headers=h).status_code == 403
+    assert client.post(f"{C}/fotos/eliminar", json={"ids": [
+        "00000000-0000-0000-0000-000000000000"]}, headers=h).status_code == 403

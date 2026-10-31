@@ -1,0 +1,201 @@
+<app-pestanas [pestanas]="pestanas" etiqueta="Vistas del perfil del club" />
+
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudo cargar la galería. Recarga la página.</p>
+} @else if (albumes() === null) {
+  <p class="panel vacio">Cargando…</p>
+} @else if (album() && !abierto()) {
+  <p class="panel vacio">Ese álbum ya no existe. <a routerLink="." [queryParams]="{}">Volver a los álbumes</a></p>
+} @else if (abierto(); as a) {
+  <!-- ===== Un álbum abierto ===== -->
+  <section class="panel" aria-labelledby="titulo-album">
+    <header class="cabecera-album">
+      <a class="volver" routerLink="." [queryParams]="{}"><span class="icono" aria-hidden="true">arrow_back</span> Álbumes</a>
+      <div class="titulo-album">
+        <h2 id="titulo-album">{{ a.nombre }}</h2>
+        <span class="meta mono">
+          {{ a.fotos.length }} {{ a.fotos.length === 1 ? 'foto' : 'fotos' }}@if (a.fecha) { · {{ a.fecha | date: 'd MMM y' }} }
+        </span>
+      </div>
+      <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="a.publicado"
+              [disabled]="ocupado()" (click)="cambiarPublicado(a)">
+        <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+        {{ a.publicado ? 'En el sitio' : 'Borrador' }}
+      </button>
+      <button type="button" class="boton-icono" (click)="abrirEditarAlbum(a)" aria-label="Editar nombre y fecha del álbum">
+        <span class="icono" aria-hidden="true">edit</span>
+      </button>
+      <button type="button" class="boton chico" (click)="abrirSubir()">
+        <span class="icono" aria-hidden="true">add_photo_alternate</span> Subir fotos
+      </button>
+    </header>
+
+    @if (a.fotos.length) {
+      <div class="barra-seleccion" [class.activa]="seleccion().size">
+        <button type="button" class="enlace" (click)="marcarTodas()">{{ todasMarcadas() ? 'Quitar selección' : 'Seleccionar todas' }}</button>
+        @if (seleccion().size) {
+          <span class="mono">{{ seleccion().size }} {{ seleccion().size === 1 ? 'seleccionada' : 'seleccionadas' }}</span>
+          <span class="crece"></span>
+          <button type="button" class="boton peligro chico" [disabled]="ocupado()" (click)="eliminarSeleccionadas()">
+            <span class="icono" aria-hidden="true">delete</span> Eliminar {{ seleccion().size }}
+          </button>
+        } @else {
+          <span class="sub">Toca las fotos para marcarlas y eliminarlas juntas.</span>
+        }
+      </div>
+      <div class="fotos" role="group" aria-label="Fotos del álbum">
+        @for (f of a.fotos; track f.id; let i = $index) {
+          <button type="button" class="foto" [class.marcada]="marcada(f)" [attr.aria-pressed]="marcada(f)"
+                  [attr.aria-label]="'Foto ' + (i + 1)" (click)="marcar(f)">
+            @if (miniaturas()[f.id]; as src) {
+              <img [src]="src" alt="" loading="lazy" [attr.width]="f.ancho" [attr.height]="f.alto" />
+            }
+            <span class="check" aria-hidden="true"><span class="icono">check</span></span>
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="vacio-album">
+        <span class="icono" aria-hidden="true">photo_library</span>
+        <p>Este álbum aún no tiene fotos.</p>
+        <button type="button" class="boton chico" (click)="abrirSubir()">Subir fotos</button>
+      </div>
+    }
+
+    <footer class="pie-album">
+      <button type="button" class="enlace-rojo" (click)="eliminarAlbum(a)">Eliminar álbum completo</button>
+    </footer>
+  </section>
+} @else {
+  <!-- ===== Lista de álbumes ===== -->
+  <div class="encabezado">
+    <p class="sub">Cada álbum es una carpeta de fotos. En el sitio solo se ven los álbumes publicados.</p>
+    <button type="button" class="boton" (click)="abrirEditarAlbum('nuevo')">
+      <span class="icono" aria-hidden="true">create_new_folder</span> Nuevo álbum
+    </button>
+  </div>
+
+  <ul class="albumes">
+    @for (a of albumes(); track a.id) {
+      <li>
+        <a class="album" routerLink="." [queryParams]="{ album: a.id }" [attr.aria-label]="'Abrir álbum ' + a.nombre">
+          <span class="portada">
+            @if (portada(a); as src) {
+              <img [src]="src" alt="" loading="lazy" />
+            } @else {
+              <span class="icono" aria-hidden="true">photo_library</span>
+            }
+            <span class="estado" [class.publicado]="a.publicado">{{ a.publicado ? 'En el sitio' : 'Borrador' }}</span>
+          </span>
+          <span class="datos">
+            <span class="nombre">{{ a.nombre }}</span>
+            <span class="meta mono">
+              {{ a.fotos.length }} {{ a.fotos.length === 1 ? 'foto' : 'fotos' }}@if (a.fecha) { · {{ a.fecha | date: 'd MMM y' }} }
+            </span>
+          </span>
+        </a>
+      </li>
+    } @empty {
+      <li class="panel vacio">Aún no hay álbumes. Crea uno (por ejemplo, «Copa Caldas 2026») y súbele fotos.</li>
+    }
+  </ul>
+
+  <section class="panel videos" aria-labelledby="titulo-videos">
+    <header class="cabecera fila">
+      <div>
+        <h2 id="titulo-videos">Videos</h2>
+        <p class="sub">Enlaces de YouTube: el sitio muestra la portada y abre el video en YouTube.</p>
+      </div>
+      <button type="button" class="boton secundario chico" (click)="abrirVideo()">Agregar video</button>
+    </header>
+    @for (v of videos(); track v.id) {
+      <div class="video">
+        @if (miniaturaYoutube(v.youtube_id); as src) {
+          <img class="video-mini" [src]="src" alt="" loading="lazy" referrerpolicy="no-referrer" />
+        }
+        <span class="titulo-fila">{{ v.titulo }}</span>
+        <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="v.publicado"
+                [attr.aria-label]="'Publicar ' + v.titulo" [disabled]="ocupado()" (click)="cambiarVideo(v)">
+          <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+        </button>
+        <button type="button" class="boton-icono peligro" (click)="eliminarVideo(v)" [attr.aria-label]="'Eliminar ' + v.titulo">
+          <span class="icono" aria-hidden="true">delete</span>
+        </button>
+      </div>
+    } @empty {
+      <p class="vacio">Pega el enlace de un video de YouTube del club (resúmenes de torneos, presentación…).</p>
+    }
+  </section>
+}
+
+<!-- ---------- Ventanas ---------- -->
+@if (editandoAlbum(); as a) {
+  <app-dialogo [titulo]="a === 'nuevo' ? 'Nuevo álbum' : 'Editar álbum'" (cerrar)="editandoAlbum.set(null)">
+    <form class="formulario" [formGroup]="formAlbum" (ngSubmit)="guardarAlbum()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombre</span>
+          <input class="control" formControlName="nombre" maxlength="120" placeholder="Ej.: Copa Caldas 2026" /></label>
+        <label class="campo"><span class="etiqueta">Fecha (opcional)</span>
+          <input class="control" formControlName="fecha" type="date" /></label>
+      </div>
+      <label class="casilla"><input type="checkbox" formControlName="publicado" /><span>Mostrar en el sitio</span></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editandoAlbum.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">{{ a === 'nuevo' ? 'Crear álbum' : 'Guardar' }}</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (subiendo() && abierto(); as a) {
+  <app-dialogo [titulo]="'Subir fotos · ' + a.nombre"
+               descripcion="JPG, PNG o WebP. Puedes elegir varias. Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación)."
+               (cerrar)="ocupado() ? null : subiendo.set(false)">
+    <form class="formulario" [formGroup]="formFotos" (ngSubmit)="subirFotos()">
+      <label class="campo"><span class="etiqueta">Fotos</span>
+        <input class="control" type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="elegirArchivos($event)" /></label>
+      <label class="casilla">
+        <input type="checkbox" formControlName="autorizacion" />
+        <span>Tengo autorización de los acudientes de los menores que aparecen en estas fotos.</span>
+      </label>
+      @if (progreso()) { <p class="nota-campo" role="status">{{ progreso() }}</p> }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" [disabled]="ocupado()" (click)="subiendo.set(false)">Cerrar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Subir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (creandoVideo()) {
+  <app-dialogo titulo="Agregar video" descripcion="Solo enlaces de YouTube." (cerrar)="creandoVideo.set(false)">
+    <form class="formulario" [formGroup]="formVideo" (ngSubmit)="crearVideo()">
+      <label class="campo"><span class="etiqueta">Título</span>
+        <input class="control" formControlName="titulo" maxlength="120" placeholder="Ej.: Resumen Copa Caldas" /></label>
+      <label class="campo"><span class="etiqueta">Enlace de YouTube</span>
+        <input class="control" formControlName="enlace" placeholder="https://youtu.be/…" /></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="creandoVideo.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Agregar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (confirmando(); as c) {
+  <app-dialogo [titulo]="c.titulo" (cerrar)="confirmando.set(null)">
+    <p class="advertencia">{{ c.texto }}</p>
+    @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+    <div class="acciones">
+      <button type="button" class="boton secundario" (click)="confirmando.set(null)">Cancelar</button>
+      <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="c.accion()">{{ c.boton }}</button>
+    </div>
+  </app-dialogo>
+}

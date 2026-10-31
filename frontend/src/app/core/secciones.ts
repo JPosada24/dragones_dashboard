@@ -70,6 +70,13 @@ export const SECCIONES: Seccion[] = [
     descripcion: 'Galería, videos, misión, visión, historia, contacto y equipo del club que se muestran en el sitio.',
   },
   {
+    // Pestaña de Perfil del club: álbumes de fotos y videos del sitio.
+    ruta: 'perfil-club/galeria', etiqueta: 'Galería', icono: 'photo_library', grupo: 'Club', permisos: ['club.editar'],
+    enMenu: false,
+    titulo: 'Perfil del club', subtitulo: 'Galería: álbumes de fotos y videos del sitio',
+    descripcion: 'Álbumes con sus fotos y videos de YouTube.',
+  },
+  {
     // Pestaña de Perfil del club: «Nuestro equipo técnico» del sitio.
     ruta: 'perfil-club/equipo', etiqueta: 'Equipo técnico', icono: 'sports', grupo: 'Club', permisos: ['club.editar'],
     enMenu: false,

@@ -105,6 +105,12 @@ class AlbumCambios(_Entrada):
     publicado: bool | None = None
 
 
+class EliminarFotosIn(_Entrada):
+    """Varias fotos a la vez (las que se marcaron en el álbum)."""
+
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+
+
 class FotoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -9,89 +9,12 @@
 } @else if (panel(); as p) {
   <div class="columnas">
     <div class="columna">
-      <!-- Galería -->
-      <section class="panel tarjeta" aria-labelledby="titulo-galeria">
-        <header class="cabecera fila">
-          <div>
-            <h2 id="titulo-galeria">Galería por álbumes</h2>
-            <p class="sub">Solo se ven en el sitio los álbumes publicados</p>
-          </div>
-          <button type="button" class="boton chico" (click)="abrirAlbum()">Nuevo álbum</button>
-        </header>
-        @for (a of p.albumes; track a.id) {
-          <article class="album">
-            <div class="album-cabecera">
-              <span class="album-nombre">{{ a.nombre }}</span>
-              <span class="meta mono">
-                {{ a.fotos.length }} {{ a.fotos.length === 1 ? 'foto' : 'fotos' }}@if (a.fecha) { · {{ a.fecha | date: 'd MMM y' }} }
-                · <span [class.publicado]="a.publicado">{{ a.publicado ? 'publicado' : 'borrador' }}</span>
-              </span>
-            </div>
-            <div class="fotos">
-              @for (f of a.fotos; track f.id) {
-                <div class="foto">
-                  @if (miniaturas()[f.id]; as src) {
-                    <img [src]="src" [attr.width]="f.ancho" [attr.height]="f.alto" alt="" loading="lazy" />
-                  }
-                  <button type="button" class="quitar-foto" (click)="eliminarFoto(a, f)" aria-label="Eliminar foto">
-                    <span class="icono" aria-hidden="true">close</span>
-                  </button>
-                </div>
-              }
-              <button type="button" class="foto vacia" (click)="abrirFotos(a)">
-                <span class="icono" aria-hidden="true">add_photo_alternate</span> Subir fotos
-              </button>
-            </div>
-            <div class="album-acciones">
-              <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="a.publicado"
-                      [disabled]="ocupado()" (click)="cambiarAlbum(a)">
-                <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
-                {{ a.publicado ? 'Publicado' : 'Publicar' }}
-              </button>
-              <button type="button" class="enlace-rojo" (click)="eliminarAlbum(a)">Eliminar álbum</button>
-            </div>
-          </article>
-        } @empty {
-          <p class="vacio">Aún no hay álbumes. Crea uno (por ejemplo, «Copa Caldas 2026») y súbele fotos.</p>
-        }
-      </section>
-
-      <!-- Videos -->
-      <section class="panel tarjeta" aria-labelledby="titulo-videos">
-        <header class="cabecera fila">
-          <h2 id="titulo-videos">Videos</h2>
-          <button type="button" class="boton secundario chico" (click)="abrirVideo()">Agregar video</button>
-        </header>
-        @for (v of p.videos; track v.id) {
-          <div class="video">
-            @if (miniaturaYoutube(v.youtube_id); as src) {
-              <img class="video-mini" [src]="src" alt="" loading="lazy" referrerpolicy="no-referrer" />
-            }
-            <div class="textos">
-              <span class="titulo-fila">{{ v.titulo }}</span>
-              <span class="sub">YouTube</span>
-            </div>
-            <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="v.publicado"
-                    [attr.aria-label]="'Publicar ' + v.titulo" [disabled]="ocupado()" (click)="cambiarVideo(v)">
-              <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
-            </button>
-            <button type="button" class="boton-icono peligro" (click)="eliminarVideo(v)" [attr.aria-label]="'Eliminar ' + v.titulo">
-              <span class="icono" aria-hidden="true">delete</span>
-            </button>
-          </div>
-        } @empty {
-          <p class="vacio">Pega el enlace de un video de YouTube del club (resúmenes de torneos, presentación…).</p>
-        }
-      </section>
-    </div>
-
-    <div class="columna">
       <!-- Estado del sitio -->
       <section class="panel estado-sitio" [class.en-linea]="p.perfil.publicado" aria-label="Estado del sitio">
         <div class="textos">
           <h2>{{ p.perfil.publicado ? 'Contenido publicado en el sitio' : 'Contenido oculto en el sitio' }}</h2>
           <p class="sub">
-            {{ p.perfil.publicado ? 'El sitio muestra el equipo técnico, la galería, los torneos abiertos y las cifras del club.'
+            {{ p.perfil.publicado ? 'El sitio muestra el equipo técnico, la galería, los torneos abiertos y las cifras del club (cada uno se edita en su pestaña).'
               : 'Mientras esté oculto, el sitio muestra solo su contenido fijo (sin equipo, galería, torneos ni cifras).' }}
             @if (!p.sitio_url) { Falta configurar SITIO_URL en el servidor para el botón «Ver sitio». }
           </p>
@@ -121,6 +44,9 @@
         </section>
       }
 
+    </div>
+
+    <div class="columna">
       <!-- La formación va por rotaciones -->
       <section class="panel texto-club" aria-labelledby="titulo-formacion">
         <div class="fila-titulo">
@@ -204,73 +130,6 @@
         <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
       </div>
     </form>
-  </app-dialogo>
-}
-
-@if (creandoAlbum()) {
-  <app-dialogo titulo="Nuevo álbum" (cerrar)="creandoAlbum.set(false)">
-    <form class="formulario" [formGroup]="formAlbum" (ngSubmit)="crearAlbum()">
-      <div class="rejilla">
-        <label class="campo"><span class="etiqueta">Nombre</span>
-          <input class="control" formControlName="nombre" maxlength="120" placeholder="Ej.: Copa Caldas 2026" /></label>
-        <label class="campo"><span class="etiqueta">Fecha (opcional)</span>
-          <input class="control" formControlName="fecha" type="date" /></label>
-      </div>
-      <label class="casilla"><input type="checkbox" formControlName="publicado" /><span>Publicarlo de una vez</span></label>
-      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-      <div class="acciones">
-        <button type="button" class="boton secundario" (click)="creandoAlbum.set(false)">Cancelar</button>
-        <button type="submit" class="boton" [disabled]="ocupado()">Crear álbum</button>
-      </div>
-    </form>
-  </app-dialogo>
-}
-
-@if (subiendoA(); as a) {
-  <app-dialogo [titulo]="'Subir fotos · ' + a.nombre"
-               descripcion="JPG, PNG o WebP. Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación)."
-               (cerrar)="ocupado() ? null : subiendoA.set(null)">
-    <form class="formulario" [formGroup]="formFotos" (ngSubmit)="subirFotos()">
-      <label class="campo"><span class="etiqueta">Fotos</span>
-        <input class="control" type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="elegirArchivos($event)" /></label>
-      <label class="casilla">
-        <input type="checkbox" formControlName="autorizacion" />
-        <span>Tengo autorización de los acudientes de los menores que aparecen en estas fotos.</span>
-      </label>
-      @if (progreso()) { <p class="nota-campo" role="status">{{ progreso() }}</p> }
-      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-      <div class="acciones">
-        <button type="button" class="boton secundario" [disabled]="ocupado()" (click)="subiendoA.set(null)">Cerrar</button>
-        <button type="submit" class="boton" [disabled]="ocupado()">Subir</button>
-      </div>
-    </form>
-  </app-dialogo>
-}
-
-@if (creandoVideo()) {
-  <app-dialogo titulo="Agregar video" descripcion="Solo enlaces de YouTube. En el sitio se muestra la portada con un enlace al video." (cerrar)="creandoVideo.set(false)">
-    <form class="formulario" [formGroup]="formVideo" (ngSubmit)="crearVideo()">
-      <label class="campo"><span class="etiqueta">Título</span>
-        <input class="control" formControlName="titulo" maxlength="120" placeholder="Ej.: Resumen Copa Caldas" /></label>
-      <label class="campo"><span class="etiqueta">Enlace de YouTube</span>
-        <input class="control" formControlName="enlace" placeholder="https://youtu.be/…" /></label>
-      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-      <div class="acciones">
-        <button type="button" class="boton secundario" (click)="creandoVideo.set(false)">Cancelar</button>
-        <button type="submit" class="boton" [disabled]="ocupado()">Agregar</button>
-      </div>
-    </form>
-  </app-dialogo>
-}
-
-@if (confirmando(); as c) {
-  <app-dialogo [titulo]="c.titulo" (cerrar)="confirmando.set(null)">
-    <p class="advertencia">{{ c.texto }}</p>
-    @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-    <div class="acciones">
-      <button type="button" class="boton secundario" (click)="confirmando.set(null)">Cancelar</button>
-      <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="c.accion()">Eliminar</button>
-    </div>
   </app-dialogo>
 }
 

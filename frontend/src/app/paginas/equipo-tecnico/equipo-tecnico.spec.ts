@@ -47,7 +47,7 @@ describe('EquipoTecnicoPage', () => {
     expect(el().querySelector('.tarjeta h2')?.textContent).toBe('Ana Ruiz');
     expect(el().querySelector('.tarjeta .foto img')).not.toBeNull();
     const pestanas = [...el().querySelectorAll('app-pestanas a')].map((a) => a.textContent?.trim());
-    expect(pestanas).toEqual(['web Contenido del sitio', 'sports Equipo técnico']);
+    expect(pestanas).toEqual(['web Contenido del sitio', 'photo_library Galería', 'sports Equipo técnico']);
   });
 
   it('agrega un entrenador y sube su foto', async () => {

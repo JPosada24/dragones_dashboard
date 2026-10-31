@@ -328,7 +328,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   sitio publicado); la API solo expone `foto` = 8 caracteres de versión. El equipo técnico tiene su propia pantalla,
   pestaña de Perfil del club (`PESTANAS_CLUB`: «Contenido del sitio» `/perfil-club` · «Equipo técnico»
   `/perfil-club/equipo`, `paginas/equipo-tecnico/`, `GET /club/equipo`): tarjetas con foto, interruptor de
-  publicar, agregar/editar/quitar. 229 pruebas backend, 99 frontend.
+  publicar, agregar/editar/quitar. Galería también en su pestaña (`/perfil-club/galeria`, `paginas/galeria/`): álbumes
+  como carpetas con portada (solo se pide la miniatura de la primera foto), `?album=id` abre uno (fotos, subir,
+  editar, publicar, eliminar) con **selección múltiple** («Seleccionar todas», `POST /club/fotos/eliminar`
+  {ids ≤500}, todo o nada) y videos. `GET /club/albumes` y `/club/videos`. Contenido del sitio queda con estado,
+  textos, formación y contacto. 231 pruebas backend, 101 frontend.
   Migración 0019 (`perfil_club.fundado_en`): `GET /publico/club` trae `cifras` (solo totales: deportistas con
   inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
   portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno
