@@ -1,34 +1,26 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Observable, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { Observable, map, of, switchMap, tap, throwError } from 'rxjs';
 
 import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { PESTANAS_ALUMNOS, Pestanas } from '../../compartido/pestanas';
 import { mensajeError } from '../../compartido/errores';
-import { ESTADO_INSCRIPCION, TIPOS_DOCUMENTO } from '../../compartido/estados';
+import { ESTADO_INSCRIPCION, TIPOS_DOCUMENTO, TipoDocumento } from '../../compartido/estados';
 import { isoLocal } from '../../compartido/fechas';
 import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
-import { API } from '../../core/modelos';
+import { AlumnosApi, VinculoNuevo } from './alumnos.api';
 import {
   Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial,
 } from './alumnos.modelos';
-import { FormaPago, inscribirConPago, inscripcionUrl, problemaPago, resumenPago } from '../inscripciones/inscribir';
+import { DocumentosAlumno } from './documentos-alumno';
+import { FormaPago, inscribirConPago, problemaPago, resumenPago } from '../inscripciones/inscribir';
 import { Inscripcion } from '../inscripciones/inscripciones.modelos';
-
-const TIPOS_ARCHIVO: { valor: string; texto: string }[] = [
-  { valor: 'identidad', texto: 'Documento de identidad' },
-  { valor: 'eps', texto: 'Certificado de EPS' },
-  { valor: 'consentimiento', texto: 'Consentimiento informado' },
-  { valor: 'certificado_medico', texto: 'Certificado médico' },
-  { valor: 'foto', texto: 'Foto' },
-  { valor: 'otro', texto: 'Otro' },
-];
 
 const ESTADO_ASISTENCIA: Record<string, string> = {
   presente: 'Presente',
@@ -39,26 +31,19 @@ const ESTADO_ASISTENCIA: Record<string, string> = {
 /** Máximo que pide la lista; el club es pequeño, para más está la búsqueda. */
 const LIMITE_LISTA = 200;
 
-const alumnoUrl = (id: string) => `${API}/alumnos/${encodeURIComponent(id)}`;
-
-interface VinculoNuevo {
-  acudiente_id: string;
-  parentesco: string;
-  principal: boolean;
-}
-
 /** Resultado de buscar al acudiente por documento: encontrado, no existe (se crea) o sin buscar aún. */
 type BusquedaAcudiente = Acudiente | 'nuevo' | null;
 
 @Component({
   selector: 'app-alumnos',
-  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, Pestanas],
+  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink, Aviso, Dialogo, DocumentosAlumno, PesosPipe, Pestanas],
   templateUrl: './alumnos.html',
   styleUrl: './alumnos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlumnosPage implements OnInit {
-  private readonly http = inject(HttpClient);
+  private readonly http = inject(HttpClient); // solo para inscribirConPago (compartido con Inscripciones)
+  private readonly api = inject(AlumnosApi);
   private readonly auth = inject(AuthService);
   private readonly ruta = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -75,7 +60,6 @@ export class AlumnosPage implements OnInit {
   protected readonly puedeVerDocumento = computed(() => this.auth.tiene('alumnos.ver_documento'));
 
   protected readonly tiposDocumento = TIPOS_DOCUMENTO;
-  protected readonly tiposArchivo = TIPOS_ARCHIVO;
   protected readonly estadoInscripcion = ESTADO_INSCRIPCION;
   protected readonly estadoAsistencia = ESTADO_ASISTENCIA;
   protected readonly hoy = isoLocal(new Date());
@@ -114,8 +98,6 @@ export class AlumnosPage implements OnInit {
   protected readonly editandoAlumno = signal<'nuevo' | 'editar' | null>(null);
   protected readonly agregandoAcudiente = signal(false);
   protected readonly quitandoAcudiente = signal<AcudienteVinculado | null>(null);
-  protected readonly subiendoDocumento = signal(false);
-  protected readonly eliminandoDocumento = signal<Documento | null>(null);
   protected readonly inscribiendo = signal(false);
   protected readonly abonando = signal(false);
   protected readonly registrandoAutorizacion = signal(false);
@@ -123,12 +105,11 @@ export class AlumnosPage implements OnInit {
   /** Para confirmar hay que escribir el código del alumno (evita borrar por un clic). */
   protected readonly confirmacion = signal('');
   protected readonly busquedaAcudiente = signal<BusquedaAcudiente>(null);
-  protected readonly archivo = signal<File | null>(null);
 
   protected readonly formAlumno = this.fb.group({
     nombres: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
     apellidos: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
-    tipo_documento: ['', Validators.required],
+    tipo_documento: this.fb.control<TipoDocumento | ''>('', Validators.required),
     documento: ['', Validators.maxLength(30)],
     fecha_nacimiento: ['', Validators.required],
     rama: this.fb.control<Rama | ''>('', Validators.required),
@@ -139,7 +120,7 @@ export class AlumnosPage implements OnInit {
     activo: true,
   });
   protected readonly formAcudiente = this.fb.group({
-    tipo_documento: ['', Validators.required],
+    tipo_documento: this.fb.control<TipoDocumento | ''>('', Validators.required),
     documento: ['', Validators.maxLength(30)],
     parentesco: ['', Validators.maxLength(30)],
     principal: false,
@@ -148,7 +129,6 @@ export class AlumnosPage implements OnInit {
     telefono: ['', Validators.maxLength(20)],
     email: ['', [Validators.email, Validators.maxLength(254)]],
   });
-  protected readonly formDocumento = this.fb.group({ tipo: ['', Validators.required] });
   /** Autorización de datos: quién la dio, si permite fotos y la confirmación de que quedó por escrito. */
   protected readonly formAutorizacion = this.fb.group({
     nombre: ['', Validators.maxLength(120)],
@@ -184,12 +164,11 @@ export class AlumnosPage implements OnInit {
 
   // ---------- Lista ----------
   protected cargarLista(): void {
-    let params = new HttpParams().set('limit', LIMITE_LISTA);
-    const texto = this.buscar().trim();
-    if (texto.length >= 2) params = params.set('buscar', texto);
-    if (this.filtroRama()) params = params.set('rama', this.filtroRama());
-    if (this.esStaff()) params = params.set('activo', !this.verInactivos());
-    this.http.get<Alumno[]>(`${API}/alumnos`, { params }).subscribe({
+    const filtro = {
+      limite: LIMITE_LISTA, buscar: this.buscar(), rama: this.filtroRama(),
+      activo: this.esStaff() ? !this.verInactivos() : undefined,
+    };
+    this.api.listar(filtro).subscribe({
       next: (lista) => {
         this.errorLista.set(false);
         this.alumnos.set(lista);
@@ -245,15 +224,7 @@ export class AlumnosPage implements OnInit {
     this.errorFicha.set(false);
     this.alumno.set(null);
     void this.router.navigate([], { queryParams: { id }, replaceUrl: true });
-    forkJoin({
-      alumno: this.http.get<Alumno>(alumnoUrl(id)),
-      cuenta: this.http.get<EstadoCuenta>(`${alumnoUrl(id)}/estado-cuenta`),
-      historial: this.http.get<RegistroHistorial[]>(`${alumnoUrl(id)}/asistencia`),
-      documentos: this.http.get<Documento[]>(`${alumnoUrl(id)}/documentos`),
-      inscripciones: this.http.get<Inscripcion[]>(`${API}/inscripciones`, {
-        params: new HttpParams().set('alumno_id', id).set('anio', this.hoy.slice(0, 4)),
-      }),
-    }).subscribe({
+    this.api.ficha(id, this.hoy.slice(0, 4)).subscribe({
       next: (r) => {
         if (this.seleccionadoId() !== id) return; // el usuario ya eligió otro
         this.alumno.set(r.alumno);
@@ -276,7 +247,7 @@ export class AlumnosPage implements OnInit {
   protected eliminarAlumno(): void {
     const a = this.alumno();
     if (!a || this.confirmacion().trim().toUpperCase() !== a.codigo) return;
-    this.op.ejecutar(this.http.delete(alumnoUrl(a.id)), () => {
+    this.op.ejecutar(this.api.eliminar(a.id), () => {
       this.eliminando.set(false);
       this.alumnos.update((lista) => lista?.filter((x) => x.id !== a.id) ?? lista);
       this.volverALista();
@@ -293,7 +264,7 @@ export class AlumnosPage implements OnInit {
   /** Muestra el documento completo (solo Admin/SuperAdmin; el servidor deja registro en la auditoría). */
   protected verDocumento(a: Alumno): void {
     this.op.ejecutar(
-      this.http.get<{ documento: string }>(`${alumnoUrl(a.id)}/documento-identidad`),
+      this.api.documentoIdentidad(a.id),
       (r) => this.documentoCompleto.set(r.documento), { enDialogo: false });
   }
 
@@ -323,7 +294,8 @@ export class AlumnosPage implements OnInit {
   protected guardarAlumno(): void {
     const modo = this.editandoAlumno();
     const f = this.formAlumno.getRawValue();
-    if (this.formAlumno.invalid || (modo === 'nuevo' && !f.documento.trim())) {
+    const { rama, tipo_documento } = f;
+    if (this.formAlumno.invalid || !rama || !tipo_documento || (modo === 'nuevo' && !f.documento.trim())) {
       this.formAlumno.markAllAsTouched();
       this.errorDialogo.set('Revisa los campos obligatorios.');
       return;
@@ -334,25 +306,25 @@ export class AlumnosPage implements OnInit {
     };
     const base = {
       nombres: f.nombres, apellidos: f.apellidos, fecha_nacimiento: f.fecha_nacimiento,
-      rama: f.rama || null, ...opcionales,
+      rama, ...opcionales,
     };
 
     if (modo === 'nuevo') {
       const error = this.problemaAcudiente(false) ?? this.problemaAutorizacion() ?? this.problemaInscripcion();
       if (error) return this.errorDialogo.set(error);
-      const ficha = { ...base, tipo_documento: f.tipo_documento, documento: f.documento, autorizacion: this.autorizacion() };
+      const ficha = { ...base, tipo_documento, documento: f.documento, autorizacion: this.autorizacion() };
       const pago = this.formInscripcion.getRawValue();
       if (!this.puedeInscribir()) {
         // Sin permiso de inscribir solo se registra la ficha (hoy ningún rol está en ese caso).
         const alta = this.vinculo$().pipe(
-          switchMap((v) => this.http.post<Alumno>(`${API}/alumnos`, { ...ficha, acudientes: v ? [v] : [] })),
+          switchMap((v) => this.api.crear({ ...ficha, acudientes: v ? [v] : [] })),
         );
         this.op.ejecutar(alta, (a) => this.terminarAlta(a.id, `${a.nombres} ${a.apellidos} quedó registrado.`));
         return;
       }
       // Ficha + inscripción + primer pago en una sola operación: si algo falla, no queda nada a medias.
       const alta = this.vinculo$().pipe(
-        switchMap((v) => this.http.post<Inscripcion>(`${API}/inscripciones/alumno-nuevo`, {
+        switchMap((v) => this.api.inscribirNuevo({
           alumno: { ...ficha, acudientes: v ? [v] : [] },
           pago: this.puedeAbonar() && pago.pago !== 'ninguno'
             ? { forma: pago.pago, monto: pago.pago === 'parcial' ? pago.monto : null }
@@ -366,9 +338,9 @@ export class AlumnosPage implements OnInit {
     const actual = this.alumno();
     if (!actual) return;
     const cambios: Record<string, unknown> = { ...base, activo: f.activo };
-    if (f.documento.trim()) Object.assign(cambios, { tipo_documento: f.tipo_documento, documento: f.documento });
-    else if (f.tipo_documento !== actual.tipo_documento) cambios['tipo_documento'] = f.tipo_documento;
-    this.op.ejecutar(this.http.patch<Alumno>(alumnoUrl(actual.id), cambios), (a) => {
+    if (f.documento.trim()) Object.assign(cambios, { tipo_documento, documento: f.documento });
+    else if (tipo_documento !== actual.tipo_documento) cambios['tipo_documento'] = tipo_documento;
+    this.op.ejecutar(this.api.actualizar(actual.id, cambios), (a) => {
       this.editandoAlumno.set(null);
       this.reemplazar(a);
       this.documentoCompleto.set(null);
@@ -400,7 +372,7 @@ export class AlumnosPage implements OnInit {
     if (!a) return;
     const error = this.problemaAutorizacion();
     if (error) return this.errorDialogo.set(error);
-    this.op.ejecutar(this.http.put<Alumno>(`${alumnoUrl(a.id)}/autorizacion`, this.autorizacion()), (r) => {
+    this.op.ejecutar(this.api.registrarAutorizacion(a.id, this.autorizacion()), (r) => {
       this.registrandoAutorizacion.set(false);
       this.reemplazar(r);
       this.op.exito('Autorización de datos registrada.');
@@ -453,9 +425,9 @@ export class AlumnosPage implements OnInit {
     const i = this.inscripcion();
     if (!i) return;
     if (this.formAbono.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del abono.');
-    const url = `${inscripcionUrl(i.id)}/pagos`;
     const { monto, fecha_pago } = this.formAbono.getRawValue();
-    this.op.ejecutar(this.http.post<Inscripcion>(url, { monto, fecha_pago: fecha_pago || this.hoy }), (r) => {
+    if (monto === null) return;
+    this.op.ejecutar(this.api.abonar(i.id, { monto, fecha_pago: fecha_pago || this.hoy }), (r) => {
       this.abonando.set(false);
       this.seleccionar(r.alumno_id); // refresca estado de cuenta y punto de la lista
       this.cargarLista();
@@ -491,9 +463,8 @@ export class AlumnosPage implements OnInit {
   protected buscarAcudiente(): void {
     const { tipo_documento, documento } = this.formAcudiente.getRawValue();
     if (!documento.trim()) return this.errorDialogo.set('Escribe el número de documento del acudiente.');
-    const params = new HttpParams().set('tipo_documento', tipo_documento).set('documento', documento);
     this.errorDialogo.set(null);
-    this.http.get<Acudiente[]>(`${API}/acudientes`, { params }).subscribe({
+    this.api.buscarAcudiente(tipo_documento, documento).subscribe({
       next: (r) => this.busquedaAcudiente.set(r[0] ?? 'nuevo'),
       error: (e) => this.errorDialogo.set(mensajeError(e)),
     });
@@ -531,11 +502,13 @@ export class AlumnosPage implements OnInit {
     const f = this.formAcudiente.getRawValue();
     const b = this.busquedaAcudiente();
     if (!f.documento.trim() || b === null) return of(null);
+    const tipo = f.tipo_documento;
+    if (!tipo) return throwError(() => new Error('Elige el tipo de documento del acudiente.'));
     const vinculo = (id: string): VinculoNuevo => ({ acudiente_id: id, parentesco: f.parentesco, principal: f.principal });
     if (b !== 'nuevo') return of(vinculo(b.id));
-    return this.http
-      .post<Acudiente>(`${API}/acudientes`, {
-        nombres: f.nombres, apellidos: f.apellidos, tipo_documento: f.tipo_documento, documento: f.documento,
+    return this.api
+      .crearAcudiente({
+        nombres: f.nombres, apellidos: f.apellidos, tipo_documento: tipo, documento: f.documento,
         telefono: f.telefono, email: f.email.trim() || null,
       })
       .pipe(
@@ -550,7 +523,8 @@ export class AlumnosPage implements OnInit {
     const error = this.problemaAcudiente(true);
     if (error) return this.errorDialogo.set(error);
     const peticion = this.vinculo$().pipe(
-      switchMap((v) => this.http.post<Alumno>(`${alumnoUrl(a.id)}/acudientes`, v)),
+      // problemaAcudiente(true) ya exige el documento, así que aquí siempre hay vínculo.
+      switchMap((v) => (v ? this.api.vincularAcudiente(a.id, v) : throwError(() => new Error('Falta el acudiente.')))),
     );
     this.op.ejecutar(peticion, (r) => {
       this.agregandoAcudiente.set(false);
@@ -567,76 +541,10 @@ export class AlumnosPage implements OnInit {
     const a = this.alumno();
     const v = this.quitandoAcudiente();
     if (!a || !v) return;
-    const url = `${alumnoUrl(a.id)}/acudientes/${encodeURIComponent(v.acudiente_id)}`;
-    this.op.ejecutar(this.http.delete<Alumno>(url), (r) => {
+    this.op.ejecutar(this.api.desvincularAcudiente(a.id, v.acudiente_id), (r) => {
       this.quitandoAcudiente.set(null);
       this.reemplazar(r);
       this.op.exito('Acudiente desvinculado.');
-    });
-  }
-
-  // ---------- Documentos ----------
-  protected textoArchivo(tipo: string): string {
-    return TIPOS_ARCHIVO.find((t) => t.valor === tipo)?.texto ?? tipo;
-  }
-
-  protected tamano(bytes: number): string {
-    return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  }
-
-  protected abrirSubir(): void {
-    this.formDocumento.reset();
-    this.archivo.set(null);
-    this.op.abrir(() => this.subiendoDocumento.set(true));
-  }
-
-  protected elegirArchivo(evento: Event): void {
-    this.archivo.set((evento.target as HTMLInputElement).files?.[0] ?? null);
-  }
-
-  protected subirDocumento(): void {
-    const a = this.alumno();
-    const archivo = this.archivo();
-    if (!a) return;
-    if (!archivo) return this.errorDialogo.set('Elige el archivo (PDF, JPG o PNG).');
-    if (this.formDocumento.invalid) return this.errorDialogo.set('Elige qué tipo de documento es.');
-    const datos = new FormData();
-    datos.append('tipo', this.formDocumento.getRawValue().tipo);
-    datos.append('archivo', archivo);
-    this.op.ejecutar(this.http.post<Documento>(`${alumnoUrl(a.id)}/documentos`, datos), (d) => {
-      this.subiendoDocumento.set(false);
-      this.documentos.update((lista) => [d, ...lista]);
-      this.op.exito('Documento subido.');
-    });
-  }
-
-  /** Descarga con el token (no es un enlace público) y la guarda con su nombre original. */
-  protected descargar(d: Documento): void {
-    const a = this.alumno();
-    if (!a) return;
-    const url = `${alumnoUrl(a.id)}/documentos/${encodeURIComponent(d.id)}/archivo`;
-    this.op.ejecutar(this.http.get(url, { responseType: 'blob' }), (blob) => {
-      const enlace = document.createElement('a');
-      enlace.href = URL.createObjectURL(blob);
-      enlace.download = d.nombre_original;
-      enlace.click();
-      setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
-    }, { enDialogo: false });
-  }
-
-  protected abrirEliminarDocumento(d: Documento): void {
-    this.op.abrir(() => this.eliminandoDocumento.set(d));
-  }
-
-  protected eliminarDocumento(): void {
-    const a = this.alumno();
-    const d = this.eliminandoDocumento();
-    if (!a || !d) return;
-    const url = `${alumnoUrl(a.id)}/documentos/${encodeURIComponent(d.id)}`;
-    this.op.ejecutar(this.http.delete(url), () => {
-      this.eliminandoDocumento.set(null);
-      this.documentos.update((lista) => lista.filter((x) => x.id !== d.id));
-      this.op.exito('Documento eliminado.');
     });
   }
 

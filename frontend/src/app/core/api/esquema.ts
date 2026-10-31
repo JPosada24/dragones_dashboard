@@ -1783,8 +1783,11 @@ export interface components {
             nombres: string;
             /** Telefono */
             telefono: string;
-            /** Tipo Documento */
-            tipo_documento: string;
+            /**
+             * Tipo Documento
+             * @enum {string}
+             */
+            tipo_documento: "RC" | "TI" | "CC" | "CE" | "PA" | "PPT";
             /** Usuario Id */
             usuario_id: string | null;
         };
@@ -1994,8 +1997,11 @@ export interface components {
             rama: "masculina" | "femenina";
             /** Telefono */
             telefono: string | null;
-            /** Tipo Documento */
-            tipo_documento: string;
+            /**
+             * Tipo Documento
+             * @enum {string}
+             */
+            tipo_documento: "RC" | "TI" | "CC" | "CE" | "PA" | "PPT";
             /** Usuario Id */
             usuario_id: string | null;
         };
@@ -2245,8 +2251,11 @@ export interface components {
         DocumentoIdentidadOut: {
             /** Documento */
             documento: string;
-            /** Tipo Documento */
-            tipo_documento: string;
+            /**
+             * Tipo Documento
+             * @enum {string}
+             */
+            tipo_documento: "RC" | "TI" | "CC" | "CE" | "PA" | "PPT";
         };
         /** DocumentoOut */
         DocumentoOut: {

@@ -281,6 +281,14 @@
             "type": "string"
           },
           "tipo_documento": {
+            "enum": [
+              "RC",
+              "TI",
+              "CC",
+              "CE",
+              "PA",
+              "PPT"
+            ],
             "title": "Tipo Documento",
             "type": "string"
           },
@@ -985,6 +993,14 @@
             "title": "Telefono"
           },
           "tipo_documento": {
+            "enum": [
+              "RC",
+              "TI",
+              "CC",
+              "CE",
+              "PA",
+              "PPT"
+            ],
             "title": "Tipo Documento",
             "type": "string"
           },
@@ -1668,6 +1684,14 @@
             "type": "string"
           },
           "tipo_documento": {
+            "enum": [
+              "RC",
+              "TI",
+              "CC",
+              "CE",
+              "PA",
+              "PPT"
+            ],
             "title": "Tipo Documento",
             "type": "string"
           }

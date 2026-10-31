@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.nota-chica {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.fila-base {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.relleno {
+  padding: 17px 18px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.documento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--borde-suave);
+
+  &:last-of-type {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.documento-textos {
+  flex: 1;
+  min-width: 0;
+}
+
+.documento-tipo {
+  font: 600 12px var(--f-texto);
+  color: var(--texto);
+}
+
+.documento-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-icono {
+  font-size: 20px;
+  color: var(--texto-3);
+}

@@ -1,16 +1,16 @@
 import { DatePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Operacion } from '../../compartido/operacion';
+import { AsistenciaApi } from './asistencia.api';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { desdeIso, diaSemana, isoLocal, lunesDe, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
-import { API } from '../../core/modelos';
+import { Esquema } from '../../core/api/tipos';
 import {
-  AlertaInasistencia, EstadoAsistencia, FilaPlanilla, Horario, HorarioActualizado, Justificacion, Marca, Rama, Sesion,
+  AlertaInasistencia, EstadoAsistencia, FilaPlanilla, Horario, Justificacion, Marca, Rama, Sesion,
 } from './asistencia.modelos';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -29,7 +29,6 @@ const CANCELACION: Record<string, string> = {
   manual: 'cancelada',
 };
 
-const sesionUrl = (id: string) => `${API}/sesiones/${encodeURIComponent(id)}`;
 
 @Component({
   selector: 'app-asistencia',
@@ -39,7 +38,7 @@ const sesionUrl = (id: string) => `${API}/sesiones/${encodeURIComponent(id)}`;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AsistenciaPage implements OnInit {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(AsistenciaApi);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
@@ -144,7 +143,7 @@ export class AsistenciaPage implements OnInit {
     this.cargarHorario();
     this.cargarJustificaciones();
     if (this.esStaff()) {
-      this.http.get<AlertaInasistencia[]>(`${API}/sesiones/alertas`).subscribe({
+      this.api.alertas().subscribe({
         next: (a) => this.alertas.set(a),
         error: () => undefined,
       });
@@ -164,8 +163,7 @@ export class AsistenciaPage implements OnInit {
 
   /** `elegir`: seleccionar de nuevo una sesión (la de hoy si la hay) en vez de conservar la actual. */
   private cargarSesiones(elegir: boolean): void {
-    const params = { desde: isoLocal(this.lunes()), hasta: isoLocal(this.domingo()) };
-    this.http.get<Sesion[]>(`${API}/sesiones`, { params }).subscribe({
+    this.api.sesiones(isoLocal(this.lunes()), isoLocal(this.domingo())).subscribe({
       next: (lista) => {
         const ordenadas = [...lista].sort((a, b) => (a.fecha + a.hora_inicio).localeCompare(b.fecha + b.hora_inicio));
         this.sesiones.set(ordenadas);
@@ -187,7 +185,7 @@ export class AsistenciaPage implements OnInit {
   }
 
   private cargarHorario(): void {
-    this.http.get<Horario>(`${API}/sesiones/horario`).subscribe({
+    this.api.horario().subscribe({
       next: (h) => this.horario.set(h),
       error: () => undefined,
     });
@@ -203,7 +201,7 @@ export class AsistenciaPage implements OnInit {
   private recargarPlanilla(): void {
     const id = this.seleccionadaId();
     if (!id) return;
-    this.http.get<FilaPlanilla[]>(`${sesionUrl(id)}/asistencia`).subscribe({
+    this.api.planilla(id).subscribe({
       next: (p) => {
         if (this.seleccionadaId() === id) this.planilla.set(p);
       },
@@ -214,8 +212,7 @@ export class AsistenciaPage implements OnInit {
   private cargarJustificaciones(): void {
     // El staff que revisa ve las pendientes; la familia ve el historial de las suyas.
     if (!this.puedeRevisar() && !this.esFamilia()) return;
-    const params: Record<string, string | number> = this.puedeRevisar() ? { estado: 'pendiente' } : { limit: 10 };
-    this.http.get<Justificacion[]>(`${API}/justificaciones`, { params }).subscribe({
+    this.api.justificaciones(this.puedeRevisar() ? { estado: 'pendiente' } : { limit: 10 }).subscribe({
       next: (j) => this.justificaciones.set(j),
       error: () => undefined,
     });
@@ -251,7 +248,7 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     if (!s || !this.hayCambios()) return;
     const marcas = Object.entries(this.cambios()).map(([alumno_id, estado]) => ({ alumno_id, estado }));
-    this.op.ejecutar(this.http.post<FilaPlanilla[]>(`${sesionUrl(s.id)}/asistencia`, { marcas }), (p) => {
+    this.op.ejecutar(this.api.marcarGrupo(s.id, { marcas }), (p) => {
       this.planilla.set(p);
       this.cambios.set({});
       this.op.exito(`Planilla guardada (${marcas.length} ${marcas.length === 1 ? 'marca' : 'marcas'}).`);
@@ -262,7 +259,7 @@ export class AsistenciaPage implements OnInit {
   protected marcarPropia(f: FilaPlanilla): void {
     const s = this.seleccionada();
     if (!s) return;
-    this.op.ejecutar(this.http.post(`${sesionUrl(s.id)}/asistencia/propia`, { alumno_id: f.alumno_id }), () => {
+    this.op.ejecutar(this.api.marcarPropia(s.id, f.alumno_id), () => {
       this.recargarPlanilla();
       this.op.exito(`Asistencia de ${f.alumno_nombre} registrada.`);
     }, { enDialogo: false });
@@ -308,7 +305,7 @@ export class AsistenciaPage implements OnInit {
       this.errorDialogo.set('En cada día, la hora de fin debe ser posterior a la de inicio.');
       return;
     }
-    this.op.ejecutar(this.http.put<HorarioActualizado>(`${API}/sesiones/horario`, { dias }), (r) => {
+    this.op.ejecutar(this.api.cambiarHorario({ dias }), (r) => {
       this.horario.set(r);
       this.editandoHorario.set(false);
       this.cargarSesiones(false);
@@ -328,7 +325,7 @@ export class AsistenciaPage implements OnInit {
     if (this.formExtra.invalid) return this.errorDialogo.set('Indica la fecha y las horas de inicio y fin.');
     const v = this.formExtra.getRawValue();
     const cuerpo = { ...v, lugar: v.lugar.trim() || null };
-    this.op.ejecutar(this.http.post<Sesion>(`${API}/sesiones`, cuerpo), (s) => {
+    this.op.ejecutar(this.api.crearExtra(cuerpo), (s) => {
       this.creandoExtra.set(false);
       this.lunes.set(lunesDe(desdeIso(s.fecha)));
       this.cargarSesiones(false);
@@ -346,7 +343,7 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     if (!s || this.formCancelar.invalid) return;
     const motivo = this.formCancelar.getRawValue().motivo.trim() || null;
-    this.op.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/cancelar`, { motivo }), (actualizada) => {
+    this.op.ejecutar(this.api.cancelar(s.id, motivo), (actualizada) => {
       this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
       this.cancelandoSesion.set(false);
       this.op.exito('Sesión cancelada.');
@@ -361,7 +358,7 @@ export class AsistenciaPage implements OnInit {
   protected eliminarSesion(): void {
     const s = this.seleccionada();
     if (!s) return;
-    this.op.ejecutar(this.http.delete(sesionUrl(s.id)), () => {
+    this.op.ejecutar(this.api.eliminar(s.id), () => {
       this.eliminandoSesion.set(false);
       this.sesiones.update((l) => l?.filter((x) => x.id !== s.id) ?? l);
       this.seleccionar(this.sesiones()?.[0] ?? null);
@@ -379,7 +376,7 @@ export class AsistenciaPage implements OnInit {
   }
 
   protected reactivar(s: Sesion): void {
-    this.op.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/reactivar`, {}), (actualizada) => {
+    this.op.ejecutar(this.api.reactivar(s.id), (actualizada) => {
       this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
       this.recargarPlanilla();
       this.op.exito('Cancelación deshecha: el entrenamiento vuelve a estar activo.');
@@ -396,8 +393,9 @@ export class AsistenciaPage implements OnInit {
     const f = this.corrigiendo();
     if (!s || !f) return;
     if (this.formCorregir.invalid) return this.errorDialogo.set('Elige el nuevo estado y escribe el motivo (mín. 10 caracteres).');
-    const url = `${sesionUrl(s.id)}/asistencia/${encodeURIComponent(f.alumno_id)}`;
-    this.op.ejecutar(this.http.patch<FilaPlanilla[]>(url, this.formCorregir.getRawValue()), (p) => {
+    const { estado, motivo } = this.formCorregir.getRawValue();
+    if (!estado) return;
+    this.op.ejecutar(this.api.corregir(s.id, f.alumno_id, { estado, motivo }), (p) => {
       this.planilla.set(p);
       this.corrigiendo.set(null);
       this.op.exito(`Asistencia de ${f.alumno_nombre} corregida.`);
@@ -409,7 +407,7 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     if (!s) return;
     const cuerpo = { alumno_id: f.alumno_id, motivo: null };
-    this.op.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), (j) => {
+    this.op.ejecutar(this.api.justificar(s.id, cuerpo), (j) => {
       this.recargarPlanilla();
       this.cargarJustificaciones();
       this.op.exito(j.estado === 'aprobada'
@@ -437,9 +435,9 @@ export class AsistenciaPage implements OnInit {
     this.revisar(j, { aprobar: false, comentario: this.formRechazar.getRawValue().comentario }, true);
   }
 
-  private revisar(j: Justificacion, cuerpo: object, enDialogo: boolean): void {
-    const aprobada = (cuerpo as { aprobar: boolean }).aprobar;
-    this.op.ejecutar(this.http.post<Justificacion>(`${API}/justificaciones/${encodeURIComponent(j.id)}/revisar`, cuerpo), () => {
+  private revisar(j: Justificacion, cuerpo: Esquema<'RevisarIn'>, enDialogo: boolean): void {
+    const aprobada = cuerpo.aprobar;
+    this.op.ejecutar(this.api.revisar(j.id, cuerpo), () => {
       this.justificaciones.update((l) => l.filter((x) => x.id !== j.id));
       this.rechazando.set(null);
       if (this.seleccionadaId() === j.sesion_id) this.recargarPlanilla();

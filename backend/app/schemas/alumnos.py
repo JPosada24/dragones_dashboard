@@ -83,7 +83,7 @@ class AcudienteOut(BaseModel):
     id: uuid.UUID
     nombres: str
     apellidos: str
-    tipo_documento: str
+    tipo_documento: TipoDocumento
     documento: str  # enmascarado: ****1234
     telefono: str
     email: str | None
@@ -159,7 +159,7 @@ class AlumnoOut(BaseModel):
     codigo: str  # F001 / M001
     nombres: str
     apellidos: str
-    tipo_documento: str
+    tipo_documento: TipoDocumento
     documento: str  # enmascarado: ****1234
     fecha_nacimiento: date
     edad: int
@@ -177,7 +177,7 @@ class AlumnoOut(BaseModel):
 
 
 class DocumentoIdentidadOut(BaseModel):
-    tipo_documento: str
+    tipo_documento: TipoDocumento
     documento: str
 
 

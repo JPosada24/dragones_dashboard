@@ -1,3 +1,7 @@
+import type { Esquema } from '../core/api/tipos';
+
+export type TipoDocumento = Esquema<'AlumnoCrear'>['tipo_documento'];
+
 /** Textos de los estados que llegan de la API (para no repetirlos en cada pantalla). */
 
 export const ESTADO_INSCRIPCION: Record<string, string> = {
@@ -8,7 +12,7 @@ export const ESTADO_INSCRIPCION: Record<string, string> = {
   rechazado: 'Rechazada',
 };
 
-export const TIPOS_DOCUMENTO: { valor: string; texto: string }[] = [
+export const TIPOS_DOCUMENTO: { valor: TipoDocumento; texto: string }[] = [
   { valor: 'RC', texto: 'Registro civil' },
   { valor: 'TI', texto: 'Tarjeta de identidad' },
   { valor: 'CC', texto: 'Cédula de ciudadanía' },

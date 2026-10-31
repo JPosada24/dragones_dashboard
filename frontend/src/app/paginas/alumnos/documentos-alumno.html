@@ -1,0 +1,69 @@
+<section class="panel relleno">
+  <div class="fila-base">
+    <h2>Documentos</h2>
+    @if (puedeEditar()) {
+      <button type="button" class="boton secundario chico" (click)="abrirSubir()">
+        <span class="icono" aria-hidden="true">upload</span> Subir
+      </button>
+    }
+  </div>
+  @if (op.mensaje(); as m) {
+    <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="op.mensaje.set(null)" />
+  }
+  @for (d of lista(); track d.id) {
+    <div class="documento">
+      <span class="icono doc-icono" aria-hidden="true">{{ d.mime === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</span>
+      <div class="documento-textos">
+        <div class="documento-tipo">{{ texto(d.tipo) }}</div>
+        <div class="nota-chica documento-nombre">{{ d.nombre_original }} · {{ tamano(d.tamano) }} · {{ d.creado_en | date: 'd MMM y' }}</div>
+      </div>
+      <button type="button" class="boton-icono" [disabled]="op.ocupado()" (click)="descargar(d)"
+              [attr.aria-label]="'Descargar ' + d.nombre_original">
+        <span class="icono" aria-hidden="true">download</span>
+      </button>
+      @if (puedeEditar()) {
+        <button type="button" class="boton-icono peligro" (click)="abrirEliminar(d)"
+                [attr.aria-label]="'Eliminar ' + d.nombre_original">
+          <span class="icono" aria-hidden="true">delete</span>
+        </button>
+      }
+    </div>
+  } @empty {
+    <p class="nota-chica">Sin documentos.</p>
+  }
+</section>
+
+@if (subiendo()) {
+  <app-dialogo titulo="Subir documento" descripcion="PDF, JPG o PNG. El archivo se guarda cifrado." (cerrar)="subiendo.set(false)">
+    <form class="formulario" [formGroup]="form" (ngSubmit)="subir()">
+      <label class="campo"><span class="etiqueta">Tipo</span>
+        <select class="control" formControlName="tipo">
+          <option value="" disabled>Selecciona…</option>
+          @for (t of tiposArchivo; track t.valor) { <option [value]="t.valor">{{ t.texto }}</option> }
+        </select></label>
+      <div class="campo">
+        <span class="etiqueta">Archivo</span>
+        <app-zona-archivos accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                           etiqueta="Elegir archivo" (elegidos)="elegir($event)" />
+      </div>
+      @if (op.errorDialogo()) { <p class="mensaje error" role="alert">{{ op.errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="subiendo.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="op.ocupado() || !archivo()">Subir</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (eliminando(); as d) {
+  <app-dialogo titulo="Eliminar documento" (cerrar)="eliminando.set(null)">
+    <div class="formulario">
+      <p>¿Eliminar <b>{{ d.nombre_original }}</b> ({{ texto(d.tipo) }})? No se puede deshacer.</p>
+      @if (op.errorDialogo()) { <p class="mensaje error" role="alert">{{ op.errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="eliminando.set(null)">Volver</button>
+        <button type="button" class="boton peligro" [disabled]="op.ocupado()" (click)="eliminar()">Eliminar</button>
+      </div>
+    </div>
+  </app-dialogo>
+}
