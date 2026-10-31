@@ -5,8 +5,8 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { AlbumClub, FotoClub, VideoClub, miniaturaYoutube } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
@@ -40,9 +40,10 @@ export class GaleriaPage implements OnInit {
   protected readonly albumes = signal<AlbumClub[] | null>(null);
   protected readonly videos = signal<VideoClub[]>([]);
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
   /** Miniaturas (blob:, pedidas con el token: un álbum sin publicar no es público). */
   protected readonly miniaturas = signal<Record<string, string>>({});
   /** Portadas propias de los álbumes (blob:), por "id:versión". */
@@ -157,41 +158,22 @@ export class GaleriaPage implements OnInit {
     const datos = new FormData();
     datos.append('archivo', this.archivoPortada);
     datos.append('autorizacion', 'true');
-    this.ejecutar(this.http.post<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`, datos), (nuevo) => {
+    this.op.ejecutar(this.http.post<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`, datos), (nuevo) => {
       this.reemplazar(nuevo);
       this.eligiendoPortada.set(false);
-      this.exito(`Portada de «${nuevo.nombre}» actualizada.`);
+      this.op.exito(`Portada de «${nuevo.nombre}» actualizada.`);
     });
   }
 
   protected quitarPortada(a: AlbumClub): void {
-    this.ejecutar(this.http.delete<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`), (nuevo) => {
+    this.op.ejecutar(this.http.delete<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/portada`), (nuevo) => {
       this.reemplazar(nuevo);
-      this.exito('Se quitó la portada: ahora se usa la primera foto del álbum.');
-    }, false);
+      this.op.exito('Se quitó la portada: ahora se usa la primera foto del álbum.');
+    }, { enDialogo: false });
   }
 
 
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = true): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    if (!enDialogo) this.mensaje.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        if (enDialogo) this.errorDialogo.set(mensajeError(e));
-        else this.mensaje.set({ error: true, texto: mensajeError(e) });
-      },
-    });
-  }
 
-  private exito(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 
   private abrirVentana(accion: () => void): void {
     this.errorDialogo.set(null);
@@ -216,36 +198,36 @@ export class GaleriaPage implements OnInit {
     const f = this.formAlbum.getRawValue();
     const cuerpo = { nombre: f.nombre.trim(), fecha: f.fecha || null, publicado: f.publicado };
     if (a === 'nuevo') {
-      this.ejecutar(this.http.post<AlbumClub>(`${URL_CLUB}/albumes`, cuerpo), (nuevo) => {
+      this.op.ejecutar(this.http.post<AlbumClub>(`${URL_CLUB}/albumes`, cuerpo), (nuevo) => {
         this.albumes.update((l) => [nuevo, ...(l ?? [])]);
         this.editandoAlbum.set(null);
         void this.router.navigate([], { queryParams: { album: nuevo.id } }); // directo a subirle fotos
-        this.exito(`Álbum «${nuevo.nombre}» creado. Ahora súbele fotos.`);
+        this.op.exito(`Álbum «${nuevo.nombre}» creado. Ahora súbele fotos.`);
       });
     } else {
-      this.ejecutar(this.http.patch<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}`, cuerpo), (nuevo) => {
+      this.op.ejecutar(this.http.patch<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}`, cuerpo), (nuevo) => {
         this.reemplazar(nuevo);
         this.editandoAlbum.set(null);
-        this.exito('Álbum actualizado.');
+        this.op.exito('Álbum actualizado.');
       });
     }
   }
 
   protected cambiarPublicado(a: AlbumClub): void {
-    this.ejecutar(this.http.patch<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}`, { publicado: !a.publicado }),
+    this.op.ejecutar(this.http.patch<AlbumClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}`, { publicado: !a.publicado }),
       (nuevo) => {
         this.reemplazar(nuevo);
-        this.exito(nuevo.publicado ? `«${nuevo.nombre}» ya se ve en el sitio.` : `«${nuevo.nombre}» quedó oculto.`);
-      }, false);
+        this.op.exito(nuevo.publicado ? `«${nuevo.nombre}» ya se ve en el sitio.` : `«${nuevo.nombre}» quedó oculto.`);
+      }, { enDialogo: false });
   }
 
   protected eliminarAlbum(a: AlbumClub): void {
     this.confirmar('Eliminar álbum', `Se borra «${a.nombre}» con sus ${a.fotos.length} fotos. No se puede deshacer.`, 'Eliminar álbum', () =>
-      this.ejecutar(this.http.delete(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}`), () => {
+      this.op.ejecutar(this.http.delete(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}`), () => {
         this.albumes.update((l) => (l ?? []).filter((x) => x.id !== a.id));
         this.confirmando.set(null);
         void this.router.navigate([], { queryParams: {} });
-        this.exito('Álbum eliminado.');
+        this.op.exito('Álbum eliminado.');
       }));
   }
 
@@ -284,7 +266,7 @@ export class GaleriaPage implements OnInit {
           this.errorDialogo.set(`Se subieron ${subidas} de ${total}. No se pudieron subir: ${fallidas.join('; ')}.`);
         } else {
           this.subiendo.set(false);
-          this.exito(`${subidas} ${subidas === 1 ? 'foto subida' : 'fotos subidas'} a «${a.nombre}».`);
+          this.op.exito(`${subidas} ${subidas === 1 ? 'foto subida' : 'fotos subidas'} a «${a.nombre}».`);
         }
         return;
       }
@@ -335,7 +317,7 @@ export class GaleriaPage implements OnInit {
     const n = ids.length;
     this.confirmar('Eliminar fotos', `Se borran ${n} ${n === 1 ? 'foto' : 'fotos'} de «${a.nombre}» y del sitio. No se puede deshacer.`,
       `Eliminar ${n}`, () =>
-        this.ejecutar(this.http.post<{ eliminadas: number }>(`${URL_CLUB}/fotos/eliminar`, { ids }), (r) => {
+        this.op.ejecutar(this.http.post<{ eliminadas: number }>(`${URL_CLUB}/fotos/eliminar`, { ids }), (r) => {
           const quitar = new Set(ids);
           this.albumes.update((l) => (l ?? []).map((x) => (x.id === a.id ? { ...x, fotos: x.fotos.filter((f) => !quitar.has(f.id)) } : x)));
           ids.forEach((id) => {
@@ -344,7 +326,7 @@ export class GaleriaPage implements OnInit {
           });
           this.seleccion.set(new Set());
           this.confirmando.set(null);
-          this.exito(`${r.eliminadas} ${r.eliminadas === 1 ? 'foto eliminada' : 'fotos eliminadas'}.`);
+          this.op.exito(`${r.eliminadas} ${r.eliminadas === 1 ? 'foto eliminada' : 'fotos eliminadas'}.`);
         }));
   }
 
@@ -356,27 +338,27 @@ export class GaleriaPage implements OnInit {
 
   protected crearVideo(): void {
     if (this.formVideo.invalid) return this.errorDialogo.set('Escribe el título y pega el enlace de YouTube.');
-    this.ejecutar(this.http.post<VideoClub>(`${URL_CLUB}/videos`, this.formVideo.getRawValue()), (v) => {
+    this.op.ejecutar(this.http.post<VideoClub>(`${URL_CLUB}/videos`, this.formVideo.getRawValue()), (v) => {
       this.videos.update((l) => [v, ...l]);
       this.creandoVideo.set(false);
-      this.exito(`Video «${v.titulo}» agregado.`);
+      this.op.exito(`Video «${v.titulo}» agregado.`);
     });
   }
 
   protected cambiarVideo(v: VideoClub): void {
-    this.ejecutar(this.http.patch<VideoClub>(`${URL_CLUB}/videos/${encodeURIComponent(v.id)}`, { publicado: !v.publicado }),
+    this.op.ejecutar(this.http.patch<VideoClub>(`${URL_CLUB}/videos/${encodeURIComponent(v.id)}`, { publicado: !v.publicado }),
       (nuevo) => {
         this.videos.update((l) => l.map((x) => (x.id === v.id ? nuevo : x)));
-        this.exito(nuevo.publicado ? 'Video publicado.' : 'Video oculto.');
-      }, false);
+        this.op.exito(nuevo.publicado ? 'Video publicado.' : 'Video oculto.');
+      }, { enDialogo: false });
   }
 
   protected eliminarVideo(v: VideoClub): void {
     this.confirmar('Eliminar video', `Se quita «${v.titulo}» del sitio (en YouTube sigue igual).`, 'Eliminar', () =>
-      this.ejecutar(this.http.delete(`${URL_CLUB}/videos/${encodeURIComponent(v.id)}`), () => {
+      this.op.ejecutar(this.http.delete(`${URL_CLUB}/videos/${encodeURIComponent(v.id)}`), () => {
         this.videos.update((l) => l.filter((x) => x.id !== v.id));
         this.confirmando.set(null);
-        this.exito('Video eliminado.');
+        this.op.exito('Video eliminado.');
       }));
   }
 

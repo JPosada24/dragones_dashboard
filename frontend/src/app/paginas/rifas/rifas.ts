@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, forkJoin } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { PESTANAS_RIFAS, Pestanas } from '../../compartido/pestanas';
@@ -50,9 +51,10 @@ export class RifasPage implements OnInit {
   protected readonly filtroRama = signal<'' | 'femenina' | 'masculina'>('');
   protected readonly soloConDeuda = signal(false);
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   // ---------- Ventanas emergentes ----------
   protected readonly creando = signal(false);
@@ -203,47 +205,47 @@ export class RifasPage implements OnInit {
     const n = (this.rifas() ?? []).filter((r) => r.estado !== 'cancelada').length + 1;
     this.nombreSugerido.set(`Rifa ${n} de ${this.anio()}`);
     this.formRifa.reset({ nombre: '', premio: '', fecha_sorteo: '' });
-    this.abrir(() => this.creando.set(true));
+    this.op.abrir(() => this.creando.set(true));
   }
 
   protected guardarRifa(): void {
     if (this.formRifa.invalid) return this.errorDialogo.set('Completa el premio y la fecha del sorteo.');
     const f = this.formRifa.getRawValue();
     const cuerpo = { ...f, nombre: f.nombre.trim() || this.nombreSugerido(), anio: this.anio() };
-    this.ejecutar(this.http.post<Rifa>(`${API}/rifas`, cuerpo), (r) => {
+    this.op.ejecutar(this.http.post<Rifa>(`${API}/rifas`, cuerpo), (r) => {
       this.creando.set(false);
       this.cargar();
-      this.avisar(`«${r.nombre}» creada con ${r.talonarios} talonarios (uno por alumno inscrito).`);
+      this.op.exito(`«${r.nombre}» creada con ${r.talonarios} talonarios (uno por alumno inscrito).`);
     });
   }
 
   protected abrirCancelar(r: Rifa): void {
     this.formCancelar.reset({ motivo: '' });
-    this.abrir(() => this.cancelando.set(r));
+    this.op.abrir(() => this.cancelando.set(r));
   }
 
   protected guardarCancelacion(): void {
     const r = this.cancelando();
     if (!r) return;
     const motivo = this.formCancelar.getRawValue().motivo.trim() || null;
-    this.ejecutar(this.http.post<Rifa>(`${rifaUrl(r.id)}/cancelar`, { motivo }), () => {
+    this.op.ejecutar(this.http.post<Rifa>(`${rifaUrl(r.id)}/cancelar`, { motivo }), () => {
       this.cancelando.set(null);
       this.cargar();
-      this.avisar(`«${r.nombre}» cancelada: ya no cuenta para el paz y salvo.`);
+      this.op.exito(`«${r.nombre}» cancelada: ya no cuenta para el paz y salvo.`);
     });
   }
 
   protected abrirEliminar(r: Rifa): void {
-    this.abrir(() => this.eliminando.set(r));
+    this.op.abrir(() => this.eliminando.set(r));
   }
 
   protected eliminar(): void {
     const r = this.eliminando();
     if (!r) return;
-    this.ejecutar(this.http.delete(rifaUrl(r.id)), () => {
+    this.op.ejecutar(this.http.delete(rifaUrl(r.id)), () => {
       this.eliminando.set(null);
       this.cargar();
-      this.avisar(`«${r.nombre}» eliminada.`);
+      this.op.exito(`«${r.nombre}» eliminada.`);
     });
   }
 
@@ -255,7 +257,7 @@ export class RifasPage implements OnInit {
       next: ({ asignados }) => {
         this.ocupado.set(false);
         if (asignados) this.cargar();
-        this.avisar(asignados
+        this.op.exito(asignados
           ? `${asignados} ${asignados === 1 ? 'talonario asignado' : 'talonarios asignados'} en «${r.nombre}».`
           : 'Todos los alumnos inscritos ya tienen talonario en esta rifa.');
       },
@@ -268,7 +270,7 @@ export class RifasPage implements OnInit {
 
   // ---------- Talonario ----------
   protected abrirTalonario(rifa: Rifa, t: Talonario): void {
-    this.abrir(() => this.abierto.set({ rifa, talonarioId: t.id }));
+    this.op.abrir(() => this.abierto.set({ rifa, talonarioId: t.id }));
   }
 
   protected abrirPagoTalonario(): void {
@@ -284,10 +286,10 @@ export class RifasPage implements OnInit {
     if (this.formPago.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del pago.');
     const url = `${rifaUrl(a.rifa.id)}/talonarios/${encodeURIComponent(t.id)}/pagos`;
     const { monto, fecha } = this.formPago.getRawValue();
-    this.ejecutar(this.http.post<Talonario>(url, { monto, fecha: fecha || this.hoy }), (r) => {
+    this.op.ejecutar(this.http.post<Talonario>(url, { monto, fecha: fecha || this.hoy }), (r) => {
       this.pagandoTalonario.set(false);
       this.actualizarTalonario(a.rifa, r);
-      this.avisar(r.pagado
+      this.op.exito(r.pagado
         ? `Talonario de ${r.alumno_nombre} pagado: queda a paz y salvo en «${a.rifa.nombre}».`
         : `Pago registrado. Saldo del talonario: ${this.pesos.transform(r.saldo)}.`);
     });
@@ -305,37 +307,14 @@ export class RifasPage implements OnInit {
     if (!a || !pago) return;
     const motivo = this.formAnular.getRawValue().motivo.trim() || null;
     const url = `${rifaUrl(a.rifa.id)}/talonarios/${encodeURIComponent(a.talonarioId)}/pagos/${encodeURIComponent(pago.id)}/anular`;
-    this.ejecutar(this.http.post<Talonario>(url, { motivo }), (r) => {
+    this.op.ejecutar(this.http.post<Talonario>(url, { motivo }), (r) => {
       this.anulandoPago.set(null);
       this.actualizarTalonario(a.rifa, r);
-      this.avisar('Pago anulado: queda en el historial como un movimiento en negativo.');
+      this.op.exito('Pago anulado: queda en el historial como un movimiento en negativo.');
     });
   }
 
   // ---------- Utilidades ----------
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
 
-  /** Las acciones van en popups: el error se muestra dentro, sin perder lo escrito. */
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
-    });
-  }
 
-  private avisar(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 }

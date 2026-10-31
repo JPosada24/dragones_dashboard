@@ -1,8 +1,8 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
@@ -66,9 +66,10 @@ export class UsuariosPage implements OnInit {
   protected readonly buscar = signal('');
   protected readonly filtroRol = signal<Rol | ''>('');
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   // ---------- Ventanas emergentes ----------
   protected readonly creando = signal(false);
@@ -138,7 +139,7 @@ export class UsuariosPage implements OnInit {
     this.formNuevo.reset();
     this.candidatos.set(null);
     this.alumnoElegido.set(null);
-    this.abrir(() => this.creando.set(true));
+    this.op.abrir(() => this.creando.set(true));
   }
 
   protected generar(control: 'nuevo' | 'clave'): void {
@@ -185,7 +186,7 @@ export class UsuariosPage implements OnInit {
       else if (f.acudiente_id) cuerpo['vincular_acudiente_id'] = f.acudiente_id;
       else return this.errorDialogo.set('Ese alumno no tiene acudientes: agrégalo en su ficha.');
     }
-    this.ejecutar(this.http.post<Usuario>(`${API}/usuarios`, cuerpo), (u) => {
+    this.op.ejecutar(this.http.post<Usuario>(`${API}/usuarios`, cuerpo), (u) => {
       this.creando.set(false);
       this.cargar();
       this.claveEntregada.set({ email: u.email, clave: f.password });
@@ -195,7 +196,7 @@ export class UsuariosPage implements OnInit {
   // ---------- Editar ----------
   protected abrirEditar(u: UsuarioLista): void {
     this.formEditar.reset({ nombre: u.nombre, rol: u.rol, activo: u.activo });
-    this.abrir(() => this.editando.set(u));
+    this.op.abrir(() => this.editando.set(u));
   }
 
   protected guardarEdicion(): void {
@@ -205,17 +206,17 @@ export class UsuariosPage implements OnInit {
     if (this.formEditar.invalid) return this.errorDialogo.set('Revisa el nombre y el rol.');
     const cuerpo: Record<string, unknown> = { nombre: f.nombre };
     if (u.id !== this.yo()) Object.assign(cuerpo, { rol: f.rol, activo: f.activo }); // nadie se quita su propio acceso
-    this.ejecutar(this.http.patch<Usuario>(`${API}/usuarios/${encodeURIComponent(u.id)}`, cuerpo), () => {
+    this.op.ejecutar(this.http.patch<Usuario>(`${API}/usuarios/${encodeURIComponent(u.id)}`, cuerpo), () => {
       this.editando.set(null);
       this.cargar();
-      this.avisar(`Cuenta de ${f.nombre} actualizada.`);
+      this.op.exito(`Cuenta de ${f.nombre} actualizada.`);
     });
   }
 
   // ---------- Contraseña ----------
   protected abrirClave(u: UsuarioLista): void {
     this.formClave.reset();
-    this.abrir(() => this.cambiandoClave.set(u));
+    this.op.abrir(() => this.cambiandoClave.set(u));
   }
 
   protected guardarClave(): void {
@@ -225,7 +226,7 @@ export class UsuariosPage implements OnInit {
       return this.errorDialogo.set('La contraseña debe tener al menos 12 caracteres, con mayúscula, minúscula y número.');
     }
     const { password } = this.formClave.getRawValue();
-    this.ejecutar(this.http.patch<Usuario>(`${API}/usuarios/${encodeURIComponent(u.id)}`, { password }), () => {
+    this.op.ejecutar(this.http.patch<Usuario>(`${API}/usuarios/${encodeURIComponent(u.id)}`, { password }), () => {
       this.cambiandoClave.set(null);
       this.claveEntregada.set({ email: u.email, clave: password });
     });
@@ -233,46 +234,24 @@ export class UsuariosPage implements OnInit {
 
   // ---------- Eliminar (solo SuperAdmin) ----------
   protected abrirEliminar(u: UsuarioLista): void {
-    this.abrir(() => this.eliminando.set(u));
+    this.op.abrir(() => this.eliminando.set(u));
   }
 
   protected eliminar(): void {
     const u = this.eliminando();
     if (!u) return;
-    this.ejecutar(this.http.delete(`${API}/usuarios/${encodeURIComponent(u.id)}`), () => {
+    this.op.ejecutar(this.http.delete(`${API}/usuarios/${encodeURIComponent(u.id)}`), () => {
       this.eliminando.set(null);
       this.usuarios.update((l) => l?.filter((x) => x.id !== u.id) ?? l);
-      this.avisar(`Se eliminó la cuenta de ${u.nombre}.`);
+      this.op.exito(`Se eliminó la cuenta de ${u.nombre}.`);
     });
   }
 
   protected copiar(texto: string): void {
-    void navigator.clipboard?.writeText(texto).then(() => this.avisar('Copiado al portapapeles.'));
+    void navigator.clipboard?.writeText(texto).then(() => this.op.exito('Copiado al portapapeles.'));
   }
 
   // ---------- Utilidades ----------
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
 
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
-    });
-  }
 
-  private avisar(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 }

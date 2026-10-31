@@ -2,8 +2,8 @@ import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
@@ -46,9 +46,10 @@ export class TorneosPage implements OnInit {
   protected readonly torneos = signal<Torneo[] | null>(null);
   protected readonly filtro = signal<Filtro>('proximos');
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   // ---------- Ventanas emergentes ----------
   protected readonly editando = signal<'nuevo' | Torneo | null>(null);
@@ -157,7 +158,7 @@ export class TorneosPage implements OnInit {
   // ---------- Torneo: crear / editar ----------
   protected abrirNuevo(): void {
     this.formTorneo.reset();
-    this.abrir(() => this.editando.set('nuevo'));
+    this.op.abrir(() => this.editando.set('nuevo'));
   }
 
   protected abrirEditar(t: Torneo): void {
@@ -166,7 +167,7 @@ export class TorneosPage implements OnInit {
       fecha_limite_inscripcion: t.fecha_limite_inscripcion, lugar: t.lugar ?? '', cupo_equipos: t.cupo_equipos,
       valor_inscripcion: t.valor_inscripcion,
     });
-    this.abrir(() => this.editando.set(t));
+    this.op.abrir(() => this.editando.set(t));
   }
 
   protected guardarTorneo(): void {
@@ -178,10 +179,10 @@ export class TorneosPage implements OnInit {
     const peticion = modo === 'nuevo'
       ? this.http.post<Torneo>(`${API}/torneos`, cuerpo)
       : this.http.patch<Torneo>(torneoUrl(modo.id), cuerpo);
-    this.ejecutar(peticion, (t) => {
+    this.op.ejecutar(peticion, (t) => {
       this.editando.set(null);
       this.cargar();
-      this.avisar(modo === 'nuevo'
+      this.op.exito(modo === 'nuevo'
         ? `«${t.nombre}» creado. Los entrenamientos de esas fechas se cancelan solos.`
         : `«${t.nombre}» actualizado.`);
     });
@@ -189,38 +190,38 @@ export class TorneosPage implements OnInit {
 
   protected abrirCancelar(t: Torneo): void {
     this.formMotivo.reset();
-    this.abrir(() => this.cancelando.set(t));
+    this.op.abrir(() => this.cancelando.set(t));
   }
 
   protected guardarCancelacion(): void {
     const t = this.cancelando();
     if (!t) return;
     const motivo = this.formMotivo.getRawValue().motivo.trim() || null;
-    this.ejecutar(this.http.post<Torneo>(`${torneoUrl(t.id)}/cancelar`, { motivo }), () => {
+    this.op.ejecutar(this.http.post<Torneo>(`${torneoUrl(t.id)}/cancelar`, { motivo }), () => {
       this.cancelando.set(null);
       this.cargar();
-      this.avisar(`«${t.nombre}» cancelado. Los entrenamientos de esos días vuelven.`);
+      this.op.exito(`«${t.nombre}» cancelado. Los entrenamientos de esos días vuelven.`);
     });
   }
 
   protected abrirEliminar(t: Torneo): void {
-    this.abrir(() => this.eliminando.set(t));
+    this.op.abrir(() => this.eliminando.set(t));
   }
 
   protected eliminar(): void {
     const t = this.eliminando();
     if (!t) return;
-    this.ejecutar(this.http.delete(torneoUrl(t.id)), () => {
+    this.op.ejecutar(this.http.delete(torneoUrl(t.id)), () => {
       this.eliminando.set(null);
       this.cargar();
-      this.avisar(`«${t.nombre}» eliminado.`);
+      this.op.exito(`«${t.nombre}» eliminado.`);
     });
   }
 
   // ---------- Clubes ----------
   protected verEquipos(t: Torneo): void {
     this.equipos.set(null);
-    this.abrir(() => this.abierto.set(t));
+    this.op.abrir(() => this.abierto.set(t));
     this.cargarEquipos(t);
   }
 
@@ -252,10 +253,10 @@ export class TorneosPage implements OnInit {
     if (this.formEquipo.invalid) return this.errorDialogo.set('Completa el club, la ciudad y el delegado con su teléfono.');
     const f = this.formEquipo.getRawValue();
     const cuerpo = { ...f, delegado_email: f.delegado_email.trim() || null };
-    this.ejecutar(this.http.post<Equipo>(`${torneoUrl(t.id)}/equipos`, cuerpo), (e) => {
+    this.op.ejecutar(this.http.post<Equipo>(`${torneoUrl(t.id)}/equipos`, cuerpo), (e) => {
       this.inscribiendo.set(false);
       this.refrescar(t);
-      this.avisar(e.estado === 'en_espera'
+      this.op.exito(e.estado === 'en_espera'
         ? `${e.nombre_club} quedó en lista de espera: el cupo está lleno.`
         : `${e.nombre_club} inscrito.`);
     });
@@ -274,10 +275,10 @@ export class TorneosPage implements OnInit {
     if (this.formPago.invalid) return this.errorDialogo.set('Escribe el valor del pago.');
     const { monto, fecha } = this.formPago.getRawValue();
     const url = `${torneoUrl(t.id)}/equipos/${encodeURIComponent(e.id)}/pagos`;
-    this.ejecutar(this.http.post<Equipo>(url, { monto, fecha: fecha || this.hoy }), (r) => {
+    this.op.ejecutar(this.http.post<Equipo>(url, { monto, fecha: fecha || this.hoy }), (r) => {
       this.pagando.set(null);
       this.refrescar(t);
-      this.avisar(r.estado === 'confirmado'
+      this.op.exito(r.estado === 'confirmado'
         ? `${r.nombre_club} pagó completo: queda confirmado.`
         : `Pago registrado. Saldo de ${r.nombre_club}: ${this.pesos.transform(r.saldo)}.`);
     });
@@ -295,10 +296,10 @@ export class TorneosPage implements OnInit {
     if (!t || !e) return;
     const motivo = this.formMotivo.getRawValue().motivo.trim() || null;
     const url = `${torneoUrl(t.id)}/equipos/${encodeURIComponent(e.id)}/retirar`;
-    this.ejecutar(this.http.post<Retiro>(url, { motivo }), (r) => {
+    this.op.ejecutar(this.http.post<Retiro>(url, { motivo }), (r) => {
       this.retirando.set(null);
       this.refrescar(t);
-      this.avisar(r.promovido
+      this.op.exito(r.promovido
         ? `${e.nombre_club} se retiró; entra ${r.promovido.nombre_club} desde la lista de espera.`
         : `${e.nombre_club} se retiró del torneo.`);
     });
@@ -316,36 +317,14 @@ export class TorneosPage implements OnInit {
     if (!t || !a) return;
     const motivo = this.formMotivo.getRawValue().motivo.trim() || null;
     const url = `${torneoUrl(t.id)}/equipos/${encodeURIComponent(a.equipo.id)}/pagos/${encodeURIComponent(a.pago.id)}/anular`;
-    this.ejecutar(this.http.post<Equipo>(url, { motivo }), () => {
+    this.op.ejecutar(this.http.post<Equipo>(url, { motivo }), () => {
       this.anulando.set(null);
       this.refrescar(t);
-      this.avisar('Pago anulado: queda en el historial como un movimiento en negativo.');
+      this.op.exito('Pago anulado: queda en el historial como un movimiento en negativo.');
     });
   }
 
   // ---------- Utilidades ----------
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
 
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
-    });
-  }
 
-  private avisar(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 }

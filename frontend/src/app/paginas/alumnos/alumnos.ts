@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { PESTANAS_ALUMNOS, Pestanas } from '../../compartido/pestanas';
@@ -104,9 +105,10 @@ export class AlumnosPage implements OnInit {
   protected readonly textoNuevo = computed(() => (this.puedeInscribir() ? 'Inscribir alumno nuevo' : 'Nuevo alumno'));
   protected readonly errorFicha = signal(false);
 
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   // ---------- Ventanas emergentes ----------
   protected readonly editandoAlumno = signal<'nuevo' | 'editar' | null>(null);
@@ -268,18 +270,18 @@ export class AlumnosPage implements OnInit {
 
   protected abrirEliminar(): void {
     this.confirmacion.set('');
-    this.abrir(() => this.eliminando.set(true));
+    this.op.abrir(() => this.eliminando.set(true));
   }
 
   protected eliminarAlumno(): void {
     const a = this.alumno();
     if (!a || this.confirmacion().trim().toUpperCase() !== a.codigo) return;
-    this.ejecutar(this.http.delete(alumnoUrl(a.id)), () => {
+    this.op.ejecutar(this.http.delete(alumnoUrl(a.id)), () => {
       this.eliminando.set(false);
       this.alumnos.update((lista) => lista?.filter((x) => x.id !== a.id) ?? lista);
       this.volverALista();
-      this.avisar(null, `${a.nombres} ${a.apellidos} (${a.codigo}) fue eliminado con toda su información.`);
-    }, true);
+      this.op.exito(`${a.nombres} ${a.apellidos} (${a.codigo}) fue eliminado con toda su información.`);
+    });
   }
 
   protected volverALista(): void {
@@ -290,10 +292,9 @@ export class AlumnosPage implements OnInit {
 
   /** Muestra el documento completo (solo Admin/SuperAdmin; el servidor deja registro en la auditoría). */
   protected verDocumento(a: Alumno): void {
-    this.ejecutar(
+    this.op.ejecutar(
       this.http.get<{ documento: string }>(`${alumnoUrl(a.id)}/documento-identidad`),
-      (r) => this.documentoCompleto.set(r.documento),
-    );
+      (r) => this.documentoCompleto.set(r.documento), { enDialogo: false });
   }
 
   private reemplazar(a: Alumno): void {
@@ -307,7 +308,7 @@ export class AlumnosPage implements OnInit {
     this.formAutorizacion.reset();
     this.reiniciarAcudiente();
     this.reiniciarInscripcion();
-    this.abrir(() => this.editandoAlumno.set('nuevo'));
+    this.op.abrir(() => this.editandoAlumno.set('nuevo'));
   }
 
   protected abrirEditar(a: Alumno): void {
@@ -316,7 +317,7 @@ export class AlumnosPage implements OnInit {
       fecha_nacimiento: a.fecha_nacimiento, rama: a.rama, telefono: a.telefono ?? '', email: a.email ?? '',
       direccion: a.direccion ?? '', eps: a.eps ?? '', activo: a.activo,
     });
-    this.abrir(() => this.editandoAlumno.set('editar'));
+    this.op.abrir(() => this.editandoAlumno.set('editar'));
   }
 
   protected guardarAlumno(): void {
@@ -346,7 +347,7 @@ export class AlumnosPage implements OnInit {
         const alta = this.vinculo$().pipe(
           switchMap((v) => this.http.post<Alumno>(`${API}/alumnos`, { ...ficha, acudientes: v ? [v] : [] })),
         );
-        this.ejecutar(alta, (a) => this.terminarAlta(a.id, `${a.nombres} ${a.apellidos} quedó registrado.`), true);
+        this.op.ejecutar(alta, (a) => this.terminarAlta(a.id, `${a.nombres} ${a.apellidos} quedó registrado.`));
         return;
       }
       // Ficha + inscripción + primer pago en una sola operación: si algo falla, no queda nada a medias.
@@ -358,7 +359,7 @@ export class AlumnosPage implements OnInit {
             : { forma: 'ninguno' },
         })),
       );
-      this.ejecutar(alta, (i) => this.terminarAlta(i.alumno_id, `${i.alumno_nombre} quedó inscrito. ${resumenPago(i)}`), true);
+      this.op.ejecutar(alta, (i) => this.terminarAlta(i.alumno_id, `${i.alumno_nombre} quedó inscrito. ${resumenPago(i)}`));
       return;
     }
 
@@ -367,12 +368,12 @@ export class AlumnosPage implements OnInit {
     const cambios: Record<string, unknown> = { ...base, activo: f.activo };
     if (f.documento.trim()) Object.assign(cambios, { tipo_documento: f.tipo_documento, documento: f.documento });
     else if (f.tipo_documento !== actual.tipo_documento) cambios['tipo_documento'] = f.tipo_documento;
-    this.ejecutar(this.http.patch<Alumno>(alumnoUrl(actual.id), cambios), (a) => {
+    this.op.ejecutar(this.http.patch<Alumno>(alumnoUrl(actual.id), cambios), (a) => {
       this.editandoAlumno.set(null);
       this.reemplazar(a);
       this.documentoCompleto.set(null);
-      this.avisar(null, 'Cambios guardados.');
-    }, true);
+      this.op.exito('Cambios guardados.');
+    });
   }
 
   // ---------- Autorización de datos (Ley 1581) ----------
@@ -391,7 +392,7 @@ export class AlumnosPage implements OnInit {
 
   protected abrirAutorizacion(): void {
     this.formAutorizacion.reset();
-    this.abrir(() => this.registrandoAutorizacion.set(true));
+    this.op.abrir(() => this.registrandoAutorizacion.set(true));
   }
 
   protected guardarAutorizacion(): void {
@@ -399,18 +400,18 @@ export class AlumnosPage implements OnInit {
     if (!a) return;
     const error = this.problemaAutorizacion();
     if (error) return this.errorDialogo.set(error);
-    this.ejecutar(this.http.put<Alumno>(`${alumnoUrl(a.id)}/autorizacion`, this.autorizacion()), (r) => {
+    this.op.ejecutar(this.http.put<Alumno>(`${alumnoUrl(a.id)}/autorizacion`, this.autorizacion()), (r) => {
       this.registrandoAutorizacion.set(false);
       this.reemplazar(r);
-      this.avisar(null, 'Autorización de datos registrada.');
-    }, true);
+      this.op.exito('Autorización de datos registrada.');
+    });
   }
 
   private terminarAlta(alumnoId: string, texto: string): void {
     this.editandoAlumno.set(null);
     this.cargarLista();
     this.seleccionar(alumnoId);
-    this.avisar(null, texto);
+    this.op.exito(texto);
   }
 
   // ---------- Inscripción del año ----------
@@ -420,7 +421,7 @@ export class AlumnosPage implements OnInit {
 
   protected abrirInscribir(): void {
     this.reiniciarInscripcion();
-    this.abrir(() => this.inscribiendo.set(true));
+    this.op.abrir(() => this.inscribiendo.set(true));
   }
 
   private problemaInscripcion(): string | null {
@@ -445,7 +446,7 @@ export class AlumnosPage implements OnInit {
 
   protected abrirAbono(): void {
     this.formAbono.reset({ monto: null, fecha_pago: '' });
-    this.abrir(() => this.abonando.set(true));
+    this.op.abrir(() => this.abonando.set(true));
   }
 
   protected guardarAbono(): void {
@@ -454,12 +455,12 @@ export class AlumnosPage implements OnInit {
     if (this.formAbono.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del abono.');
     const url = `${inscripcionUrl(i.id)}/pagos`;
     const { monto, fecha_pago } = this.formAbono.getRawValue();
-    this.ejecutar(this.http.post<Inscripcion>(url, { monto, fecha_pago: fecha_pago || this.hoy }), (r) => {
+    this.op.ejecutar(this.http.post<Inscripcion>(url, { monto, fecha_pago: fecha_pago || this.hoy }), (r) => {
       this.abonando.set(false);
       this.seleccionar(r.alumno_id); // refresca estado de cuenta y punto de la lista
       this.cargarLista();
-      this.avisar(null, `Abono registrado. ${resumenPago(r)}`);
-    }, true);
+      this.op.exito(`Abono registrado. ${resumenPago(r)}`);
+    });
   }
 
   protected guardarInscripcion(): void {
@@ -467,12 +468,12 @@ export class AlumnosPage implements OnInit {
     if (!a) return;
     const error = this.problemaInscripcion();
     if (error) return this.errorDialogo.set(error);
-    this.ejecutar(this.inscribir$(a.id), (i) => {
+    this.op.ejecutar(this.inscribir$(a.id), (i) => {
       this.inscribiendo.set(false);
       this.seleccionar(a.id);
       this.cargarLista();
-      this.avisar(null, `Inscripción registrada. ${resumenPago(i)}`);
-    }, true);
+      this.op.exito(`Inscripción registrada. ${resumenPago(i)}`);
+    });
   }
 
   // ---------- Acudientes ----------
@@ -483,7 +484,7 @@ export class AlumnosPage implements OnInit {
 
   protected abrirAgregarAcudiente(): void {
     this.reiniciarAcudiente();
-    this.abrir(() => this.agregandoAcudiente.set(true));
+    this.op.abrir(() => this.agregandoAcudiente.set(true));
   }
 
   /** Busca por documento completo: así se reutiliza el acudiente de un hermano sin duplicarlo. */
@@ -551,15 +552,15 @@ export class AlumnosPage implements OnInit {
     const peticion = this.vinculo$().pipe(
       switchMap((v) => this.http.post<Alumno>(`${alumnoUrl(a.id)}/acudientes`, v)),
     );
-    this.ejecutar(peticion, (r) => {
+    this.op.ejecutar(peticion, (r) => {
       this.agregandoAcudiente.set(false);
       this.reemplazar(r);
-      this.avisar(null, 'Acudiente vinculado.');
-    }, true);
+      this.op.exito('Acudiente vinculado.');
+    });
   }
 
   protected abrirQuitarAcudiente(v: AcudienteVinculado): void {
-    this.abrir(() => this.quitandoAcudiente.set(v));
+    this.op.abrir(() => this.quitandoAcudiente.set(v));
   }
 
   protected quitarAcudiente(): void {
@@ -567,11 +568,11 @@ export class AlumnosPage implements OnInit {
     const v = this.quitandoAcudiente();
     if (!a || !v) return;
     const url = `${alumnoUrl(a.id)}/acudientes/${encodeURIComponent(v.acudiente_id)}`;
-    this.ejecutar(this.http.delete<Alumno>(url), (r) => {
+    this.op.ejecutar(this.http.delete<Alumno>(url), (r) => {
       this.quitandoAcudiente.set(null);
       this.reemplazar(r);
-      this.avisar(null, 'Acudiente desvinculado.');
-    }, true);
+      this.op.exito('Acudiente desvinculado.');
+    });
   }
 
   // ---------- Documentos ----------
@@ -586,7 +587,7 @@ export class AlumnosPage implements OnInit {
   protected abrirSubir(): void {
     this.formDocumento.reset();
     this.archivo.set(null);
-    this.abrir(() => this.subiendoDocumento.set(true));
+    this.op.abrir(() => this.subiendoDocumento.set(true));
   }
 
   protected elegirArchivo(evento: Event): void {
@@ -602,11 +603,11 @@ export class AlumnosPage implements OnInit {
     const datos = new FormData();
     datos.append('tipo', this.formDocumento.getRawValue().tipo);
     datos.append('archivo', archivo);
-    this.ejecutar(this.http.post<Documento>(`${alumnoUrl(a.id)}/documentos`, datos), (d) => {
+    this.op.ejecutar(this.http.post<Documento>(`${alumnoUrl(a.id)}/documentos`, datos), (d) => {
       this.subiendoDocumento.set(false);
       this.documentos.update((lista) => [d, ...lista]);
-      this.avisar(null, 'Documento subido.');
-    }, true);
+      this.op.exito('Documento subido.');
+    });
   }
 
   /** Descarga con el token (no es un enlace público) y la guarda con su nombre original. */
@@ -614,17 +615,17 @@ export class AlumnosPage implements OnInit {
     const a = this.alumno();
     if (!a) return;
     const url = `${alumnoUrl(a.id)}/documentos/${encodeURIComponent(d.id)}/archivo`;
-    this.ejecutar(this.http.get(url, { responseType: 'blob' }), (blob) => {
+    this.op.ejecutar(this.http.get(url, { responseType: 'blob' }), (blob) => {
       const enlace = document.createElement('a');
       enlace.href = URL.createObjectURL(blob);
       enlace.download = d.nombre_original;
       enlace.click();
       setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
-    });
+    }, { enDialogo: false });
   }
 
   protected abrirEliminarDocumento(d: Documento): void {
-    this.abrir(() => this.eliminandoDocumento.set(d));
+    this.op.abrir(() => this.eliminandoDocumento.set(d));
   }
 
   protected eliminarDocumento(): void {
@@ -632,39 +633,14 @@ export class AlumnosPage implements OnInit {
     const d = this.eliminandoDocumento();
     if (!a || !d) return;
     const url = `${alumnoUrl(a.id)}/documentos/${encodeURIComponent(d.id)}`;
-    this.ejecutar(this.http.delete(url), () => {
+    this.op.ejecutar(this.http.delete(url), () => {
       this.eliminandoDocumento.set(null);
       this.documentos.update((lista) => lista.filter((x) => x.id !== d.id));
-      this.avisar(null, 'Documento eliminado.');
-    }, true);
-  }
-
-  // ---------- Utilidades ----------
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
-
-  /** Igual que en Asistencia: el error va dentro del popup (`enDialogo`) para no perder lo escrito. */
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = false): void {
-    this.ocupado.set(true);
-    this.mensaje.set(null);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        if (enDialogo) this.errorDialogo.set(mensajeError(e));
-        else this.avisar(e);
-      },
+      this.op.exito('Documento eliminado.');
     });
   }
 
-  private avisar(e: unknown, texto?: string): void {
-    this.mensaje.set(e ? { error: true, texto: mensajeError(e) } : { error: false, texto: texto ?? '' });
-  }
+  // ---------- Utilidades ----------
+
+
 }

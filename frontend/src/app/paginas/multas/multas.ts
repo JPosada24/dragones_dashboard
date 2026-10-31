@@ -3,11 +3,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
-import { mensajeError } from '../../compartido/errores';
 import { diasEntre, isoLocal } from '../../compartido/fechas';
 import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
@@ -45,9 +44,10 @@ export class MultasPage implements OnInit {
   protected readonly multas = signal<Multa[] | null>(null);
   protected readonly mora = signal<SituacionMora[] | null>(null);
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   /** Multas que se van a cobrar juntas (las de un alumno, o una sola). */
   protected readonly cobrando = signal<Multa[] | null>(null);
@@ -136,7 +136,7 @@ export class MultasPage implements OnInit {
   // ---------- Cobro ----------
   protected abrirCobro(multas: Multa[]): void {
     this.formCobro.reset({ fecha_pago: '' });
-    this.abrir(() => this.cobrando.set(multas));
+    this.op.abrir(() => this.cobrando.set(multas));
   }
 
   /** No antes del entrenamiento más reciente de las multas que se cobran. */
@@ -148,14 +148,14 @@ export class MultasPage implements OnInit {
     const multas = this.cobrando();
     if (!multas?.length) return;
     const cuerpo = { multa_ids: multas.map((m) => m.id), fecha_pago: this.formCobro.getRawValue().fecha_pago || this.hoy };
-    this.ejecutar(this.http.post<Multa[]>(`${API}/multas/pagos`, cuerpo), (pagadas) => {
+    this.op.ejecutar(this.http.post<Multa[]>(`${API}/multas/pagos`, cuerpo), (pagadas) => {
       this.cobrando.set(null);
       const ids = new Set(pagadas.map((m) => m.id));
       this.multas.update((lista) => lista?.filter((m) => !ids.has(m.id)) ?? lista);
       const total = pagadas.reduce((t, m) => t + m.valor, 0);
       const quien = multas[0]?.alumno_nombre ?? '';
       const n = pagadas.length;
-      this.avisar(`${n === 1 ? 'Multa cobrada' : `${n} multas cobradas`} a ${quien}: ${this.pesos.transform(total)}.`);
+      this.op.exito(`${n === 1 ? 'Multa cobrada' : `${n} multas cobradas`} a ${quien}: ${this.pesos.transform(total)}.`);
       this.cargarMora(); // pagar puede sacar al alumno de la mora
     });
   }
@@ -163,45 +163,22 @@ export class MultasPage implements OnInit {
   // ---------- Anulación ----------
   protected abrirAnular(m: Multa): void {
     this.formAnular.reset({ motivo: '' });
-    this.abrir(() => this.anulando.set(m));
+    this.op.abrir(() => this.anulando.set(m));
   }
 
   protected guardarAnulacion(): void {
     const m = this.anulando();
     if (!m) return;
     const motivo = this.formAnular.getRawValue().motivo.trim() || null;
-    this.ejecutar(this.http.post<Multa>(`${multaUrl(m.id)}/anular`, { motivo }), () => {
+    this.op.ejecutar(this.http.post<Multa>(`${multaUrl(m.id)}/anular`, { motivo }), () => {
       this.anulando.set(null);
       this.multas.update((lista) => lista?.filter((x) => x.id !== m.id) ?? lista);
-      this.avisar(`Multa de ${m.alumno_nombre} anulada.`);
+      this.op.exito(`Multa de ${m.alumno_nombre} anulada.`);
       this.cargarMora();
     });
   }
 
   // ---------- Utilidades ----------
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
 
-  /** Las acciones van en popups: el error se muestra dentro, sin perder lo escrito. */
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
-    });
-  }
 
-  private avisar(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 }

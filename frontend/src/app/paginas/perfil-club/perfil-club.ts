@@ -1,14 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import {
   ETAPAS_BASE, Etapa, INTRO_BASE, ORDEN_CANCHA, PerfilClub,
 } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
-import { mensajeError } from '../../compartido/errores';
 import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
 import { API } from '../../core/modelos';
 
@@ -48,9 +47,10 @@ export class PerfilClubPage implements OnInit {
 
   protected readonly panel = signal<Panel | null>(null);
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   // Ventanas
   protected readonly editandoTexto = signal<(typeof TEXTOS)[number] | null>(null);
@@ -86,40 +86,16 @@ export class PerfilClubPage implements OnInit {
     });
   }
 
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = false): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    if (!enDialogo) this.mensaje.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        if (enDialogo) this.errorDialogo.set(mensajeError(e));
-        else this.mensaje.set({ error: true, texto: mensajeError(e) });
-      },
-    });
-  }
 
-  private exito(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 
-  private abrir(accion: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    accion();
-  }
 
   // ---------- Perfil ----------
   private guardarPerfil(cambios: Partial<PerfilClub>, texto: string, enDialogo: boolean, alTerminar?: () => void): void {
-    this.ejecutar(this.http.patch<PerfilClub>(`${URL_CLUB}/perfil`, cambios), (perfil) => {
+    this.op.ejecutar(this.http.patch<PerfilClub>(`${URL_CLUB}/perfil`, cambios), (perfil) => {
       this.panel.update((p) => (p ? { ...p, perfil } : p));
       alTerminar?.();
-      this.exito(texto);
-    }, enDialogo);
+      this.op.exito(texto);
+    }, { enDialogo });
   }
 
   protected cambiarPublicado(): void {
@@ -131,7 +107,7 @@ export class PerfilClubPage implements OnInit {
 
   protected abrirTexto(t: (typeof TEXTOS)[number]): void {
     this.formTexto.reset({ texto: this.panel()?.perfil[t.campo] ?? '' });
-    this.abrir(() => this.editandoTexto.set(t));
+    this.op.abrir(() => this.editandoTexto.set(t));
   }
 
   protected guardarTexto(): void {
@@ -149,7 +125,7 @@ export class PerfilClubPage implements OnInit {
       fundado_en: p.fundado_en ? String(p.fundado_en) : '', whatsapp: p.whatsapp ?? '',
       correo: p.correo ?? '', instagram: p.instagram ?? '', facebook: p.facebook ?? '',
     });
-    this.abrir(() => this.editandoDatos.set(true));
+    this.op.abrir(() => this.editandoDatos.set(true));
   }
 
   protected guardarDatos(): void {
@@ -170,7 +146,7 @@ export class PerfilClubPage implements OnInit {
 
   protected abrirFormacion(): void {
     this.formFormacion.reset({ intro: this.introFormacion(), etapas: this.etapas().map((e) => ({ ...e })) });
-    this.abrir(() => this.editandoFormacion.set(true));
+    this.op.abrir(() => this.editandoFormacion.set(true));
   }
 
   protected guardarFormacion(): void {

@@ -3,8 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { PESTANAS_ALUMNOS, Pestanas } from '../../compartido/pestanas';
@@ -85,9 +85,10 @@ export class InscripcionesPage implements OnInit {
   protected readonly filtro = signal<Filtro>('pendientes');
   protected readonly filtroRama = signal<'' | 'femenina' | 'masculina'>('');
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
 
   // ---------- Ventanas emergentes ----------
   protected readonly detalle = signal<Inscripcion | null>(null);
@@ -232,7 +233,7 @@ export class InscripcionesPage implements OnInit {
   // ---------- Abono ----------
   protected abrirAbono(i: Inscripcion): void {
     this.formAbono.reset({ monto: null, fecha_pago: '' });
-    this.abrir(() => this.abonando.set(i));
+    this.op.abrir(() => this.abonando.set(i));
   }
 
   protected guardarAbono(): void {
@@ -241,17 +242,17 @@ export class InscripcionesPage implements OnInit {
     if (this.formAbono.invalid) return this.errorDialogo.set('Revisa el valor y la fecha del abono.');
     const { monto, fecha_pago } = this.formAbono.getRawValue();
     const datos = { monto, fecha_pago: fecha_pago || this.hoy };
-    this.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(i.id)}/pagos`, datos), (r) => {
+    this.op.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(i.id)}/pagos`, datos), (r) => {
       this.abonando.set(null);
       this.actualizar(r);
-      this.avisar(`Abono registrado a ${r.alumno_nombre}. ${resumenPago(r)}`);
+      this.op.exito(`Abono registrado a ${r.alumno_nombre}. ${resumenPago(r)}`);
     });
   }
 
   // ---------- Prórroga ----------
   protected abrirProrroga(i: Inscripcion): void {
     this.formProrroga.reset({ nueva_fecha_limite: '', motivo: '' });
-    this.abrir(() => this.prorrogando.set(i));
+    this.op.abrir(() => this.prorrogando.set(i));
   }
 
   /** La nueva fecha debe ser posterior a la actual y no estar en el pasado. */
@@ -266,17 +267,17 @@ export class InscripcionesPage implements OnInit {
     if (this.formProrroga.invalid) {
       return this.errorDialogo.set('Indica la nueva fecha y un motivo de al menos 10 caracteres.');
     }
-    this.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(i.id)}/prorroga`, this.formProrroga.getRawValue()), (r) => {
+    this.op.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(i.id)}/prorroga`, this.formProrroga.getRawValue()), (r) => {
       this.prorrogando.set(null);
       this.actualizar(r);
-      this.avisar(`Prórroga concedida a ${r.alumno_nombre}: ahora paga hasta el ${formatoFecha(r.fecha_limite_pago)}.`);
+      this.op.exito(`Prórroga concedida a ${r.alumno_nombre}: ahora paga hasta el ${formatoFecha(r.fecha_limite_pago)}.`);
     });
   }
 
   // ---------- Anular abono ----------
   protected abrirAnular(i: Inscripcion, pago: PagoInscripcion): void {
     this.formMotivo.reset({ motivo: '' });
-    this.abrir(() => this.anulando.set({ i, pago }));
+    this.op.abrir(() => this.anulando.set({ i, pago }));
   }
 
   protected guardarAnulacion(): void {
@@ -284,17 +285,17 @@ export class InscripcionesPage implements OnInit {
     if (!a) return;
     const motivo = this.formMotivo.getRawValue().motivo.trim() || null;
     const url = `${inscripcionUrl(a.i.id)}/pagos/${encodeURIComponent(a.pago.id)}/anular`;
-    this.ejecutar(this.http.post<Inscripcion>(url, { motivo }), (r) => {
+    this.op.ejecutar(this.http.post<Inscripcion>(url, { motivo }), (r) => {
       this.anulando.set(null);
       this.actualizar(r);
-      this.avisar('Abono anulado. Queda en el historial como un movimiento en negativo.');
+      this.op.exito('Abono anulado. Queda en el historial como un movimiento en negativo.');
     });
   }
 
   // ---------- Cambio de estado ----------
   protected abrirCambio(i: Inscripcion, t: Transicion): void {
     this.formMotivo.reset({ motivo: '' });
-    this.abrir(() => this.cambiando.set({ i, t }));
+    this.op.abrir(() => this.cambiando.set({ i, t }));
   }
 
   /** Rechazar, marcar para expulsión y expulsar piden motivo; devolver a activa no. */
@@ -308,10 +309,10 @@ export class InscripcionesPage implements OnInit {
     const motivo = this.formMotivo.getRawValue().motivo.trim();
     if (this.pideMotivo(c.t) && motivo.length < 5) return this.errorDialogo.set('Indica el motivo (al menos 5 caracteres).');
     const cuerpo = { estado: c.t.hacia, motivo: motivo || null };
-    this.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(c.i.id)}/estado`, cuerpo), (r) => {
+    this.op.ejecutar(this.http.post<Inscripcion>(`${inscripcionUrl(c.i.id)}/estado`, cuerpo), (r) => {
       this.cambiando.set(null);
       this.actualizar(r);
-      this.avisar(`${r.alumno_nombre}: ${c.t.resultado}.`);
+      this.op.exito(`${r.alumno_nombre}: ${c.t.resultado}.`);
     });
   }
 
@@ -320,7 +321,7 @@ export class InscripcionesPage implements OnInit {
     this.formNueva.reset({ buscar: '', pago: 'ninguno', monto: null });
     this.candidatos.set(null);
     this.elegido.set(null);
-    this.abrir(() => this.creando.set(true));
+    this.op.abrir(() => this.creando.set(true));
   }
 
   /** Busca alumnos activos (con espera, para no pedir en cada tecla). */
@@ -351,37 +352,14 @@ export class InscripcionesPage implements OnInit {
     const peticion = inscribirConPago(this.http, a.id, {
       forma: f.pago, monto: f.monto, hoy: this.hoy, puedeAbonar: this.puedeAbonar(),
     });
-    this.ejecutar(peticion, (r) => {
+    this.op.ejecutar(peticion, (r) => {
       this.creando.set(false);
       this.cargar();
-      this.avisar(`${r.alumno_nombre} quedó inscrito. ${resumenPago(r)}`);
+      this.op.exito(`${r.alumno_nombre} quedó inscrito. ${resumenPago(r)}`);
     });
   }
 
   // ---------- Utilidades ----------
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
 
-  /** Todas las acciones de esta pantalla van en popups: el error se muestra dentro, sin perder lo escrito. */
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
-    });
-  }
 
-  private avisar(texto: string): void {
-    this.mensaje.set({ error: false, texto });
-  }
 }

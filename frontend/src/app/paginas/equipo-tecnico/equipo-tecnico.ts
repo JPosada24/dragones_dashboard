@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { IntegranteClub, iniciales } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
@@ -31,9 +31,10 @@ export class EquipoTecnicoPage implements OnInit {
 
   protected readonly equipo = signal<IntegranteClub[] | null>(null);
   protected readonly errorCarga = signal(false);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
   /** Fotos (blob:, pedidas con el token: un integrante oculto no es público), por "id:versión". */
   protected readonly retratos = signal<Record<string, string>>({});
 
@@ -87,20 +88,6 @@ export class EquipoTecnicoPage implements OnInit {
     this.cargarRetratos([i]);
   }
 
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void): void {
-    this.ocupado.set(true);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        this.errorDialogo.set(mensajeError(e));
-      },
-    });
-  }
 
   protected abrir(i: IntegranteClub | 'nuevo'): void {
     this.form.reset(i === 'nuevo' ? undefined : {
@@ -133,7 +120,7 @@ export class EquipoTecnicoPage implements OnInit {
     const peticion = actual === 'nuevo'
       ? this.http.post<IntegranteClub>(URL_EQUIPO, cuerpo)
       : this.http.patch<IntegranteClub>(`${URL_EQUIPO}/${encodeURIComponent(actual.id)}`, cuerpo);
-    this.ejecutar(peticion, (i) => {
+    this.op.ejecutar(peticion, (i) => {
       const listo = (final: IntegranteClub) => {
         this.poner(final);
         this.editando.set(null);
@@ -144,9 +131,9 @@ export class EquipoTecnicoPage implements OnInit {
         const datos = new FormData();
         datos.append('archivo', this.archivoRetrato);
         this.poner(i); // los datos ya quedaron guardados aunque la foto falle
-        this.ejecutar(this.http.post<IntegranteClub>(url, datos), listo);
+        this.op.ejecutar(this.http.post<IntegranteClub>(url, datos), listo);
       } else if (this.quitarRetrato() && i.foto) {
-        this.ejecutar(this.http.delete<IntegranteClub>(url), listo);
+        this.op.ejecutar(this.http.delete<IntegranteClub>(url), listo);
       } else {
         listo(i);
       }
@@ -173,7 +160,7 @@ export class EquipoTecnicoPage implements OnInit {
   protected eliminar(): void {
     const i = this.eliminando();
     if (!i) return;
-    this.ejecutar(this.http.delete(`${URL_EQUIPO}/${encodeURIComponent(i.id)}`), () => {
+    this.op.ejecutar(this.http.delete(`${URL_EQUIPO}/${encodeURIComponent(i.id)}`), () => {
       this.equipo.update((l) => (l ?? []).filter((x) => x.id !== i.id));
       this.eliminando.set(null);
       this.mensaje.set({ error: false, texto: `${i.nombre} salió del equipo técnico.` });

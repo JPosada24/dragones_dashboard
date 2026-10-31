@@ -2,11 +2,10 @@ import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
 
+import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
-import { mensajeError } from '../../compartido/errores';
 import { desdeIso, diaSemana, isoLocal, lunesDe, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
@@ -73,9 +72,10 @@ export class AsistenciaPage implements OnInit {
   protected readonly justificaciones = signal<Justificacion[]>([]);
   protected readonly alertas = signal<AlertaInasistencia[]>([]);
 
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
-  protected readonly errorDialogo = signal<string | null>(null);
-  protected readonly ocupado = signal(false);
+  protected readonly op = new Operacion();
+  protected readonly mensaje = this.op.mensaje;
+  protected readonly errorDialogo = this.op.errorDialogo;
+  protected readonly ocupado = this.op.ocupado;
   protected readonly errorCarga = signal(false);
 
   // Ventanas emergentes (popups).
@@ -207,7 +207,7 @@ export class AsistenciaPage implements OnInit {
       next: (p) => {
         if (this.seleccionadaId() === id) this.planilla.set(p);
       },
-      error: (e) => this.avisar(e),
+      error: (e) => this.op.error(e),
     });
   }
 
@@ -251,21 +251,21 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     if (!s || !this.hayCambios()) return;
     const marcas = Object.entries(this.cambios()).map(([alumno_id, estado]) => ({ alumno_id, estado }));
-    this.ejecutar(this.http.post<FilaPlanilla[]>(`${sesionUrl(s.id)}/asistencia`, { marcas }), (p) => {
+    this.op.ejecutar(this.http.post<FilaPlanilla[]>(`${sesionUrl(s.id)}/asistencia`, { marcas }), (p) => {
       this.planilla.set(p);
       this.cambios.set({});
-      this.avisar(null, `Planilla guardada (${marcas.length} ${marcas.length === 1 ? 'marca' : 'marcas'}).`);
-    });
+      this.op.exito(`Planilla guardada (${marcas.length} ${marcas.length === 1 ? 'marca' : 'marcas'}).`);
+    }, { enDialogo: false });
   }
 
   /** La familia marca "presente" para su hijo (solo el día y en el horario). */
   protected marcarPropia(f: FilaPlanilla): void {
     const s = this.seleccionada();
     if (!s) return;
-    this.ejecutar(this.http.post(`${sesionUrl(s.id)}/asistencia/propia`, { alumno_id: f.alumno_id }), () => {
+    this.op.ejecutar(this.http.post(`${sesionUrl(s.id)}/asistencia/propia`, { alumno_id: f.alumno_id }), () => {
       this.recargarPlanilla();
-      this.avisar(null, `Asistencia de ${f.alumno_nombre} registrada.`);
-    });
+      this.op.exito(`Asistencia de ${f.alumno_nombre} registrada.`);
+    }, { enDialogo: false });
   }
 
   protected puedeJustificar(f: FilaPlanilla): boolean {
@@ -293,7 +293,7 @@ export class AsistenciaPage implements OnInit {
         lugar: d?.lugar ?? '',
       });
     });
-    this.abrir(() => this.editandoHorario.set(true));
+    this.op.abrir(() => this.editandoHorario.set(true));
   }
 
   protected guardarHorario(): void {
@@ -308,65 +308,65 @@ export class AsistenciaPage implements OnInit {
       this.errorDialogo.set('En cada día, la hora de fin debe ser posterior a la de inicio.');
       return;
     }
-    this.ejecutar(this.http.put<HorarioActualizado>(`${API}/sesiones/horario`, { dias }), (r) => {
+    this.op.ejecutar(this.http.put<HorarioActualizado>(`${API}/sesiones/horario`, { dias }), (r) => {
       this.horario.set(r);
       this.editandoHorario.set(false);
       this.cargarSesiones(false);
       const partes = [`${r.creadas} nuevas`];
       if (r.eliminadas) partes.push(`${r.eliminadas} quitadas`);
       if (r.canceladas) partes.push(`${r.canceladas} canceladas (tenían registros)`);
-      this.avisar(null, `Horario guardado. Sesiones: ${partes.join(', ')}.`);
-    }, true);
+      this.op.exito(`Horario guardado. Sesiones: ${partes.join(', ')}.`);
+    });
   }
 
   protected abrirExtra(): void {
     this.formExtra.reset({ fecha: '', hora_inicio: '', hora_fin: '', lugar: '' });
-    this.abrir(() => this.creandoExtra.set(true));
+    this.op.abrir(() => this.creandoExtra.set(true));
   }
 
   protected crearExtra(): void {
     if (this.formExtra.invalid) return this.errorDialogo.set('Indica la fecha y las horas de inicio y fin.');
     const v = this.formExtra.getRawValue();
     const cuerpo = { ...v, lugar: v.lugar.trim() || null };
-    this.ejecutar(this.http.post<Sesion>(`${API}/sesiones`, cuerpo), (s) => {
+    this.op.ejecutar(this.http.post<Sesion>(`${API}/sesiones`, cuerpo), (s) => {
       this.creandoExtra.set(false);
       this.lunes.set(lunesDe(desdeIso(s.fecha)));
       this.cargarSesiones(false);
       this.seleccionar(s);
-      this.avisar(null, 'Sesión extra creada.');
-    }, true);
+      this.op.exito('Sesión extra creada.');
+    });
   }
 
   protected abrirCancelar(): void {
     this.formCancelar.reset();
-    this.abrir(() => this.cancelandoSesion.set(true));
+    this.op.abrir(() => this.cancelandoSesion.set(true));
   }
 
   protected cancelarSesion(): void {
     const s = this.seleccionada();
     if (!s || this.formCancelar.invalid) return;
     const motivo = this.formCancelar.getRawValue().motivo.trim() || null;
-    this.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/cancelar`, { motivo }), (actualizada) => {
+    this.op.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/cancelar`, { motivo }), (actualizada) => {
       this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
       this.cancelandoSesion.set(false);
-      this.avisar(null, 'Sesión cancelada.');
-    }, true);
+      this.op.exito('Sesión cancelada.');
+    });
   }
 
   protected abrirEliminar(): void {
-    this.abrir(() => this.eliminandoSesion.set(true));
+    this.op.abrir(() => this.eliminandoSesion.set(true));
   }
 
   /** Solo las sesiones extra (creadas a mano); las del horario se cancelan. */
   protected eliminarSesion(): void {
     const s = this.seleccionada();
     if (!s) return;
-    this.ejecutar(this.http.delete(sesionUrl(s.id)), () => {
+    this.op.ejecutar(this.http.delete(sesionUrl(s.id)), () => {
       this.eliminandoSesion.set(false);
       this.sesiones.update((l) => l?.filter((x) => x.id !== s.id) ?? l);
       this.seleccionar(this.sesiones()?.[0] ?? null);
-      this.avisar(null, 'Sesión extra eliminada.');
-    }, true);
+      this.op.exito('Sesión extra eliminada.');
+    });
   }
 
   /** Se puede deshacer una cancelación manual o por festivo, mientras no haya pasado el día (el servidor
@@ -379,16 +379,16 @@ export class AsistenciaPage implements OnInit {
   }
 
   protected reactivar(s: Sesion): void {
-    this.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/reactivar`, {}), (actualizada) => {
+    this.op.ejecutar(this.http.post<Sesion>(`${sesionUrl(s.id)}/reactivar`, {}), (actualizada) => {
       this.sesiones.update((l) => l?.map((x) => (x.id === actualizada.id ? actualizada : x)) ?? l);
       this.recargarPlanilla();
-      this.avisar(null, 'Cancelación deshecha: el entrenamiento vuelve a estar activo.');
-    });
+      this.op.exito('Cancelación deshecha: el entrenamiento vuelve a estar activo.');
+    }, { enDialogo: false });
   }
 
   protected abrirCorregir(f: FilaPlanilla): void {
     this.formCorregir.reset({ estado: '', motivo: '' });
-    this.abrir(() => this.corrigiendo.set(f));
+    this.op.abrir(() => this.corrigiendo.set(f));
   }
 
   protected enviarCorreccion(): void {
@@ -397,11 +397,11 @@ export class AsistenciaPage implements OnInit {
     if (!s || !f) return;
     if (this.formCorregir.invalid) return this.errorDialogo.set('Elige el nuevo estado y escribe el motivo (mín. 10 caracteres).');
     const url = `${sesionUrl(s.id)}/asistencia/${encodeURIComponent(f.alumno_id)}`;
-    this.ejecutar(this.http.patch<FilaPlanilla[]>(url, this.formCorregir.getRawValue()), (p) => {
+    this.op.ejecutar(this.http.patch<FilaPlanilla[]>(url, this.formCorregir.getRawValue()), (p) => {
       this.planilla.set(p);
       this.corrigiendo.set(null);
-      this.avisar(null, `Asistencia de ${f.alumno_nombre} corregida.`);
-    }, true);
+      this.op.exito(`Asistencia de ${f.alumno_nombre} corregida.`);
+    });
   }
 
   /** J de la familia: avisa que el alumno no asiste (sin motivo ni popup). */
@@ -409,13 +409,13 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     if (!s) return;
     const cuerpo = { alumno_id: f.alumno_id, motivo: null };
-    this.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), (j) => {
+    this.op.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), (j) => {
       this.recargarPlanilla();
       this.cargarJustificaciones();
-      this.avisar(null, j.estado === 'aprobada'
+      this.op.exito(j.estado === 'aprobada'
         ? `Aviso registrado: ${f.alumno_nombre} queda justificado, sin multa.`
         : 'Aviso enviado. Como el entrenamiento ya empezó, el club lo revisará.');
-    });
+    }, { enDialogo: false });
   }
 
   protected avisado(f: FilaPlanilla): boolean {
@@ -424,7 +424,7 @@ export class AsistenciaPage implements OnInit {
 
   protected abrirRechazo(j: Justificacion): void {
     this.formRechazar.reset();
-    this.abrir(() => this.rechazando.set(j));
+    this.op.abrir(() => this.rechazando.set(j));
   }
 
   protected aprobar(j: Justificacion): void {
@@ -439,12 +439,12 @@ export class AsistenciaPage implements OnInit {
 
   private revisar(j: Justificacion, cuerpo: object, enDialogo: boolean): void {
     const aprobada = (cuerpo as { aprobar: boolean }).aprobar;
-    this.ejecutar(this.http.post<Justificacion>(`${API}/justificaciones/${encodeURIComponent(j.id)}/revisar`, cuerpo), () => {
+    this.op.ejecutar(this.http.post<Justificacion>(`${API}/justificaciones/${encodeURIComponent(j.id)}/revisar`, cuerpo), () => {
       this.justificaciones.update((l) => l.filter((x) => x.id !== j.id));
       this.rechazando.set(null);
       if (this.seleccionadaId() === j.sesion_id) this.recargarPlanilla();
-      this.avisar(null, `Justificación de ${j.alumno_nombre} ${aprobada ? 'aprobada' : 'rechazada'}.`);
-    }, enDialogo);
+      this.op.exito(`Justificación de ${j.alumno_nombre} ${aprobada ? 'aprobada' : 'rechazada'}.`);
+    }, { enDialogo });
   }
 
   // ---------- Apoyo ----------
@@ -465,34 +465,10 @@ export class AsistenciaPage implements OnInit {
     return total ? `${Math.round((n / total) * 100)}%` : '0%';
   }
 
-  private abrir(mostrar: () => void): void {
-    this.errorDialogo.set(null);
-    this.mensaje.set(null);
-    mostrar();
-  }
 
   /**
    * Ejecuta una acción mostrando el estado ocupado. Si falla, el error se muestra dentro del popup
    * (`enDialogo`) para no perder lo escrito, o arriba de la pantalla.
    */
-  private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = false): void {
-    this.ocupado.set(true);
-    this.mensaje.set(null);
-    this.errorDialogo.set(null);
-    peticion.subscribe({
-      next: (r) => {
-        this.ocupado.set(false);
-        ok(r);
-      },
-      error: (e) => {
-        this.ocupado.set(false);
-        if (enDialogo) this.errorDialogo.set(mensajeError(e));
-        else this.avisar(e);
-      },
-    });
-  }
 
-  private avisar(e: unknown, texto?: string): void {
-    this.mensaje.set(e ? { error: true, texto: mensajeError(e) } : { error: false, texto: texto ?? '' });
-  }
 }
