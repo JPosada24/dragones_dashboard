@@ -168,8 +168,25 @@ def test_miembro_solo_ve_su_fila_en_la_planilla(client, h_admin, familia):
 
 
 # ---------- Justificaciones ----------
-def test_justificacion_pendiente_evita_la_multa_y_si_se_aprueba_queda_justificado(client, h_admin, familia, reloj):
+def test_aviso_antes_del_entrenamiento_queda_aprobado_solo_y_sin_motivo(client, h_admin, familia, reloj):
+    sesion = crear_sesion(client, h_admin)  # 18:00; el reloj está a las 10:00
+    r = client.post(f"{S}/{sesion['id']}/justificaciones", json={"alumno_id": familia["hija"]["id"]},
+                    headers=familia["h"])
+    assert r.status_code == 201 and r.json()["estado"] == "aprobada" and r.json()["motivo"] is None
+    fila = ver_planilla(client, h_admin, sesion["id"])[familia["hija"]["id"]]
+    assert fila["asistencia"] == "justificado"
+    reloj(en_hora(LUNES, 23, 59))
+    assert cerrar_dia(client, h_admin)["multas"] == 0
+    # Un motivo en blanco cuenta como sin motivo.
+    otra = crear_sesion(client, h_admin, dia=LUNES + timedelta(days=2))
+    r = client.post(f"{S}/{otra['id']}/justificaciones", json={"alumno_id": familia["hija"]["id"], "motivo": "  "},
+                    headers=familia["h"])
+    assert r.status_code == 201 and r.json()["motivo"] is None
+
+
+def test_aviso_tardio_queda_pendiente_y_si_se_aprueba_queda_justificado(client, h_admin, familia, reloj):
     sesion = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 18, 30))  # ya empezó el entrenamiento: lo revisa el staff
     j = justificar(client, familia["h"], sesion["id"], familia["hija"]["id"])
     assert j.status_code == 201 and j.json()["estado"] == "pendiente"
 
@@ -183,6 +200,7 @@ def test_justificacion_pendiente_evita_la_multa_y_si_se_aprueba_queda_justificad
 
 def test_justificacion_rechazada_despues_del_cierre_genera_la_multa(client, h_admin, familia, reloj):
     sesion = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 19))
     j = justificar(client, familia["h"], sesion["id"], familia["hija"]["id"]).json()
     reloj(en_hora(LUNES, 23, 59))
     cerrar_dia(client, h_admin)
@@ -222,9 +240,10 @@ def test_justificacion_no_se_duplica_ni_aplica_a_quien_estuvo_presente(client, h
 
 
 def test_solo_el_staff_revisa_y_el_motivo_no_va_a_la_auditoria(
-    client, h_admin, familia, crear_usuario, auth_header, db
+    client, h_admin, familia, crear_usuario, auth_header, db, reloj
 ):
     sesion = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 19))
     motivo = "Hospitalización por apendicitis"
     j = justificar(client, familia["h"], sesion["id"], familia["hija"]["id"], motivo=motivo).json()
     crear_usuario("coach@club.com", "ENTRENADOR")

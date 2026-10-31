@@ -110,7 +110,7 @@ export class AsistenciaPage implements OnInit {
     motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(255)]],
   });
   protected readonly formJustificar = this.fb.group({
-    motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
+    motivo: ['', Validators.maxLength(500)], // opcional: basta con avisar
   });
   protected readonly formRechazar = this.fb.group({
     comentario: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
@@ -417,13 +417,21 @@ export class AsistenciaPage implements OnInit {
     const s = this.seleccionada();
     const f = this.justificando();
     if (!s || !f || this.formJustificar.invalid) return;
-    const cuerpo = { alumno_id: f.alumno_id, motivo: this.formJustificar.getRawValue().motivo };
-    this.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), () => {
+    const cuerpo = { alumno_id: f.alumno_id, motivo: this.formJustificar.getRawValue().motivo.trim() || null };
+    this.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), (j) => {
       this.justificando.set(null);
       this.recargarPlanilla();
       this.cargarJustificaciones();
-      this.avisar(null, 'Justificación enviada. El club la revisará.');
+      this.avisar(null, j.estado === 'aprobada'
+        ? `Aviso registrado: ${f.alumno_nombre} queda justificado, sin multa.`
+        : 'Aviso enviado. Como el entrenamiento ya empezó, el club lo revisará.');
     }, true);
+  }
+
+  /** El aviso llega antes de que empiece el entrenamiento (hora de Colombia, sin horario de verano). */
+  protected avisoATiempo(): boolean {
+    const s = this.seleccionada();
+    return !!s && Date.now() < new Date(`${s.fecha}T${s.hora_inicio.slice(0, 5)}:00-05:00`).getTime();
   }
 
   protected abrirRechazo(j: Justificacion): void {

@@ -105,7 +105,7 @@ class Justificacion(UUIDMixin, Base):
 
     sesion_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("sesiones.id"), index=True)
     alumno_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("alumnos.id"), index=True)
-    motivo: Mapped[str] = mapped_column(String(500))
+    motivo: Mapped[str | None] = mapped_column(String(500))  # opcional: basta con avisar
     estado: Mapped[str] = mapped_column(String(15), default="pendiente")
     creada_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
     revisada_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))

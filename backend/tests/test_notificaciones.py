@@ -77,8 +77,9 @@ def test_un_correo_que_falla_se_reintenta_y_luego_queda_fallido(client, h_admin,
     assert fila.email_estado == "fallido" and "SMTP no responde" in fila.email_error
 
 
-def test_justificacion_rechazada_avisa_con_el_motivo(client, h_admin, familia):
+def test_justificacion_rechazada_avisa_con_el_motivo(client, h_admin, familia, reloj):
     sesion = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 19))  # aviso tardío: queda pendiente de revisión
     j = justificar(client, familia["h"], sesion["id"], familia["hija"]["id"]).json()
     client.post(f"{J}/{j['id']}/revisar", json={"aprobar": False, "comentario": "Sin soporte médico"}, headers=h_admin)
     [aviso] = client.get(f"{N}/mias", headers=familia["h"]).json()

@@ -43,7 +43,9 @@ def test_indicadores_cartera_y_entrenamiento_de_hoy(client, h_admin, reloj):
 def test_alertas_que_requieren_decision(client, h_admin, h_root, familia, reloj):
     hija = familia["hija"]
     sesion = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 19))  # aviso tardío: queda por revisar
     justificar(client, familia["h"], sesion["id"], hija["id"])
+    reloj(en_hora(LUNES, 10))
     otra = alumno_inscrito(client, h_admin, documento="2000000005")
     i = client.get(I, params={"alumno_id": otra["id"]}, headers=h_admin).json()[0]
     client.post(f"{I}/{i['id']}/pagos", json={"fecha_pago": LUNES.isoformat(), "monto": 90000}, headers=h_admin)

@@ -206,10 +206,10 @@ describe('AsistenciaPage', () => {
     req.flush({ ...JUSTIFICACION, estado: 'rechazada' });
     await estable();
     expect(dialogo()).toBeNull();
-    expect(texto()).toContain('No hay justificaciones pendientes');
+    expect(texto()).toContain('No hay avisos pendientes');
   });
 
-  it('la familia no ve alertas ni edita el horario, y justifica a su hijo en un popup', async () => {
+  it('la familia no ve alertas ni edita el horario, y avisa que su hijo no asistió (aviso tardío)', async () => {
     crear(FAMILIA);
     pedirSesiones().flush([sesion({ fecha: isoLocal(sumarDias(new Date(), -1)), cerrada: true })]);
     backend.expectOne(`${API}/sesiones/horario`).flush(HORARIO);
@@ -224,19 +224,18 @@ describe('AsistenciaPage', () => {
     expect(boton('Corregir')).toBeUndefined();
     expect(boton('Editar')).toBeUndefined();
     expect(boton('Marcar presente')).toBeUndefined(); // no es hoy
-    boton('Justificar')!.click();
+    boton('Avisar que no asiste')!.click();
     await estable();
-    escribir('dialog textarea', 'Estaba enferma con fiebre');
-    await estable();
-    boton('Enviar', dialogo()!)!.click();
+    expect(dialogo()!.textContent).toContain('el club revisará');
+    boton('Enviar aviso', dialogo()!)!.click(); // el comentario es opcional
     const req = backend.expectOne(`${API}/sesiones/s1/justificaciones`);
-    expect(req.request.body).toEqual({ alumno_id: 'a1', motivo: 'Estaba enferma con fiebre' });
+    expect(req.request.body).toEqual({ alumno_id: 'a1', motivo: null });
     req.flush({ ...JUSTIFICACION, alumno_id: 'a1' });
     backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez', { asistencia: 'ausente', justificacion: 'pendiente', multa: 'pendiente' })]);
     backend.expectOne((r) => r.url === `${API}/justificaciones`).flush([]);
     await estable();
-    expect(texto()).toContain('Justificación enviada');
-    expect(boton('Justificar')).toBeUndefined();
+    expect(texto()).toContain('Aviso enviado');
+    expect(boton('Avisar que no asiste')).toBeUndefined();
   });
 
   it('si la API rechaza, el error se muestra dentro del popup sin perder lo escrito', async () => {

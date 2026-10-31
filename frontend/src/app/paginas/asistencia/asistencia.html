@@ -108,7 +108,7 @@
                   <div class="alumno-nombre">{{ f.alumno_nombre }}</div>
                   <div class="alumno-nota">
                     <span class="capital">{{ f.rama }}</span>
-                    @if (f.justificacion) { · Justificación {{ f.justificacion }} }
+                    @if (f.justificacion) { · {{ f.justificacion === 'aprobada' ? 'Avisó que no asiste' : f.justificacion === 'pendiente' ? 'Aviso por revisar' : 'Aviso rechazado' }} }
                     @if (f.multa) { · Multa {{ f.multa }} }
                   </div>
                 </div>
@@ -128,7 +128,7 @@
                   <button type="button" class="boton chico" [disabled]="ocupado()" (click)="marcarPropia(f)">Marcar presente</button>
                 }
                 @if (puedeJustificar(f)) {
-                  <button type="button" class="boton secundario chico" (click)="abrirJustificar(f)">Justificar</button>
+                  <button type="button" class="boton secundario chico" (click)="abrirJustificar(f)">Avisar que no asiste</button>
                 }
               </div>
             </div>
@@ -155,7 +155,7 @@
         <p class="vacio">Elige un entrenamiento de la semana.</p>
       }
       <p class="nota">
-        A las 11:59 pm el sistema cierra el día: quien no marcó ni justificó queda ausente y con multa.
+        A las 11:59 pm el sistema cierra el día: quien no marcó ni avisó que no venía queda ausente y con multa.
         @if (puedeCorregir()) { Después del cierre, los cambios se hacen con "Corregir" y quedan en la auditoría. }
       </p>
     </section>
@@ -191,7 +191,7 @@
       @if (puedeRevisar() || esFamilia()) {
         <section class="panel relleno" aria-labelledby="titulo-justificaciones">
           <div class="fila-base">
-            <h2 id="titulo-justificaciones">{{ puedeRevisar() ? 'Justificaciones por revisar' : 'Tus justificaciones' }}</h2>
+            <h2 id="titulo-justificaciones">{{ puedeRevisar() ? 'Avisos tardíos por revisar' : 'Tus avisos de inasistencia' }}</h2>
             @if (puedeRevisar() && justificaciones().length) {
               <span class="insignia">{{ justificaciones().length }}</span>
             }
@@ -202,7 +202,7 @@
                 <span class="alumno-nombre">{{ j.alumno_nombre }}</span>
                 <span class="mono chico apagado">{{ j.fecha_sesion | date: 'd MMM' }} · {{ j.rama }}</span>
               </div>
-              <p class="justificacion-texto">{{ j.motivo }}</p>
+              <p class="justificacion-texto" [class.apagado]="!j.motivo">{{ j.motivo || 'Sin comentario' }}</p>
               @if (puedeRevisar()) {
                 <div class="acciones">
                   <button type="button" class="enlace-rojo" (click)="abrirRechazo(j)">Rechazar</button>
@@ -216,7 +216,7 @@
               }
             </article>
           } @empty {
-            <p class="vacio sin-borde">{{ puedeRevisar() ? 'No hay justificaciones pendientes.' : 'Aún no has enviado justificaciones.' }}</p>
+            <p class="vacio sin-borde">{{ puedeRevisar() ? 'No hay avisos pendientes.' : 'Aún no has enviado avisos.' }}</p>
           }
         </section>
       }
@@ -363,17 +363,19 @@
 }
 
 @if (justificando(); as f) {
-  <app-dialogo [titulo]="'Justificar · ' + f.alumno_nombre" (cerrar)="justificando.set(null)"
-               descripcion="Explica por qué no asistió. El club la revisará; si se aprueba, no hay multa.">
+  <app-dialogo [titulo]="'No asistirá · ' + f.alumno_nombre" (cerrar)="justificando.set(null)"
+               [descripcion]="avisoATiempo()
+                 ? 'Con el aviso queda justificado de una vez: no hay multa. No hace falta explicar el motivo.'
+                 : 'El entrenamiento ya empezó: el club revisará este aviso antes de quitar la multa.'">
     <form class="formulario" [formGroup]="formJustificar" (ngSubmit)="enviarJustificacion()">
       <label class="campo">
-        <span class="etiqueta">Motivo (mín. 10 caracteres)</span>
-        <textarea class="control" formControlName="motivo" maxlength="500" rows="3"></textarea>
+        <span class="etiqueta">Comentario (opcional)</span>
+        <textarea class="control" formControlName="motivo" maxlength="500" rows="2" placeholder="Ej.: viaje familiar, está enferma…"></textarea>
       </label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario chico" (click)="justificando.set(null)">Cancelar</button>
-        <button type="submit" class="boton chico" [disabled]="formJustificar.invalid || ocupado()">Enviar</button>
+        <button type="submit" class="boton chico" [disabled]="formJustificar.invalid || ocupado()">Enviar aviso</button>
       </div>
     </form>
   </app-dialogo>

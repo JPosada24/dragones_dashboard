@@ -34,6 +34,8 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   100 %. El sorteo solo incluye talonarios pagados, **se puede jugar varias veces** (una boleta no gana dos veces) y
   cada jugada deja un acta inmutable. Una rifa se puede **eliminar** (desaparece y deja de contar; su dinero y actas
   se conservan; con pagos o sorteos solo el SuperAdmin).
+- **Inasistencia: basta con avisar** (sin motivo). Aviso antes del entrenamiento = justificado automático; aviso
+  tardío lo revisa el staff.
 - **Cancelar y anular no exigen motivo** (sesiones, rifas, torneos, multas, abonos y pagos): es opcional; quién y
   cuándo queda igual en la auditoría. Siguen pidiendo motivo: prórroga, cambio de estado de la inscripción,
   corrección de asistencia y rechazo de justificación.
@@ -274,7 +276,12 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   Configuración rehecha como el prototipo (2 columnas: parámetros con caja de valor/unidad que abre el popup,
   «Políticas automáticas» con interruptor `role=switch` de `expulsion_automatica`, «Recordatorios» derivados de la
   configuración, matriz «Roles y permisos» de solo lectura desde `GET /configuracion/roles` (`config.ver`; los
-  permisos se cambian con migración). Sin «Zona crítica» hasta que existan cierre de año y respaldo. 197 pruebas backend, 89 frontend.
+  permisos se cambian con migración). Sin «Zona crítica» hasta que existan cierre de año y respaldo.
+- HECHO (aviso de inasistencia, 2026-10-30): migración 0016 (`justificaciones.motivo` opcional). La familia (o el
+  staff) **avisa que el alumno no asistirá, sin explicar el motivo** («Avisar que no asiste», comentario opcional).
+  Aviso antes del inicio del entrenamiento → `aprobada` automática, asistencia `justificado`, sin multa; aviso ya
+  empezado o después (dentro de `dias_para_justificar`) → `pendiente` y lo revisa el staff como antes. En
+  Configuración se quitaron las políticas fijas (solo queda el interruptor real de expulsión). 198 pruebas backend, 89 frontend.
 - SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), agente de IA, endurecer
   para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 

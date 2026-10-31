@@ -122,8 +122,15 @@ class HistorialOut(BaseModel):
 
 
 class JustificarIn(_Entrada):
+    """Aviso de que el alumno no asistirá. El motivo es opcional."""
+
     alumno_id: uuid.UUID
-    motivo: str = Field(min_length=10, max_length=500)
+    motivo: str | None = Field(default=None, max_length=500)
+
+    @field_validator("motivo")
+    @classmethod
+    def _vacio_es_nulo(cls, v: str | None) -> str | None:
+        return (v or "").strip() or None
 
 
 class RevisarIn(_Entrada):
@@ -144,7 +151,7 @@ class JustificacionOut(BaseModel):
     rama: str
     alumno_id: uuid.UUID
     alumno_nombre: str
-    motivo: str
+    motivo: str | None
     estado: str
     comentario: str | None
     creado_en: datetime

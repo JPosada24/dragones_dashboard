@@ -284,8 +284,13 @@ def corregir(
 
 # ---------- Justificaciones ----------
 def justificar(
-    db: Session, sesion: Sesion, *, alumno_id: uuid.UUID, motivo: str, actor: Usuario, ip: str | None
+    db: Session, sesion: Sesion, *, alumno_id: uuid.UUID, motivo: str | None, actor: Usuario, ip: str | None
 ) -> Justificacion:
+    """Aviso de que el alumno no asistirá (el motivo es opcional).
+
+    Si llega antes de que empiece el entrenamiento queda aprobado solo: el alumno queda justificado y no hay multa.
+    Si llega ya empezado o después, queda pendiente y lo revisa el staff (evita excusas a posteriori).
+    """
     staff = "asistencia.marcar_grupo" in actor.permisos_codigos
     if staff:
         alumnos.obtener_visible(db, actor, alumno_id)  # el Entrenador, solo de su rama
@@ -306,13 +311,19 @@ def justificar(
         raise Conflicto("El alumno ya está marcado como presente en esta sesión.")
     if _justificacion_viva(db, sesion.id, alumno_id) is not None:
         raise Conflicto("Ya hay una justificación pendiente o aprobada para esta sesión.")
-    j = Justificacion(sesion_id=sesion.id, alumno_id=alumno_id, motivo=motivo, estado="pendiente", creada_por=actor.id)
+    a_tiempo = fechas.ahora() < fechas.en_zona(sesion.fecha, sesion.hora_inicio)
+    j = Justificacion(
+        sesion_id=sesion.id, alumno_id=alumno_id, motivo=motivo, creada_por=actor.id,
+        estado="aprobada" if a_tiempo else "pendiente", revisada_en=fechas.ahora() if a_tiempo else None,
+    )
     db.add(j)
     db.flush()
+    if a_tiempo:
+        _fijar_asistencia(db, sesion, alumno_id, "justificado", "justificacion", actor.id)
     # El motivo puede traer datos de salud: no se copia a la auditoría.
     _auditar(
         db, "justificacion.crear", "justificacion", j.id, actor.id, ip,
-        despues={"sesion_id": str(sesion.id), "alumno_id": str(alumno_id)},
+        despues={"sesion_id": str(sesion.id), "alumno_id": str(alumno_id), "estado": j.estado},
     )
     return j
 

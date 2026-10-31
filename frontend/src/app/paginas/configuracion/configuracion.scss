@@ -163,11 +163,7 @@ h2 {
     background: rgba(242, 105, 30, 0.06);
   }
 
-  &.fija {
-    opacity: 0.8;
-  }
-
-  &:is(button):not(:disabled) {
+  &:not(:disabled) {
     cursor: pointer;
 
     &:hover {

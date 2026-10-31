@@ -22,8 +22,8 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       { titulo: 'Programación automática', texto: 'Los entrenamientos salen solos del horario semanal (ambas ramas juntas). Los festivos de Colombia y los torneos del club los cancelan; para reponer se crea una sesión extra.' },
       { titulo: 'Marcar', texto: 'El entrenador marca presente o ausente en la planilla. La familia puede marcar "presente" el mismo día, dentro del horario.' },
-      { titulo: 'Justificar', texto: 'La familia justifica una inasistencia hasta unos días después; el staff la aprueba o la rechaza con un comentario.' },
-      { titulo: 'Cierre del día', texto: 'A las 11:59 pm, quien no marcó ni justificó queda ausente y con multa (por defecto $2.000). Si hay una justificación pendiente, decide la revisión.' },
+      { titulo: 'Avisar que no asiste', texto: 'La familia avisa que el alumno no irá, sin tener que explicar el motivo. Si avisa antes de que empiece el entrenamiento queda justificado de una vez (sin multa); si avisa ya empezado o después, el staff aprueba o rechaza el aviso.' },
+      { titulo: 'Cierre del día', texto: 'A las 11:59 pm, quien no marcó ni avisó queda ausente y con multa (por defecto $2.000). Si hay un aviso tardío por revisar, decide la revisión.' },
       { titulo: 'Cancelar y deshacer', texto: 'Una sesión se cancela (el motivo es opcional) y anula sus multas pendientes. Se puede deshacer hasta el cierre de ese día.', permisos: ['sesiones.gestionar'] },
       { titulo: 'Eliminar', texto: 'Las sesiones extra (creadas a mano) se pueden eliminar con la papelera; las del horario solo se cancelan. Si ya se cobraron multas de esa sesión, no se elimina.', permisos: ['sesiones.gestionar'] },
       { titulo: 'Rachas', texto: 'Tras varias ausencias seguidas aparece una alerta; una ausencia justificada corta la racha.', permisos: STAFF },
@@ -76,7 +76,7 @@ export const AYUDAS: Record<string, Ayuda> = {
   multas: {
     titulo: 'Cómo funcionan las multas y la mora',
     pasos: [
-      { titulo: 'Multa', texto: 'Se genera al cierre del día (11:59 pm) a quien no marcó ni justificó un entrenamiento. El valor es configurable (por defecto $2.000).' },
+      { titulo: 'Multa', texto: 'Se genera al cierre del día (11:59 pm) a quien no marcó ni avisó un entrenamiento. El valor es configurable (por defecto $2.000).' },
       { titulo: 'Pago', texto: 'Lo registran Admin o SuperAdmin. Una multa pagada no se anula.' },
       { titulo: 'Anular', texto: 'Una multa pendiente se puede anular (el motivo es opcional). Cancelar un entrenamiento anula sus multas pendientes.', permisos: ['multas.anular'] },
       { titulo: 'Mora', texto: 'Cualquier deuda (multas o talonarios de rifa) con más de 3 meses sin pagar pone la inscripción "en revisión". La familia recibe aviso antes.' },

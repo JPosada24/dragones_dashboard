@@ -52,7 +52,7 @@ export interface Justificacion {
   rama: Rama;
   alumno_id: string;
   alumno_nombre: string;
-  motivo: string;
+  motivo: string | null;
   estado: 'pendiente' | 'aprobada' | 'rechazada';
   comentario: string | null;
   creado_en: string;
