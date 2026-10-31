@@ -44,7 +44,8 @@ def subir(client, h, album_id, datos: bytes, autorizacion="true"):
 
 
 def test_solo_quien_edita_el_club_entra_al_panel(client, h_admin, crear_usuario, auth_header):
-    assert client.get(C, headers=h_admin).status_code == 200
+    r = client.get(C, headers=h_admin)
+    assert r.status_code == 200 and "sitio_url" in r.json()
     crear_usuario("coach@club.com", "ENTRENADOR")
     h = auth_header("coach@club.com")
     assert client.get(C, headers=h).status_code == 403

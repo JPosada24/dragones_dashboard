@@ -87,16 +87,19 @@
       <!-- Estado del sitio -->
       <section class="panel estado-sitio" [class.en-linea]="p.perfil.publicado" aria-label="Estado del sitio">
         <div class="textos">
-          <h2>{{ p.perfil.publicado ? 'El sitio está publicado' : 'El sitio está oculto' }}</h2>
+          <h2>{{ p.perfil.publicado ? 'Contenido publicado en el sitio' : 'Contenido oculto en el sitio' }}</h2>
           <p class="sub">
-            {{ p.perfil.publicado ? 'Cualquiera puede verlo e inscribir su club a los torneos abiertos.'
-              : 'Complétalo y publícalo cuando esté listo. Mientras tanto nadie lo ve.' }}
+            {{ p.perfil.publicado ? 'El sitio muestra el equipo, la galería, los torneos abiertos y las cifras del club.'
+              : 'Mientras esté oculto, el sitio muestra solo su contenido fijo (sin equipo, galería, torneos ni cifras).' }}
+            @if (!p.sitio_url) { Falta configurar SITIO_URL en el servidor para el botón «Ver sitio». }
           </p>
         </div>
         <div class="estado-acciones">
-          <a class="boton secundario chico" routerLink="/sitio" target="_blank" rel="noopener">
-            <span class="icono" aria-hidden="true">open_in_new</span> Ver sitio
-          </a>
+          @if (p.sitio_url) {
+            <a class="boton secundario chico" [href]="p.sitio_url" target="_blank" rel="noopener">
+              <span class="icono" aria-hidden="true">open_in_new</span> Ver sitio
+            </a>
+          }
           <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="p.perfil.publicado"
                   [disabled]="ocupado()" (click)="cambiarPublicado()">
             <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
@@ -124,8 +127,6 @@
         </div>
         <dl class="datos">
           <dt>Nombre</dt><dd>{{ p.perfil.nombre }}</dd>
-          <dt>Lema</dt><dd>{{ p.perfil.lema || '—' }}</dd>
-          <dt>Ciudad</dt><dd>{{ p.perfil.ciudad || '—' }}</dd>
           <dt>Sede</dt><dd>{{ p.perfil.sede || '—' }}</dd>
           <dt>Fundado en</dt><dd class="mono">{{ p.perfil.fundado_en || '—' }}</dd>
           <dt>WhatsApp</dt><dd class="mono">{{ p.perfil.whatsapp || '—' }}</dd>
@@ -184,15 +185,11 @@
 }
 
 @if (editandoDatos()) {
-  <app-dialogo titulo="Datos y contacto" descripcion="Lo que se muestra en el sitio. Las redes van solo con el usuario." (cerrar)="editandoDatos.set(false)">
+  <app-dialogo titulo="Datos y contacto" descripcion="La sede sale en Horarios; WhatsApp, correo y redes en el botón y el pie del sitio. Las redes van solo con el usuario." (cerrar)="editandoDatos.set(false)">
     <form class="formulario" [formGroup]="formDatos" (ngSubmit)="guardarDatos()">
       <div class="rejilla">
         <label class="campo"><span class="etiqueta">Nombre del club</span>
           <input class="control" formControlName="nombre" maxlength="120" placeholder="Club Deportivo Dragones" /></label>
-        <label class="campo"><span class="etiqueta">Lema</span>
-          <input class="control" formControlName="lema" maxlength="160" placeholder="Ej.: Garra, disciplina y corazón" /></label>
-        <label class="campo"><span class="etiqueta">Ciudad</span>
-          <input class="control" formControlName="ciudad" maxlength="80" placeholder="Ej.: Manizales" /></label>
         <label class="campo"><span class="etiqueta">Sede de entrenamiento</span>
           <input class="control" formControlName="sede" maxlength="160" placeholder="Ej.: Coliseo menor" /></label>
         <label class="campo"><span class="etiqueta">Año de fundación</span>

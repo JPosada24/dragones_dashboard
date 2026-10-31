@@ -2,7 +2,6 @@ import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
@@ -14,6 +13,7 @@ import { mensajeError } from '../../compartido/errores';
 import { API } from '../../core/modelos';
 
 interface Panel {
+  sitio_url: string | null;
   perfil: PerfilClub;
   albumes: AlbumClub[];
   videos: VideoClub[];
@@ -32,7 +32,7 @@ const URL_CLUB = `${API}/club`;
 
 @Component({
   selector: 'app-perfil-club',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, Aviso, Dialogo],
+  imports: [ReactiveFormsModule, DatePipe, Aviso, Dialogo],
   templateUrl: './perfil-club.html',
   styleUrl: './perfil-club.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,8 +66,6 @@ export class PerfilClubPage implements OnInit {
   protected readonly formTexto = this.fb.group({ texto: ['', Validators.maxLength(4000)] });
   protected readonly formDatos = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
-    lema: ['', Validators.maxLength(160)],
-    ciudad: ['', Validators.maxLength(80)],
     sede: ['', Validators.maxLength(160)],
     fundado_en: ['', Validators.pattern(/^(19|20)\d{2}$/)],
     whatsapp: [''],
@@ -181,7 +179,7 @@ export class PerfilClubPage implements OnInit {
     const p = this.panel()?.perfil;
     if (!p) return;
     this.formDatos.reset({
-      nombre: p.nombre, lema: p.lema ?? '', ciudad: p.ciudad ?? '', sede: p.sede ?? '',
+      nombre: p.nombre, sede: p.sede ?? '',
       fundado_en: p.fundado_en ? String(p.fundado_en) : '', whatsapp: p.whatsapp ?? '',
       correo: p.correo ?? '', instagram: p.instagram ?? '', facebook: p.facebook ?? '',
     });
@@ -193,7 +191,7 @@ export class PerfilClubPage implements OnInit {
     const f = this.formDatos.getRawValue();
     const vacio = (v: string) => v.trim() || null;
     this.guardarPerfil({
-      nombre: f.nombre.trim(), lema: vacio(f.lema), ciudad: vacio(f.ciudad), sede: vacio(f.sede),
+      nombre: f.nombre.trim(), sede: vacio(f.sede),
       fundado_en: f.fundado_en.trim() ? Number(f.fundado_en) : null,
       whatsapp: vacio(f.whatsapp), correo: vacio(f.correo), instagram: vacio(f.instagram), facebook: vacio(f.facebook),
     }, 'Datos del club actualizados.', true, () => this.editandoDatos.set(false));

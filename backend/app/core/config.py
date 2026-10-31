@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:4200"
     # Dominios del sitio público del club (otro proyecto): solo pueden leer /api/v1/publico, sin credenciales.
     sitio_origenes: str = ""
+    # Dirección del sitio público (el botón «Ver sitio» del panel la abre). Vacía = el botón no aparece.
+    sitio_url: str = ""
 
     max_intentos_login: int = 5
     bloqueo_minutos: int = 15

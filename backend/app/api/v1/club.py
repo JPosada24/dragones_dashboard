@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere
 from app.core.almacen import Almacen, get_almacen
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.club import Album, IntegranteEquipo, Video
@@ -35,7 +36,9 @@ EDITAR = requiere("club.editar")
 
 @router.get("", response_model=ClubPanelOut)
 def ver(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> ClubPanelOut:
+    url = get_settings().sitio_url.strip()
     return ClubPanelOut(
+        sitio_url=url if url.startswith(("https://", "http://localhost")) else None,
         perfil=PerfilOut.model_validate(servicio.perfil(db)),
         albumes=[AlbumOut.model_validate(a) for a in
                  db.scalars(select(Album).order_by(Album.fecha.desc().nulls_last(), Album.creado_en.desc()))],

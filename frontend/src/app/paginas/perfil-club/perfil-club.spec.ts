@@ -7,6 +7,7 @@ import { API } from '../../core/modelos';
 import { PerfilClubPage } from './perfil-club';
 
 const PANEL = {
+  sitio_url: 'https://club.example',
   perfil: {
     nombre: 'Club Dragones', lema: null, ciudad: null, sede: null, fundado_en: null, mision: 'Formar deportistas', vision: null,
     historia: null, whatsapp: null, correo: null, instagram: null, facebook: null, publicado: false,
@@ -47,14 +48,15 @@ describe('PerfilClubPage', () => {
 
   it('muestra textos, álbumes en borrador y publica el sitio', async () => {
     expect(el().textContent).toContain('Formar deportistas');
-    expect(el().textContent).toContain('El sitio está oculto');
+    expect(el().textContent).toContain('Contenido oculto en el sitio');
+    expect(el().querySelector<HTMLAnchorElement>('a[href="https://club.example"]')?.target).toBe('_blank');
     expect(el().textContent).toContain('borrador');
     el().querySelector<HTMLButtonElement>('.estado-sitio [role="switch"]')!.click();
     const r = backend.expectOne(`${API}/club/perfil`);
     expect(r.request.body).toEqual({ publicado: true });
     r.flush({ ...PANEL.perfil, publicado: true });
     await estable();
-    expect(el().textContent).toContain('El sitio está publicado');
+    expect(el().textContent).toContain('Contenido publicado en el sitio');
   });
 
   it('no sube fotos sin la autorización de los acudientes', async () => {

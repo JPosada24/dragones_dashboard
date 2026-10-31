@@ -160,6 +160,7 @@ class IntegranteOut(BaseModel):
 
 
 class ClubPanelOut(BaseModel):
+    sitio_url: str | None  # dirección del sitio público (SITIO_URL), para el botón «Ver sitio»
     perfil: PerfilOut
     albumes: list[AlbumOut]
     videos: list[VideoOut]

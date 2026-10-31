@@ -27,12 +27,6 @@ const PANTALLAS: Record<string, Cargar> = {
 
 export const routes: Routes = [
   {
-    // Sitio público del club: sin sesión.
-    path: 'sitio',
-    title: 'Club Deportivo Dragones',
-    loadComponent: () => import('./paginas/sitio/sitio').then((m) => m.SitioPage),
-  },
-  {
     path: 'login',
     canActivate: [soloInvitado],
     title: 'Ingresar · Dragones',
