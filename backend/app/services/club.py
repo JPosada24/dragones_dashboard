@@ -58,20 +58,33 @@ def actualizar_perfil(
 
 
 # ---------- Fotos ----------
-def procesar_foto(datos: bytes) -> tuple[bytes, bytes, int, int]:
-    """Vuelve a codificar la imagen: corrige la orientación, quita EXIF/ubicación y genera dos tamaños.
-
-    Re-codificar también neutraliza archivos manipulados: lo que se guarda lo produjo el servidor.
-    """
+def abrir_imagen(datos: bytes) -> Image.Image:
+    """Abre y valida la imagen (formato, tamaño razonable) con la orientación corregida y en RGB."""
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(io.BytesIO(datos)) as original:
                 if original.format not in FORMATOS:
                     raise ErrorNegocio("Solo se aceptan fotos JPG, PNG o WebP.")
-                imagen = ImageOps.exif_transpose(original).convert("RGB")
+                return ImageOps.exif_transpose(original).convert("RGB")
     except (UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning, OSError) as e:
         raise ErrorNegocio("El archivo no es una imagen válida o es demasiado grande.") from e
+
+
+def procesar_retrato(datos: bytes) -> bytes:
+    """Foto de un integrante: recorte cuadrado de 600 px centrado arriba (donde suele estar la cara), sin metadatos."""
+    imagen = ImageOps.fit(abrir_imagen(datos), (600, 600), centering=(0.5, 0.35))
+    salida = io.BytesIO()
+    imagen.save(salida, "JPEG", quality=85, optimize=True, progressive=True)
+    return salida.getvalue()
+
+
+def procesar_foto(datos: bytes) -> tuple[bytes, bytes, int, int]:
+    """Vuelve a codificar la imagen: corrige la orientación, quita EXIF/ubicación y genera dos tamaños.
+
+    Re-codificar también neutraliza archivos manipulados: lo que se guarda lo produjo el servidor.
+    """
+    imagen = abrir_imagen(datos)
 
     def jpeg(maximo: int) -> tuple[bytes, int, int]:
         copia = imagen.copy()
@@ -219,3 +232,11 @@ def inscribir_desde_sitio(
                  f"Quedó {estado}. Delegado: {equipo.delegado_nombre}."),
     )
     return equipo
+
+
+def integrante_publico(db: Session, integrante_id: uuid.UUID) -> IntegranteEquipo:
+    """Integrante cuya foto se puede ver en el sitio: publicado, con foto y con el sitio publicado."""
+    i = db.get(IntegranteEquipo, integrante_id)
+    if i is None or not i.publicado or not i.foto_clave or not perfil(db).publicado:
+        raise NoEncontrado("Foto no encontrada.")
+    return i

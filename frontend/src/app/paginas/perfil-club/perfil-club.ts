@@ -1,12 +1,13 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
 import {
-  AlbumClub, FotoClub, IntegranteClub, PerfilClub, VideoClub, iniciales, miniaturaYoutube,
+  AlbumClub, ETAPAS_BASE, Etapa, FotoClub, INTRO_BASE, IntegranteClub, ORDEN_CANCHA, PerfilClub, VideoClub,
+  iniciales, miniaturaYoutube,
 } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
@@ -44,6 +45,11 @@ export class PerfilClubPage implements OnInit {
   protected readonly textos = TEXTOS;
   protected readonly iniciales = iniciales;
   protected readonly miniaturaYoutube = miniaturaYoutube;
+  protected readonly ordenCancha = ORDEN_CANCHA;
+  /** Etapas que muestra el sitio: las del panel o, si no hay, las fijas. */
+  protected readonly etapas = computed<Etapa[]>(() => this.panel()?.perfil.formacion ?? ETAPAS_BASE);
+  protected readonly introFormacion = computed(() => this.panel()?.perfil.formacion_intro ?? INTRO_BASE);
+  protected readonly formacionPropia = computed(() => !!this.panel()?.perfil.formacion);
 
   protected readonly panel = signal<Panel | null>(null);
   protected readonly errorCarga = signal(false);
@@ -52,6 +58,8 @@ export class PerfilClubPage implements OnInit {
   protected readonly ocupado = signal(false);
   /** Miniaturas de las fotos (blob: pedidas con el token, porque los álbumes sin publicar no son públicos). */
   protected readonly miniaturas = signal<Record<string, string>>({});
+  /** Fotos de los integrantes (blob:), por "id:versión". */
+  protected readonly retratos = signal<Record<string, string>>({});
 
   // Ventanas
   protected readonly editandoTexto = signal<(typeof TEXTOS)[number] | null>(null);
@@ -61,6 +69,7 @@ export class PerfilClubPage implements OnInit {
   protected readonly progreso = signal<string | null>(null);
   protected readonly creandoVideo = signal(false);
   protected readonly integrante = signal<IntegranteClub | 'nuevo' | null>(null);
+  protected readonly editandoFormacion = signal(false);
   protected readonly confirmando = signal<{ titulo: string; texto: string; accion: () => void } | null>(null);
 
   protected readonly formTexto = this.fb.group({ texto: ['', Validators.maxLength(4000)] });
@@ -91,9 +100,19 @@ export class PerfilClubPage implements OnInit {
     orden: [''],
     publicado: true,
   });
+  /** Foto elegida en la ventana del integrante (se sube al guardar) o pedido de quitarla. */
+  protected archivoRetrato: File | null = null;
+  protected readonly quitarRetrato = signal(false);
+  protected readonly formFormacion = this.fb.group({
+    intro: ['', Validators.maxLength(600)],
+    etapas: this.fb.array(ETAPAS_BASE.map(() => this.fb.group({ titulo: [''], texto: [''] }))),
+  });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => Object.values(this.miniaturas()).forEach((u) => URL.revokeObjectURL(u)));
+    inject(DestroyRef).onDestroy(() => {
+      Object.values(this.miniaturas()).forEach((u) => URL.revokeObjectURL(u));
+      Object.values(this.retratos()).forEach((u) => URL.revokeObjectURL(u));
+    });
   }
 
   ngOnInit(): void {
@@ -106,6 +125,7 @@ export class PerfilClubPage implements OnInit {
         this.errorCarga.set(false);
         this.panel.set(p);
         this.cargarMiniaturas(p.albumes.flatMap((a) => a.fotos));
+        this.cargarRetratos(p.equipo);
       },
       error: () => this.errorCarga.set(true),
     });
@@ -118,6 +138,35 @@ export class PerfilClubPage implements OnInit {
         next: (blob) => this.miniaturas.update((m) => ({ ...m, [f.id]: URL.createObjectURL(blob) })),
       });
     }
+  }
+
+  // ---------- Fotos de los integrantes (con el token: un integrante oculto no es público) ----------
+  private cargarRetratos(equipo: IntegranteClub[]): void {
+    for (const i of equipo) {
+      const clave = `${i.id}:${i.foto}`;
+      if (!i.foto || this.retratos()[clave]) continue;
+      this.http.get(`${URL_CLUB}/equipo/${encodeURIComponent(i.id)}/foto`, { responseType: 'blob' }).subscribe({
+        next: (blob) => this.retratos.update((r) => ({ ...r, [clave]: URL.createObjectURL(blob) })),
+      });
+    }
+  }
+
+  protected retrato(i: IntegranteClub): string | null {
+    return i.foto ? (this.retratos()[`${i.id}:${i.foto}`] ?? null) : null;
+  }
+
+  protected elegirRetrato(e: Event): void {
+    this.archivoRetrato = (e.target as HTMLInputElement).files?.[0] ?? null;
+    if (this.archivoRetrato) this.quitarRetrato.set(false);
+  }
+
+  private ponerIntegrante(i: IntegranteClub): void {
+    this.panel.update((p) => {
+      if (!p) return p;
+      const otros = p.equipo.filter((x) => x.id !== i.id);
+      return { ...p, equipo: [...otros, i].sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)) };
+    });
+    this.cargarRetratos([i]);
   }
 
   private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = false): void {
@@ -339,6 +388,8 @@ export class PerfilClubPage implements OnInit {
 
   // ---------- Equipo ----------
   protected abrirIntegrante(i: IntegranteClub | 'nuevo'): void {
+    this.archivoRetrato = null;
+    this.quitarRetrato.set(false);
     this.formIntegrante.reset(i === 'nuevo' ? undefined : {
       nombre: i.nombre, cargo: i.cargo, bio: i.bio ?? '', orden: String(i.orden), publicado: i.publicado,
     });
@@ -357,13 +408,22 @@ export class PerfilClubPage implements OnInit {
       ? this.http.post<IntegranteClub>(`${URL_CLUB}/equipo`, cuerpo)
       : this.http.patch<IntegranteClub>(`${URL_CLUB}/equipo/${encodeURIComponent(actual.id)}`, cuerpo);
     this.ejecutar(peticion, (i) => {
-      this.panel.update((p) => {
-        if (!p) return p;
-        const otros = p.equipo.filter((x) => x.id !== i.id);
-        return { ...p, equipo: [...otros, i].sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)) };
-      });
-      this.integrante.set(null);
-      this.exito(actual === 'nuevo' ? `${i.nombre} agregado al equipo.` : `${i.nombre} actualizado.`);
+      const listo = (final: IntegranteClub) => {
+        this.ponerIntegrante(final);
+        this.integrante.set(null);
+        this.exito(actual === 'nuevo' ? `${final.nombre} agregado al equipo.` : `${final.nombre} actualizado.`);
+      };
+      const url = `${URL_CLUB}/equipo/${encodeURIComponent(i.id)}/foto`;
+      if (this.archivoRetrato) {
+        const datos = new FormData();
+        datos.append('archivo', this.archivoRetrato);
+        this.ponerIntegrante(i); // los datos ya quedaron guardados aunque la foto falle
+        this.ejecutar(this.http.post<IntegranteClub>(url, datos), listo, true);
+      } else if (this.quitarRetrato() && i.foto) {
+        this.ejecutar(this.http.delete<IntegranteClub>(url), listo, true);
+      } else {
+        listo(i);
+      }
     }, true);
   }
 
@@ -374,6 +434,30 @@ export class PerfilClubPage implements OnInit {
         this.confirmando.set(null);
         this.exito(`${i.nombre} quitado del equipo.`);
       }, true));
+  }
+
+  // ---------- La formación (rotación) ----------
+  protected zona(n: number): Etapa {
+    return this.etapas()[n - 1] ?? { titulo: '', texto: '' };
+  }
+
+  protected abrirFormacion(): void {
+    this.formFormacion.reset({ intro: this.introFormacion(), etapas: this.etapas().map((e) => ({ ...e })) });
+    this.abrir(() => this.editandoFormacion.set(true));
+  }
+
+  protected guardarFormacion(): void {
+    const f = this.formFormacion.getRawValue();
+    const etapas = f.etapas.map((e) => ({ titulo: e.titulo.trim(), texto: e.texto.trim() }));
+    const mala = etapas.findIndex((e) => e.titulo.length < 2 || e.titulo.length > 60 || e.texto.length < 2 || e.texto.length > 200);
+    if (mala >= 0) return this.errorDialogo.set(`Zona ${mala + 1}: el título va de 2 a 60 letras y el texto de 2 a 200.`);
+    this.guardarPerfil({ formacion_intro: f.intro.trim() || null, formacion: etapas },
+      'La formación quedó actualizada en el sitio.', true, () => this.editandoFormacion.set(false));
+  }
+
+  protected restablecerFormacion(): void {
+    this.guardarPerfil({ formacion_intro: null, formacion: null },
+      'Se restablecieron las etapas originales del sitio.', true, () => this.editandoFormacion.set(false));
   }
 
   private confirmar(titulo: string, texto: string, accion: () => void): void {

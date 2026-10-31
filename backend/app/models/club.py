@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, Uuid, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -27,6 +28,10 @@ class PerfilClub(Base):
     ciudad: Mapped[str | None] = mapped_column(String(80))
     sede: Mapped[str | None] = mapped_column(String(160))  # lugar de entrenamiento
     fundado_en: Mapped[int | None] = mapped_column(Integer)  # año: el sitio calcula los años del club
+    # Sección «La formación va por rotaciones»: texto de entrada y 6 etapas [{titulo, texto}] (zona 1 a 6).
+    # Vacío = el sitio usa sus etapas fijas.
+    formacion_intro: Mapped[str | None] = mapped_column(Text)
+    formacion: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB)
     mision: Mapped[str | None] = mapped_column(Text)
     vision: Mapped[str | None] = mapped_column(Text)
     historia: Mapped[str | None] = mapped_column(Text)
@@ -85,3 +90,5 @@ class IntegranteEquipo(UUIDMixin, TiempoMixin, Base):
     bio: Mapped[str | None] = mapped_column(String(400))
     orden: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     publicado: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Foto cuadrada (600 px, sin metadatos) en el almacén; la clave cambia con cada foto nueva.
+    foto_clave: Mapped[str | None] = mapped_column(String(32))

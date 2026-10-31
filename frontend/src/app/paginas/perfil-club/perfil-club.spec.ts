@@ -9,12 +9,12 @@ import { PerfilClubPage } from './perfil-club';
 const PANEL = {
   sitio_url: 'https://club.example',
   perfil: {
-    nombre: 'Club Dragones', lema: null, ciudad: null, sede: null, fundado_en: null, mision: 'Formar deportistas', vision: null,
+    nombre: 'Club Dragones', lema: null, ciudad: null, sede: null, fundado_en: null, formacion_intro: null, formacion: null, mision: 'Formar deportistas', vision: null,
     historia: null, whatsapp: null, correo: null, instagram: null, facebook: null, publicado: false,
   },
   albumes: [{ id: 'a1', nombre: 'Copa', fecha: null, publicado: false, fotos: [{ id: 'f1', ancho: 10, alto: 10 }] }],
   videos: [],
-  equipo: [],
+  equipo: [{ id: 'i1', nombre: 'Ana Ruiz', cargo: 'Entrenadora', bio: null, orden: 0, publicado: true, foto: null }],
 };
 
 describe('PerfilClubPage', () => {
@@ -93,5 +93,51 @@ describe('PerfilClubPage', () => {
     r.flush({ id: 'v1', titulo: 'Resumen', youtube_id: 'dQw4w9WgXcQ', publicado: true });
     await estable();
     expect(el().querySelector('img.video-mini')?.getAttribute('src')).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg');
+  });
+
+  it('edita las 6 etapas de la formación y valida cada zona', async () => {
+    expect(el().querySelectorAll('.mini-cancha .zona').length).toBe(6);
+    expect([...el().querySelectorAll('.zona-num')].map((z) => z.textContent)).toEqual(['4', '3', '2', '5', '6', '1']);
+    expect(el().textContent).toContain('etapas de ejemplo');
+    el().querySelector<HTMLButtonElement>('[aria-labelledby="titulo-formacion"] .enlace')!.click();
+    await estable();
+    const titulos = dialogo().querySelectorAll<HTMLInputElement>('[formcontrolname="titulo"]');
+    expect(titulos.length).toBe(6);
+    expect(titulos[0]!.value).toBe('Primer contacto');
+    titulos[2]!.value = 'x';
+    titulos[2]!.dispatchEvent(new Event('input'));
+    boton('Guardar', dialogo())!.click();
+    await estable();
+    expect(dialogo().querySelector('[role="alert"]')?.textContent).toContain('Zona 3');
+    titulos[2]!.value = 'Juego en la red y bloqueo';
+    titulos[2]!.dispatchEvent(new Event('input'));
+    boton('Guardar', dialogo())!.click();
+    const r = backend.expectOne(`${API}/club/perfil`);
+    expect(r.request.body.formacion).toHaveLength(6);
+    expect(r.request.body.formacion[2].titulo).toBe('Juego en la red y bloqueo');
+    r.flush({ ...PANEL.perfil, formacion: r.request.body.formacion, formacion_intro: r.request.body.formacion_intro });
+    await estable();
+    expect(el().textContent).toContain('Juego en la red y bloqueo');
+    expect(el().textContent).not.toContain('etapas de ejemplo');
+  });
+
+  it('guarda el integrante y luego sube su foto', async () => {
+    el().querySelector<HTMLButtonElement>('[aria-label="Editar Ana Ruiz"]')!.click();
+    await estable();
+    const input = dialogo().querySelector<HTMLInputElement>('input[type="file"][aria-label="Elegir foto"]')!;
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'ana.jpg', { type: 'image/jpeg' })] });
+    input.dispatchEvent(new Event('change'));
+    boton('Guardar', dialogo())!.click();
+    const datos = backend.expectOne(`${API}/club/equipo/i1`);
+    expect(datos.request.method).toBe('PATCH');
+    datos.flush({ ...PANEL.equipo[0] });
+    const foto = backend.expectOne(`${API}/club/equipo/i1/foto`);
+    expect(foto.request.method).toBe('POST');
+    expect((foto.request.body as FormData).get('archivo')).toBeInstanceOf(File);
+    foto.flush({ ...PANEL.equipo[0], foto: 'abcd1234' });
+    backend.expectOne(`${API}/club/equipo/i1/foto`).flush(new Blob(['y'])); // vista previa con el token
+    await estable();
+    expect(el().querySelector('img.foto-avatar')).not.toBeNull();
+    expect(el().textContent).toContain('Ana Ruiz actualizado');
   });
 });

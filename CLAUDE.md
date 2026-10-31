@@ -320,6 +320,12 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   «Ver sitio» de Perfil del club abre `SITIO_URL` (`.env`; vacío = sin botón). El sitio toma del perfil WhatsApp
   (botón), correo y redes (pie), misión/visión/historia (sección El club) y sede (Horarios); vacíos = diseño fijo.
   Lema y ciudad ya no se editan en el panel (el sitio nuevo no los usa; las columnas siguen).
+  Migración 0020: «La formación va por rotaciones» (`perfil_club.formacion_intro` y `formacion`, 6 etapas
+  {titulo ≤60, texto ≤200}, zona = posición; null = etapas fijas del sitio, `ETAPAS_BASE` en `compartido/club.ts`)
+  editable en una tarjeta con la cancha en miniatura (arriba 4·3·2, abajo 5·6·1). Foto de los integrantes
+  (`integrantes_equipo.foto_clave`): recorte cuadrado de 600 px sin metadatos (`procesar_retrato`); panel
+  `POST/DELETE/GET /club/equipo/{id}/foto`, público `GET /publico/equipo/{id}/foto` (solo integrante publicado y
+  sitio publicado); la API solo expone `foto` = 8 caracteres de versión. 228 pruebas backend, 97 frontend.
   Migración 0019 (`perfil_club.fundado_en`): `GET /publico/club` trae `cifras` (solo totales: deportistas con
   inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
   portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno

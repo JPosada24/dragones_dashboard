@@ -88,3 +88,13 @@ def inscribir_club(
         estado=equipo.estado, valor=equipo.valor, registrado_en=equipo.creado_en,
         mensaje=mensajes.get(equipo.estado, "Recibimos la inscripción. El club te contactará para coordinar el pago."),
     )
+
+
+@router.get("/equipo/{integrante_id}/foto")
+def foto_integrante(
+    integrante_id: uuid.UUID, db: Session = Depends(get_db), almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    """Foto de un integrante publicado (con el sitio publicado). El enlace lleva ?v=… y cambia con cada foto."""
+    i = servicio.integrante_publico(db, integrante_id)
+    return Response(almacen.leer(i.foto_clave), media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=604800"})

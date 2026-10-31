@@ -119,6 +119,26 @@
         </section>
       }
 
+      <!-- La formación va por rotaciones -->
+      <section class="panel texto-club" aria-labelledby="titulo-formacion">
+        <div class="fila-titulo">
+          <h2 id="titulo-formacion">La formación (rotación)</h2>
+          <button type="button" class="enlace" (click)="abrirFormacion()">Editar</button>
+        </div>
+        <p class="parrafo">{{ introFormacion() }}</p>
+        <div class="mini-cancha" aria-label="Etapas por zona, como se ven en la cancha">
+          @for (n of ordenCancha; track n; let i = $index) {
+            <div class="zona" [class.red]="i < 3">
+              <span class="zona-num mono">{{ n }}</span>
+              <span class="zona-titulo">{{ zona(n).titulo }}</span>
+            </div>
+          }
+        </div>
+        @if (!formacionPropia()) {
+          <p class="sub">Son las etapas de ejemplo del sitio: ajústalas a la metodología real de los entrenadores.</p>
+        }
+      </section>
+
       <!-- Datos y contacto -->
       <section class="panel texto-club" aria-label="Datos y contacto">
         <div class="fila-titulo">
@@ -147,7 +167,11 @@
         </header>
         @for (i of p.equipo; track i.id) {
           <div class="integrante">
-            <span class="avatar mono" aria-hidden="true">{{ iniciales(i.nombre) }}</span>
+            @if (retrato(i); as src) {
+              <img class="avatar foto-avatar" [src]="src" alt="" width="34" height="34" />
+            } @else {
+              <span class="avatar mono" aria-hidden="true">{{ iniciales(i.nombre) }}</span>
+            }
             <div class="textos">
               <span class="titulo-fila">{{ i.nombre }}</span>
               <span class="sub">{{ i.cargo }}@if (!i.publicado) { · oculto }</span>
@@ -281,6 +305,21 @@
       </div>
       <label class="campo"><span class="etiqueta">Presentación corta (opcional)</span>
         <textarea class="control" formControlName="bio" rows="3" maxlength="400" placeholder="Trayectoria, logros…"></textarea></label>
+      <div class="campo">
+        <span class="etiqueta">Foto (opcional)</span>
+        <div class="retrato-fila">
+          @if (i !== 'nuevo' && retrato(i) && !quitarRetrato()) {
+            <img class="retrato-previa" [src]="retrato(i)" alt="Foto actual" width="56" height="56" />
+          }
+          <input class="control" type="file" accept="image/jpeg,image/png,image/webp" (change)="elegirRetrato($event)"
+                 aria-label="Elegir foto" />
+          @if (i !== 'nuevo' && i.foto && !quitarRetrato()) {
+            <button type="button" class="enlace-rojo" (click)="quitarRetrato.set(true)">Quitar foto</button>
+          }
+        </div>
+        <span class="nota-campo">Se recorta cuadrada (600 px) y se le quitan los datos ocultos. Mejor una foto de frente.</span>
+      </div>
+
       <label class="casilla"><input type="checkbox" formControlName="publicado" /><span>Mostrar en el sitio</span></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
@@ -299,5 +338,35 @@
       <button type="button" class="boton secundario" (click)="confirmando.set(null)">Cancelar</button>
       <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="c.accion()">Eliminar</button>
     </div>
+  </app-dialogo>
+}
+
+@if (editandoFormacion()) {
+  <app-dialogo titulo="La formación va por rotaciones" ancho="ancho"
+               descripcion="Cada zona de la cancha es una etapa del camino del jugador: se entra por la 1 y se sale por la 6."
+               (cerrar)="editandoFormacion.set(false)">
+    <form class="formulario" [formGroup]="formFormacion" (ngSubmit)="guardarFormacion()">
+      <label class="campo"><span class="etiqueta">Texto de entrada</span>
+        <textarea class="control" formControlName="intro" rows="3" maxlength="600"></textarea></label>
+      <div class="etapas" formArrayName="etapas">
+        @for (g of formFormacion.controls.etapas.controls; track $index; let n = $index) {
+          <fieldset class="etapa" [formGroupName]="n">
+            <legend class="mono">Zona {{ n + 1 }}</legend>
+            <label class="campo"><span class="etiqueta">Título</span>
+              <input class="control" formControlName="titulo" maxlength="60" /></label>
+            <label class="campo"><span class="etiqueta">Qué se trabaja</span>
+              <textarea class="control" formControlName="texto" rows="2" maxlength="200"></textarea></label>
+          </fieldset>
+        }
+      </div>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        @if (formacionPropia()) {
+          <button type="button" class="enlace" [disabled]="ocupado()" (click)="restablecerFormacion()">Restablecer las originales</button>
+        }
+        <button type="button" class="boton secundario" (click)="editandoFormacion.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
+      </div>
+    </form>
   </app-dialogo>
 }

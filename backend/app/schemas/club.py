@@ -1,9 +1,9 @@
 import re
 import uuid
 from datetime import date, datetime, time
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.comunes import normalizar_email, normalizar_telefono
 from app.schemas.torneos import EquipoCrear
@@ -20,6 +20,13 @@ def _texto(maximo: int):
 
 
 # ---------- Panel (club.editar) ----------
+class EtapaIn(_Entrada):
+    """Una etapa de la formación (la zona de la rotación es su posición en la lista: 1 a 6)."""
+
+    titulo: str = Field(min_length=2, max_length=60)
+    texto: str = Field(min_length=2, max_length=200)
+
+
 class PerfilIn(_Entrada):
     """Cambios al perfil. Solo se aplican los campos enviados; vacío = borrar el dato."""
 
@@ -28,6 +35,8 @@ class PerfilIn(_Entrada):
     ciudad: str | None = _texto(80)
     sede: str | None = _texto(160)
     fundado_en: int | None = Field(default=None, ge=1900, le=2100)
+    formacion_intro: str | None = _texto(600)
+    formacion: list[EtapaIn] | None = Field(default=None, min_length=6, max_length=6)
     mision: str | None = _texto(2000)
     vision: str | None = _texto(2000)
     historia: str | None = _texto(4000)
@@ -37,7 +46,7 @@ class PerfilIn(_Entrada):
     facebook: str | None = None
     publicado: bool | None = None
 
-    @field_validator("lema", "ciudad", "sede", "mision", "vision", "historia")
+    @field_validator("lema", "ciudad", "sede", "mision", "vision", "historia", "formacion_intro")
     @classmethod
     def _vacio(cls, v: str | None) -> str | None:
         return v or None
@@ -72,6 +81,8 @@ class PerfilOut(BaseModel):
     ciudad: str | None
     sede: str | None
     fundado_en: int | None
+    formacion_intro: str | None
+    formacion: list[EtapaIn] | None
     mision: str | None
     vision: str | None
     historia: str | None
@@ -157,6 +168,17 @@ class IntegranteOut(BaseModel):
     bio: str | None
     orden: int
     publicado: bool
+    foto: str | None = None  # versión de la foto (cambia con cada foto nueva); None = sin foto
+
+    @model_validator(mode="before")
+    @classmethod
+    def _version_foto(cls, datos: Any) -> Any:
+        """Expone solo una versión corta de la clave (sirve para refrescar la caché), nunca la clave entera."""
+        clave = getattr(datos, "foto_clave", None)
+        if clave is not None:
+            return {**{k: getattr(datos, k) for k in ("id", "nombre", "cargo", "bio", "orden", "publicado")},
+                    "foto": clave[:8]}
+        return datos
 
 
 class ClubPanelOut(BaseModel):

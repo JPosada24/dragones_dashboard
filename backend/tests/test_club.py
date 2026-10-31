@@ -180,3 +180,57 @@ def test_cifras_publicas_solo_totales(client, h_admin, reloj):
     assert c == {"deportistas_activos": 3, "femenina": 2, "masculina": 1, "entrenamientos_semana": 3,
                  "torneos_anio": 1, "anios": 8}
     assert client.patch(f"{C}/perfil", json={"fundado_en": 1800}, headers=h_admin).status_code == 422
+
+
+ETAPAS = [{"titulo": f"Etapa {n}", "texto": f"Lo que se aprende en la zona {n}."} for n in range(1, 7)]
+
+
+def test_formacion_editable_con_seis_etapas(client, h_admin):
+    publicar(client, h_admin)
+    assert client.get(f"{P}/club").json()["perfil"]["formacion"] is None  # el sitio usa sus etapas fijas
+    r = client.patch(f"{C}/perfil", json={"formacion_intro": "Se entra por la zona 1.", "formacion": ETAPAS},
+                     headers=h_admin)
+    assert r.status_code == 200, r.text
+    perfil = client.get(f"{P}/club").json()["perfil"]
+    assert perfil["formacion_intro"] == "Se entra por la zona 1." and perfil["formacion"][5]["titulo"] == "Etapa 6"
+    assert client.patch(f"{C}/perfil", json={"formacion": ETAPAS[:5]}, headers=h_admin).status_code == 422
+    largo = [*ETAPAS[:5], {"titulo": "x" * 61, "texto": "ok ok"}]
+    assert client.patch(f"{C}/perfil", json={"formacion": largo}, headers=h_admin).status_code == 422
+    # Vacío = volver a las etapas fijas del sitio.
+    assert client.patch(f"{C}/perfil", json={"formacion": None}, headers=h_admin).json()["formacion"] is None
+
+
+def test_foto_del_entrenador_cuadrada_sin_metadatos_y_publica(client, h_admin):
+    publicar(client, h_admin)
+    i = client.post(f"{C}/equipo", json={"nombre": "Ana Ruiz", "cargo": "Entrenadora"}, headers=h_admin).json()
+    assert i["foto"] is None
+    archivo = {"archivo": ("ana.jpg", jpeg_con_gps(1200, 1600), "image/jpeg")}
+    r = client.post(f"{C}/equipo/{i['id']}/foto", files=archivo, headers=h_admin)
+    assert r.status_code == 200, r.text
+    version = r.json()["foto"]
+    assert version and len(version) == 8
+    [publico] = client.get(f"{P}/club").json()["equipo"]
+    assert publico["foto"] == version and "foto_clave" not in publico
+    foto = client.get(f"{P}/equipo/{i['id']}/foto")
+    assert foto.status_code == 200 and "public" in foto.headers["cache-control"]
+    with Image.open(io.BytesIO(foto.content)) as im:
+        assert im.size == (600, 600) and not im.getexif()
+    # Cambiarla cambia la versión; quitarla la borra del sitio.
+    otra = client.post(f"{C}/equipo/{i['id']}/foto", files=archivo, headers=h_admin).json()["foto"]
+    assert otra != version
+    assert client.delete(f"{C}/equipo/{i['id']}/foto", headers=h_admin).json()["foto"] is None
+    assert client.get(f"{P}/equipo/{i['id']}/foto").status_code == 404
+
+
+def test_foto_de_integrante_oculto_no_es_publica(client, h_admin, crear_usuario, auth_header):
+    publicar(client, h_admin)
+    i = client.post(f"{C}/equipo", json={"nombre": "Ana Ruiz", "cargo": "Entrenadora", "publicado": False},
+                    headers=h_admin).json()
+    client.post(f"{C}/equipo/{i['id']}/foto", files={"archivo": ("a.jpg", jpeg_con_gps(), "image/jpeg")},
+                headers=h_admin)
+    assert client.get(f"{P}/equipo/{i['id']}/foto").status_code == 404
+    assert client.get(f"{C}/equipo/{i['id']}/foto", headers=h_admin).status_code == 200
+    crear_usuario("coach@club.com", "ENTRENADOR")
+    archivo = {"archivo": ("a.jpg", jpeg_con_gps(), "image/jpeg")}
+    assert client.post(f"{C}/equipo/{i['id']}/foto", files=archivo,
+                       headers=auth_header("coach@club.com")).status_code == 403

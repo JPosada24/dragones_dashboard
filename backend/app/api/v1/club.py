@@ -236,11 +236,65 @@ def actualizar_integrante(
 
 @router.delete("/equipo/{integrante_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_integrante(
-    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
+    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
 ) -> Response:
     i = _integrante(db, integrante_id)
+    clave = i.foto_clave
     servicio.auditar(db, "club.equipo_eliminar", "integrante", i.id, actor, ip_cliente(request),
                       antes={"nombre": i.nombre})
     db.delete(i)
     db.commit()
+    if clave:
+        almacen.borrar(clave)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------- Foto de un integrante ----------
+@router.post("/equipo/{integrante_id}/foto", response_model=IntegranteOut)
+def subir_foto_integrante(
+    integrante_id: uuid.UUID,
+    request: Request,
+    archivo: UploadFile = File(),
+    actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> IntegranteOut:
+    i = _integrante(db, integrante_id)
+    maximo = configuracion.obtener(db, "foto_max_mb") * 1024 * 1024
+    datos = archivo.file.read(maximo + 1)
+    if len(datos) > maximo:
+        raise ErrorNegocio(f"La foto supera el máximo de {configuracion.obtener(db, 'foto_max_mb')} MB.")
+    nueva, anterior = uuid.uuid4().hex, i.foto_clave
+    almacen.guardar(nueva, servicio.procesar_retrato(datos))
+    i.foto_clave = nueva
+    servicio.auditar(db, "club.equipo_foto", "integrante", i.id, actor, ip_cliente(request))
+    db.commit()
+    if anterior:  # después del commit: si la transacción falla, la foto anterior sigue
+        almacen.borrar(anterior)
+    return IntegranteOut.model_validate(i)
+
+
+@router.delete("/equipo/{integrante_id}/foto", response_model=IntegranteOut)
+def quitar_foto_integrante(
+    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> IntegranteOut:
+    i = _integrante(db, integrante_id)
+    anterior, i.foto_clave = i.foto_clave, None
+    servicio.auditar(db, "club.equipo_foto_quitar", "integrante", i.id, actor, ip_cliente(request))
+    db.commit()
+    if anterior:
+        almacen.borrar(anterior)
+    return IntegranteOut.model_validate(i)
+
+
+@router.get("/equipo/{integrante_id}/foto")
+def ver_foto_integrante(
+    integrante_id: uuid.UUID, _: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    i = _integrante(db, integrante_id)
+    if not i.foto_clave:
+        raise NoEncontrado("Sin foto.")
+    return Response(almacen.leer(i.foto_clave), media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})

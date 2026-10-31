@@ -342,3 +342,86 @@ h2 {
     overflow-wrap: anywhere;
   }
 }
+
+// ---------- La formación: la cancha en miniatura (arriba 4·3·2 junto a la red, abajo 5·6·1) ----------
+.mini-cancha {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--borde-fuerte);
+}
+
+.zona {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+
+  &:nth-child(-n + 3) {
+    border-bottom: 1px dashed var(--borde-fuerte); // línea de ataque
+  }
+}
+
+.zona-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--oro);
+
+  .red & {
+    color: var(--naranja);
+  }
+}
+
+.zona-titulo {
+  font-size: 11.5px;
+  color: var(--texto);
+}
+
+.etapas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.etapa {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+
+  legend {
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--naranja);
+  }
+}
+
+// ---------- Fotos del equipo ----------
+.foto-avatar {
+  object-fit: cover;
+  padding: 0;
+}
+
+.retrato-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  .control {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+.retrato-previa {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
