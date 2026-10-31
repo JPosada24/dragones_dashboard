@@ -79,3 +79,8 @@ export const PESTANAS_RIFAS: Pestana[] = [
   { ruta: '/rifas', texto: 'Rifas y talonarios', icono: 'confirmation_number' },
   { ruta: '/rifas/sorteo', texto: 'Sorteo', icono: 'casino' },
 ];
+
+export const PESTANAS_CLUB: Pestana[] = [
+  { ruta: '/perfil-club', texto: 'Contenido del sitio', icono: 'web' },
+  { ruta: '/perfil-club/equipo', texto: 'Equipo técnico', icono: 'sports' },
+];

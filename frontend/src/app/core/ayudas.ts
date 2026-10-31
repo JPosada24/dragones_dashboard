@@ -101,6 +101,15 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Torneos', texto: 'Los torneos con inscripciones abiertas aparecen en el sitio y los clubes externos se inscriben solos; quedan en Torneos marcados «desde el sitio» y te llega un aviso.' },
     ],
   },
+  'perfil-club/equipo': {
+    titulo: 'Cómo funciona el equipo técnico',
+    pasos: [
+      { titulo: 'En el sitio', texto: 'Cada entrenador aparece en «Nuestro equipo técnico» con su foto, cargo y presentación. El orden más bajo va primero.' },
+      { titulo: 'Ocultar o quitar', texto: 'El interruptor lo oculta del sitio sin borrar nada; «Quitar» lo borra con su foto.' },
+      { titulo: 'Foto', texto: 'Se recorta cuadrada y se le quitan los datos ocultos del celular. Mejor una foto de frente y con buena luz.' },
+      { titulo: 'No es una cuenta', texto: 'Estos perfiles son solo para el sitio. Para que un entrenador entre a la plataforma, créale una cuenta en Usuarios.' },
+    ],
+  },
   asistente: {
     titulo: 'Cómo funciona el asistente',
     pasos: [

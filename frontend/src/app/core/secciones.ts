@@ -70,6 +70,13 @@ export const SECCIONES: Seccion[] = [
     descripcion: 'Galería, videos, misión, visión, historia, contacto y equipo del club que se muestran en el sitio.',
   },
   {
+    // Pestaña de Perfil del club: «Nuestro equipo técnico» del sitio.
+    ruta: 'perfil-club/equipo', etiqueta: 'Equipo técnico', icono: 'sports', grupo: 'Club', permisos: ['club.editar'],
+    enMenu: false,
+    titulo: 'Perfil del club', subtitulo: 'Equipo técnico: entrenadores que se muestran en el sitio',
+    descripcion: 'Entrenadores con cargo, presentación y foto.',
+  },
+  {
     ruta: 'avisos', etiqueta: 'Avisos WhatsApp', icono: 'chat', grupo: 'Club', permisos: ['notificaciones.gestionar'],
     titulo: 'Avisos por WhatsApp', subtitulo: 'Mensajes listos para enviar con un clic',
     descripcion: 'Cola de avisos con el enlace de WhatsApp listo, y estado de los correos enviados.',

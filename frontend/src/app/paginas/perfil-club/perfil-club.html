@@ -1,3 +1,5 @@
+<app-pestanas [pestanas]="pestanas" etiqueta="Vistas del perfil del club" />
+
 @if (mensaje(); as m) {
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
@@ -89,7 +91,7 @@
         <div class="textos">
           <h2>{{ p.perfil.publicado ? 'Contenido publicado en el sitio' : 'Contenido oculto en el sitio' }}</h2>
           <p class="sub">
-            {{ p.perfil.publicado ? 'El sitio muestra el equipo, la galería, los torneos abiertos y las cifras del club.'
+            {{ p.perfil.publicado ? 'El sitio muestra el equipo técnico, la galería, los torneos abiertos y las cifras del club.'
               : 'Mientras esté oculto, el sitio muestra solo su contenido fijo (sin equipo, galería, torneos ni cifras).' }}
             @if (!p.sitio_url) { Falta configurar SITIO_URL en el servidor para el botón «Ver sitio». }
           </p>
@@ -156,37 +158,6 @@
         </dl>
       </section>
 
-      <!-- Equipo -->
-      <section class="panel tarjeta" aria-labelledby="titulo-equipo">
-        <header class="cabecera fila">
-          <div>
-            <h2 id="titulo-equipo">Equipo del club</h2>
-            <p class="sub">Mini-perfiles públicos (no son cuentas de usuario)</p>
-          </div>
-          <button type="button" class="boton secundario chico" (click)="abrirIntegrante('nuevo')">Agregar</button>
-        </header>
-        @for (i of p.equipo; track i.id) {
-          <div class="integrante">
-            @if (retrato(i); as src) {
-              <img class="avatar foto-avatar" [src]="src" alt="" width="34" height="34" />
-            } @else {
-              <span class="avatar mono" aria-hidden="true">{{ iniciales(i.nombre) }}</span>
-            }
-            <div class="textos">
-              <span class="titulo-fila">{{ i.nombre }}</span>
-              <span class="sub">{{ i.cargo }}@if (!i.publicado) { · oculto }</span>
-            </div>
-            <button type="button" class="boton-icono" (click)="abrirIntegrante(i)" [attr.aria-label]="'Editar ' + i.nombre">
-              <span class="icono" aria-hidden="true">edit</span>
-            </button>
-            <button type="button" class="boton-icono peligro" (click)="eliminarIntegrante(i)" [attr.aria-label]="'Quitar a ' + i.nombre">
-              <span class="icono" aria-hidden="true">delete</span>
-            </button>
-          </div>
-        } @empty {
-          <p class="vacio">Agrega al director, entrenadores y coordinadores con su cargo.</p>
-        }
-      </section>
     </div>
   </div>
 } @else {
@@ -287,44 +258,6 @@
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="creandoVideo.set(false)">Cancelar</button>
         <button type="submit" class="boton" [disabled]="ocupado()">Agregar</button>
-      </div>
-    </form>
-  </app-dialogo>
-}
-
-@if (integrante(); as i) {
-  <app-dialogo [titulo]="i === 'nuevo' ? 'Agregar al equipo' : 'Editar · ' + i.nombre" (cerrar)="integrante.set(null)">
-    <form class="formulario" [formGroup]="formIntegrante" (ngSubmit)="guardarIntegrante()">
-      <div class="rejilla">
-        <label class="campo"><span class="etiqueta">Nombre</span>
-          <input class="control" formControlName="nombre" maxlength="120" placeholder="Ej.: Ana Ruiz" /></label>
-        <label class="campo"><span class="etiqueta">Cargo</span>
-          <input class="control" formControlName="cargo" maxlength="120" placeholder="Ej.: Entrenadora rama femenina" /></label>
-        <label class="campo"><span class="etiqueta">Orden (opcional)</span>
-          <input class="control mono" formControlName="orden" inputmode="numeric" placeholder="0 = primero" /></label>
-      </div>
-      <label class="campo"><span class="etiqueta">Presentación corta (opcional)</span>
-        <textarea class="control" formControlName="bio" rows="3" maxlength="400" placeholder="Trayectoria, logros…"></textarea></label>
-      <div class="campo">
-        <span class="etiqueta">Foto (opcional)</span>
-        <div class="retrato-fila">
-          @if (i !== 'nuevo' && retrato(i) && !quitarRetrato()) {
-            <img class="retrato-previa" [src]="retrato(i)" alt="Foto actual" width="56" height="56" />
-          }
-          <input class="control" type="file" accept="image/jpeg,image/png,image/webp" (change)="elegirRetrato($event)"
-                 aria-label="Elegir foto" />
-          @if (i !== 'nuevo' && i.foto && !quitarRetrato()) {
-            <button type="button" class="enlace-rojo" (click)="quitarRetrato.set(true)">Quitar foto</button>
-          }
-        </div>
-        <span class="nota-campo">Se recorta cuadrada (600 px) y se le quitan los datos ocultos. Mejor una foto de frente.</span>
-      </div>
-
-      <label class="casilla"><input type="checkbox" formControlName="publicado" /><span>Mostrar en el sitio</span></label>
-      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-      <div class="acciones">
-        <button type="button" class="boton secundario" (click)="integrante.set(null)">Cancelar</button>
-        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
       </div>
     </form>
   </app-dialogo>

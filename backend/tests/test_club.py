@@ -234,3 +234,10 @@ def test_foto_de_integrante_oculto_no_es_publica(client, h_admin, crear_usuario,
     archivo = {"archivo": ("a.jpg", jpeg_con_gps(), "image/jpeg")}
     assert client.post(f"{C}/equipo/{i['id']}/foto", files=archivo,
                        headers=auth_header("coach@club.com")).status_code == 403
+
+
+def test_listar_equipo_tecnico_en_orden(client, h_admin):
+    for nombre, orden in (("Carlos Vélez", 2), ("Ana Ruiz", 1), ("Beto Gil", 1)):
+        client.post(f"{C}/equipo", json={"nombre": nombre, "cargo": "Entrenador", "orden": orden}, headers=h_admin)
+    assert [i["nombre"] for i in client.get(f"{C}/equipo", headers=h_admin).json()] == [
+        "Ana Ruiz", "Beto Gil", "Carlos Vélez"]

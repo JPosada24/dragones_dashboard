@@ -1,0 +1,101 @@
+<app-pestanas [pestanas]="pestanas" etiqueta="Vistas del perfil del club" />
+
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<div class="encabezado">
+  <p class="sub">Es la sección «Nuestro equipo técnico» del sitio. Son perfiles públicos, no cuentas de la plataforma.</p>
+  <button type="button" class="boton" (click)="abrir('nuevo')">
+    <span class="icono" aria-hidden="true">person_add</span> Agregar entrenador
+  </button>
+</div>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudo cargar el equipo técnico. Recarga la página.</p>
+} @else if (equipo(); as lista) {
+  <ul class="tarjetas">
+    @for (i of lista; track i.id) {
+      <li class="panel tarjeta" [class.oculto]="!i.publicado">
+        <div class="foto">
+          @if (retrato(i); as src) {
+            <img [src]="src" alt="" width="600" height="600" />
+          } @else {
+            <span class="iniciales mono" aria-hidden="true">{{ iniciales(i.nombre) }}</span>
+          }
+        </div>
+        <div class="datos">
+          <h2>{{ i.nombre }}</h2>
+          <p class="cargo">{{ i.cargo }}</p>
+          @if (i.bio) { <p class="bio">{{ i.bio }}</p> }
+        </div>
+        <div class="acciones-tarjeta">
+          <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="i.publicado"
+                  [attr.aria-label]="'Mostrar a ' + i.nombre + ' en el sitio'" (click)="cambiarPublicado(i)">
+            <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+            {{ i.publicado ? 'En el sitio' : 'Oculto' }}
+          </button>
+          <span class="crece"></span>
+          <button type="button" class="boton-icono" (click)="abrir(i)" [attr.aria-label]="'Editar ' + i.nombre">
+            <span class="icono" aria-hidden="true">edit</span>
+          </button>
+          <button type="button" class="boton-icono peligro" (click)="abrirEliminar(i)" [attr.aria-label]="'Quitar a ' + i.nombre">
+            <span class="icono" aria-hidden="true">delete</span>
+          </button>
+        </div>
+      </li>
+    } @empty {
+      <li class="panel vacio">Aún no hay entrenadores. Agrega al entrenador principal, a los asistentes y a quien coordine.</li>
+    }
+  </ul>
+} @else {
+  <p class="panel vacio">Cargando…</p>
+}
+
+@if (editando(); as i) {
+  <app-dialogo [titulo]="i === 'nuevo' ? 'Agregar entrenador' : 'Editar · ' + i.nombre" (cerrar)="editando.set(null)">
+    <form class="formulario" [formGroup]="form" (ngSubmit)="guardar()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombre</span>
+          <input class="control" formControlName="nombre" maxlength="120" placeholder="Ej.: Ana Ruiz" /></label>
+        <label class="campo"><span class="etiqueta">Cargo</span>
+          <input class="control" formControlName="cargo" maxlength="120" placeholder="Ej.: Entrenadora · Iniciación" /></label>
+        <label class="campo"><span class="etiqueta">Orden (opcional)</span>
+          <input class="control mono" formControlName="orden" inputmode="numeric" placeholder="0 = primero" /></label>
+      </div>
+      <label class="campo"><span class="etiqueta">Presentación corta (opcional)</span>
+        <textarea class="control" formControlName="bio" rows="3" maxlength="400" placeholder="Trayectoria, títulos, especialidad…"></textarea></label>
+      <div class="campo">
+        <span class="etiqueta">Foto (opcional)</span>
+        <div class="retrato-fila">
+          @if (i !== 'nuevo' && retrato(i) && !quitarRetrato()) {
+            <img class="retrato-previa" [src]="retrato(i)" alt="Foto actual" width="56" height="56" />
+          }
+          <input class="control" type="file" accept="image/jpeg,image/png,image/webp" (change)="elegirRetrato($event)"
+                 aria-label="Elegir foto" />
+          @if (i !== 'nuevo' && i.foto && !quitarRetrato()) {
+            <button type="button" class="enlace-rojo" (click)="quitarRetrato.set(true)">Quitar foto</button>
+          }
+        </div>
+        <span class="nota-campo">Se recorta cuadrada (600 px) y se le quitan los datos ocultos. Mejor una foto de frente.</span>
+      </div>
+      <label class="casilla"><input type="checkbox" formControlName="publicado" /><span>Mostrar en el sitio</span></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (eliminando(); as i) {
+  <app-dialogo [titulo]="'Quitar a ' + i.nombre" (cerrar)="eliminando.set(null)">
+    <p class="advertencia">Deja de aparecer en el sitio y se borra su foto. Si solo quieres ocultarlo un tiempo, usa el interruptor.</p>
+    @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+    <div class="acciones">
+      <button type="button" class="boton secundario" (click)="eliminando.set(null)">Cancelar</button>
+      <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="eliminar()">Quitar</button>
+    </div>
+  </app-dialogo>
+}

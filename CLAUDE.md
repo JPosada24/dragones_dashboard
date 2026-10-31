@@ -325,7 +325,10 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   editable en una tarjeta con la cancha en miniatura (arriba 4·3·2, abajo 5·6·1). Foto de los integrantes
   (`integrantes_equipo.foto_clave`): recorte cuadrado de 600 px sin metadatos (`procesar_retrato`); panel
   `POST/DELETE/GET /club/equipo/{id}/foto`, público `GET /publico/equipo/{id}/foto` (solo integrante publicado y
-  sitio publicado); la API solo expone `foto` = 8 caracteres de versión. 228 pruebas backend, 97 frontend.
+  sitio publicado); la API solo expone `foto` = 8 caracteres de versión. El equipo técnico tiene su propia pantalla,
+  pestaña de Perfil del club (`PESTANAS_CLUB`: «Contenido del sitio» `/perfil-club` · «Equipo técnico»
+  `/perfil-club/equipo`, `paginas/equipo-tecnico/`, `GET /club/equipo`): tarjetas con foto, interruptor de
+  publicar, agregar/editar/quitar. 229 pruebas backend, 99 frontend.
   Migración 0019 (`perfil_club.fundado_en`): `GET /publico/club` trae `cifras` (solo totales: deportistas con
   inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
   portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno

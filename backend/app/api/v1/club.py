@@ -207,6 +207,12 @@ def _integrante(db: Session, integrante_id: uuid.UUID) -> IntegranteEquipo:
     return i
 
 
+@router.get("/equipo", response_model=list[IntegranteOut])
+def listar_equipo(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[IntegranteOut]:
+    filas = db.scalars(select(IntegranteEquipo).order_by(IntegranteEquipo.orden, IntegranteEquipo.nombre))
+    return [IntegranteOut.model_validate(i) for i in filas]
+
+
 @router.post("/equipo", response_model=IntegranteOut, status_code=status.HTTP_201_CREATED)
 def crear_integrante(
     datos: IntegranteIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)

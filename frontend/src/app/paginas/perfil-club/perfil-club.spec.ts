@@ -14,7 +14,6 @@ const PANEL = {
   },
   albumes: [{ id: 'a1', nombre: 'Copa', fecha: null, publicado: false, fotos: [{ id: 'f1', ancho: 10, alto: 10 }] }],
   videos: [],
-  equipo: [{ id: 'i1', nombre: 'Ana Ruiz', cargo: 'Entrenadora', bio: null, orden: 0, publicado: true, foto: null }],
 };
 
 describe('PerfilClubPage', () => {
@@ -119,25 +118,5 @@ describe('PerfilClubPage', () => {
     await estable();
     expect(el().textContent).toContain('Juego en la red y bloqueo');
     expect(el().textContent).not.toContain('etapas de ejemplo');
-  });
-
-  it('guarda el integrante y luego sube su foto', async () => {
-    el().querySelector<HTMLButtonElement>('[aria-label="Editar Ana Ruiz"]')!.click();
-    await estable();
-    const input = dialogo().querySelector<HTMLInputElement>('input[type="file"][aria-label="Elegir foto"]')!;
-    Object.defineProperty(input, 'files', { value: [new File(['x'], 'ana.jpg', { type: 'image/jpeg' })] });
-    input.dispatchEvent(new Event('change'));
-    boton('Guardar', dialogo())!.click();
-    const datos = backend.expectOne(`${API}/club/equipo/i1`);
-    expect(datos.request.method).toBe('PATCH');
-    datos.flush({ ...PANEL.equipo[0] });
-    const foto = backend.expectOne(`${API}/club/equipo/i1/foto`);
-    expect(foto.request.method).toBe('POST');
-    expect((foto.request.body as FormData).get('archivo')).toBeInstanceOf(File);
-    foto.flush({ ...PANEL.equipo[0], foto: 'abcd1234' });
-    backend.expectOne(`${API}/club/equipo/i1/foto`).flush(new Blob(['y'])); // vista previa con el token
-    await estable();
-    expect(el().querySelector('img.foto-avatar')).not.toBeNull();
-    expect(el().textContent).toContain('Ana Ruiz actualizado');
   });
 });

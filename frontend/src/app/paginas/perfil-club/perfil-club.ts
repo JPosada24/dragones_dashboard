@@ -6,11 +6,11 @@ import { Observable } from 'rxjs';
 
 import { Aviso } from '../../compartido/aviso';
 import {
-  AlbumClub, ETAPAS_BASE, Etapa, FotoClub, INTRO_BASE, IntegranteClub, ORDEN_CANCHA, PerfilClub, VideoClub,
-  iniciales, miniaturaYoutube,
+  AlbumClub, ETAPAS_BASE, Etapa, FotoClub, INTRO_BASE, ORDEN_CANCHA, PerfilClub, VideoClub, miniaturaYoutube,
 } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
+import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
 import { API } from '../../core/modelos';
 
 interface Panel {
@@ -18,7 +18,6 @@ interface Panel {
   perfil: PerfilClub;
   albumes: AlbumClub[];
   videos: VideoClub[];
-  equipo: IntegranteClub[];
 }
 
 type Texto = 'mision' | 'vision' | 'historia';
@@ -33,7 +32,7 @@ const URL_CLUB = `${API}/club`;
 
 @Component({
   selector: 'app-perfil-club',
-  imports: [ReactiveFormsModule, DatePipe, Aviso, Dialogo],
+  imports: [ReactiveFormsModule, DatePipe, Aviso, Dialogo, Pestanas],
   templateUrl: './perfil-club.html',
   styleUrl: './perfil-club.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,7 +42,7 @@ export class PerfilClubPage implements OnInit {
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly textos = TEXTOS;
-  protected readonly iniciales = iniciales;
+  protected readonly pestanas = PESTANAS_CLUB;
   protected readonly miniaturaYoutube = miniaturaYoutube;
   protected readonly ordenCancha = ORDEN_CANCHA;
   /** Etapas que muestra el sitio: las del panel o, si no hay, las fijas. */
@@ -58,8 +57,6 @@ export class PerfilClubPage implements OnInit {
   protected readonly ocupado = signal(false);
   /** Miniaturas de las fotos (blob: pedidas con el token, porque los álbumes sin publicar no son públicos). */
   protected readonly miniaturas = signal<Record<string, string>>({});
-  /** Fotos de los integrantes (blob:), por "id:versión". */
-  protected readonly retratos = signal<Record<string, string>>({});
 
   // Ventanas
   protected readonly editandoTexto = signal<(typeof TEXTOS)[number] | null>(null);
@@ -68,7 +65,6 @@ export class PerfilClubPage implements OnInit {
   protected readonly subiendoA = signal<AlbumClub | null>(null);
   protected readonly progreso = signal<string | null>(null);
   protected readonly creandoVideo = signal(false);
-  protected readonly integrante = signal<IntegranteClub | 'nuevo' | null>(null);
   protected readonly editandoFormacion = signal(false);
   protected readonly confirmando = signal<{ titulo: string; texto: string; accion: () => void } | null>(null);
 
@@ -93,26 +89,13 @@ export class PerfilClubPage implements OnInit {
     titulo: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     enlace: ['', [Validators.required, Validators.minLength(10)]],
   });
-  protected readonly formIntegrante = this.fb.group({
-    nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
-    cargo: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
-    bio: ['', Validators.maxLength(400)],
-    orden: [''],
-    publicado: true,
-  });
-  /** Foto elegida en la ventana del integrante (se sube al guardar) o pedido de quitarla. */
-  protected archivoRetrato: File | null = null;
-  protected readonly quitarRetrato = signal(false);
   protected readonly formFormacion = this.fb.group({
     intro: ['', Validators.maxLength(600)],
     etapas: this.fb.array(ETAPAS_BASE.map(() => this.fb.group({ titulo: [''], texto: [''] }))),
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      Object.values(this.miniaturas()).forEach((u) => URL.revokeObjectURL(u));
-      Object.values(this.retratos()).forEach((u) => URL.revokeObjectURL(u));
-    });
+    inject(DestroyRef).onDestroy(() => Object.values(this.miniaturas()).forEach((u) => URL.revokeObjectURL(u)));
   }
 
   ngOnInit(): void {
@@ -125,7 +108,6 @@ export class PerfilClubPage implements OnInit {
         this.errorCarga.set(false);
         this.panel.set(p);
         this.cargarMiniaturas(p.albumes.flatMap((a) => a.fotos));
-        this.cargarRetratos(p.equipo);
       },
       error: () => this.errorCarga.set(true),
     });
@@ -138,35 +120,6 @@ export class PerfilClubPage implements OnInit {
         next: (blob) => this.miniaturas.update((m) => ({ ...m, [f.id]: URL.createObjectURL(blob) })),
       });
     }
-  }
-
-  // ---------- Fotos de los integrantes (con el token: un integrante oculto no es público) ----------
-  private cargarRetratos(equipo: IntegranteClub[]): void {
-    for (const i of equipo) {
-      const clave = `${i.id}:${i.foto}`;
-      if (!i.foto || this.retratos()[clave]) continue;
-      this.http.get(`${URL_CLUB}/equipo/${encodeURIComponent(i.id)}/foto`, { responseType: 'blob' }).subscribe({
-        next: (blob) => this.retratos.update((r) => ({ ...r, [clave]: URL.createObjectURL(blob) })),
-      });
-    }
-  }
-
-  protected retrato(i: IntegranteClub): string | null {
-    return i.foto ? (this.retratos()[`${i.id}:${i.foto}`] ?? null) : null;
-  }
-
-  protected elegirRetrato(e: Event): void {
-    this.archivoRetrato = (e.target as HTMLInputElement).files?.[0] ?? null;
-    if (this.archivoRetrato) this.quitarRetrato.set(false);
-  }
-
-  private ponerIntegrante(i: IntegranteClub): void {
-    this.panel.update((p) => {
-      if (!p) return p;
-      const otros = p.equipo.filter((x) => x.id !== i.id);
-      return { ...p, equipo: [...otros, i].sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)) };
-    });
-    this.cargarRetratos([i]);
   }
 
   private ejecutar<T>(peticion: Observable<T>, ok: (r: T) => void, enDialogo = false): void {
@@ -383,56 +336,6 @@ export class PerfilClubPage implements OnInit {
         this.panel.update((p) => (p ? { ...p, videos: p.videos.filter((x) => x.id !== v.id) } : p));
         this.confirmando.set(null);
         this.exito('Video eliminado.');
-      }, true));
-  }
-
-  // ---------- Equipo ----------
-  protected abrirIntegrante(i: IntegranteClub | 'nuevo'): void {
-    this.archivoRetrato = null;
-    this.quitarRetrato.set(false);
-    this.formIntegrante.reset(i === 'nuevo' ? undefined : {
-      nombre: i.nombre, cargo: i.cargo, bio: i.bio ?? '', orden: String(i.orden), publicado: i.publicado,
-    });
-    this.abrir(() => this.integrante.set(i));
-  }
-
-  protected guardarIntegrante(): void {
-    const actual = this.integrante();
-    if (!actual) return;
-    if (this.formIntegrante.invalid) return this.errorDialogo.set('Escribe el nombre y el cargo.');
-    const f = this.formIntegrante.getRawValue();
-    const orden = f.orden.trim() === '' ? 0 : Number(f.orden);
-    if (!Number.isInteger(orden) || orden < 0 || orden > 999) return this.errorDialogo.set('El orden es un número de 0 a 999.');
-    const cuerpo = { nombre: f.nombre.trim(), cargo: f.cargo.trim(), bio: f.bio.trim() || null, orden, publicado: f.publicado };
-    const peticion = actual === 'nuevo'
-      ? this.http.post<IntegranteClub>(`${URL_CLUB}/equipo`, cuerpo)
-      : this.http.patch<IntegranteClub>(`${URL_CLUB}/equipo/${encodeURIComponent(actual.id)}`, cuerpo);
-    this.ejecutar(peticion, (i) => {
-      const listo = (final: IntegranteClub) => {
-        this.ponerIntegrante(final);
-        this.integrante.set(null);
-        this.exito(actual === 'nuevo' ? `${final.nombre} agregado al equipo.` : `${final.nombre} actualizado.`);
-      };
-      const url = `${URL_CLUB}/equipo/${encodeURIComponent(i.id)}/foto`;
-      if (this.archivoRetrato) {
-        const datos = new FormData();
-        datos.append('archivo', this.archivoRetrato);
-        this.ponerIntegrante(i); // los datos ya quedaron guardados aunque la foto falle
-        this.ejecutar(this.http.post<IntegranteClub>(url, datos), listo, true);
-      } else if (this.quitarRetrato() && i.foto) {
-        this.ejecutar(this.http.delete<IntegranteClub>(url), listo, true);
-      } else {
-        listo(i);
-      }
-    }, true);
-  }
-
-  protected eliminarIntegrante(i: IntegranteClub): void {
-    this.confirmar('Quitar del equipo', `${i.nombre} deja de aparecer en el sitio.`, () =>
-      this.ejecutar(this.http.delete(`${URL_CLUB}/equipo/${encodeURIComponent(i.id)}`), () => {
-        this.panel.update((p) => (p ? { ...p, equipo: p.equipo.filter((x) => x.id !== i.id) } : p));
-        this.confirmando.set(null);
-        this.exito(`${i.nombre} quitado del equipo.`);
       }, true));
   }
 
