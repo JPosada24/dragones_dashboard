@@ -1,53 +1,13 @@
 /** Tipos del perfil del club (panel y sitio público) y utilidades para mostrarlo. */
-export interface PerfilClub {
-  nombre: string;
-  lema: string | null;
-  ciudad: string | null;
-  sede: string | null;
-  fundado_en: number | null;
-  formacion_intro: string | null;
-  formacion: Etapa[] | null;
-  mision: string | null;
-  vision: string | null;
-  historia: string | null;
-  whatsapp: string | null;
-  correo: string | null;
-  instagram: string | null;
-  facebook: string | null;
-  publicado: boolean;
-}
+import type { Esquema } from '../core/api/tipos';
 
-export interface FotoClub {
-  id: string;
-  ancho: number;
-  alto: number;
-}
-
-export interface AlbumClub {
-  id: string;
-  nombre: string;
-  fecha: string | null;
-  publicado: boolean;
-  fotos: FotoClub[];
-  portada: string | null; // versión de la portada propia; null = se usa la primera foto
-}
-
-export interface VideoClub {
-  id: string;
-  titulo: string;
-  youtube_id: string;
-  publicado: boolean;
-}
-
-export interface IntegranteClub {
-  id: string;
-  nombre: string;
-  cargo: string;
-  bio: string | null;
-  orden: number;
-  publicado: boolean;
-  foto: string | null; // versión de la foto; null = sin foto
-}
+export type PerfilClub = Esquema<'PerfilOut'>;
+export type FotoClub = Esquema<'FotoOut'>;
+/** `portada`: versión de la portada propia; null = se usa la primera foto. */
+export type AlbumClub = Esquema<'AlbumOut'>;
+export type VideoClub = Esquema<'VideoOut'>;
+/** `foto`: versión de la foto; null = sin foto. */
+export type IntegranteClub = Esquema<'IntegranteOut'>;
 
 /** El id de YouTube lo valida el servidor; aquí se vuelve a comprobar antes de armar cualquier enlace. */
 const ID_YOUTUBE = /^[A-Za-z0-9_-]{11}$/;
@@ -69,10 +29,7 @@ export function iniciales(nombre: string): string {
 }
 
 /** Una etapa de «La formación va por rotaciones»: su zona es la posición en la lista (1 a 6). */
-export interface Etapa {
-  titulo: string;
-  texto: string;
-}
+export type Etapa = Esquema<'EtapaIn'>;
 
 /** Etapas que muestra el sitio mientras nadie las edite en el panel (zona 1 a 6). */
 export const ETAPAS_BASE: Etapa[] = [

@@ -27,7 +27,7 @@ const rifa = (id: string, extra: Partial<Rifa> = {}): Rifa => ({
   talonarios: 2, talonarios_pagados: 1, recaudado: 50000, esperado: 80000, ...extra,
 });
 
-const talonario = (codigo: string, pagado: boolean, rama = 'femenina'): Talonario => ({
+const talonario = (codigo: string, pagado: boolean, rama: Talonario['rama'] = 'femenina'): Talonario => ({
   id: `t-${codigo}`, alumno_id: `a-${codigo}`, alumno_nombre: `Alumno ${codigo}`, rama, codigo, boletas: 20,
   recaudado: pagado ? 40000 : 10000, saldo: pagado ? 0 : 30000, pagado, pagos: [],
 });

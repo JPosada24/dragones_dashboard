@@ -3,8 +3,23 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field
 
+# Valores válidos del dominio. Deben coincidir con las restricciones CHECK de la base (models/dominio.py y los
+# modelos); tests/test_dominio.py lo verifica. Al estar tipados, el OpenAPI (y los tipos del frontend) los conocen.
 Rama = Literal["masculina", "femenina"]
 TipoDocumento = Literal["RC", "TI", "CC", "CE", "PA", "PPT"]
+RolCodigo = Literal["SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO"]
+EstadoInscripcion = Literal["pendiente_pago", "activo", "a_expulsar", "expulsado", "rechazado"]
+CausaRechazo = Literal["vencimiento", "manual"]
+CausaExpulsion = Literal["mora", "manual"]
+EstadoAsistencia = Literal["presente", "ausente", "justificado"]
+CausaCancelacion = Literal["festivo", "torneo", "horario", "manual"]
+EstadoJustificacion = Literal["pendiente", "aprobada", "rechazada"]
+EstadoMulta = Literal["pendiente", "pagada", "anulada"]
+EstadoRifa = Literal["abierta", "sorteada", "cancelada", "eliminada"]
+EstadoTorneo = Literal["programado", "cancelado", "eliminado"]
+EstadoEquipo = Literal["pendiente_pago", "confirmado", "en_espera", "retirado"]
+OrigenEquipo = Literal["staff", "sitio"]
+EstadoCorreo = Literal["no_aplica", "pendiente", "enviado", "fallido"]
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _TELEFONO = re.compile(r"^\+?\d{7,15}$")

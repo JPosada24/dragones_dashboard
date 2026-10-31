@@ -4,7 +4,7 @@ const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 
 module.exports = tseslint.config(
-  { ignores: ['dist/', '.angular/', 'node_modules/'] },
+  { ignores: ['dist/', '.angular/', 'node_modules/', 'src/app/core/api/esquema.ts'] }, // esquema.ts lo genera openapi-typescript
   {
     files: ['**/*.ts'],
     extends: [

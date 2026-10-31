@@ -25,7 +25,7 @@ const torneo = (id: string, extra: Partial<Torneo> = {}): Torneo => ({
 
 const equipo = (id: string, extra: Partial<Equipo> = {}): Equipo => ({
   id, nombre_club: `Club ${id}`, ciudad: 'Medellín', delegado_nombre: 'Ana Ruiz', delegado_telefono: '3101234567',
-  delegado_email: null, estado: 'pendiente_pago', valor: 150000, monto_pagado: 50000, saldo: 100000, motivo_retiro: null,
+  delegado_email: null, estado: 'pendiente_pago', valor: 150000, monto_pagado: 50000, saldo: 100000, motivo_retiro: null, origen: 'staff',
   pagos: [{ id: `p-${id}`, fecha: isoLocal(HOY), monto: 50000, anula_id: null, motivo: null, creado_en: '' }], ...extra,
 });
 

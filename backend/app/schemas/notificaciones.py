@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.comunes import EstadoCorreo
+
 
 class NotificacionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -38,7 +40,7 @@ class CorreoEstadoOut(BaseModel):
     tipo: str
     titulo: str
     email: str  # enmascarado
-    estado: str
+    estado: EstadoCorreo
     intentos: int
     error: str | None
     creado_en: datetime

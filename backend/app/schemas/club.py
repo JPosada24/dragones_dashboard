@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.comunes import normalizar_email, normalizar_telefono
+from app.schemas.comunes import EstadoEquipo, Rama, normalizar_email, normalizar_telefono
 from app.schemas.torneos import EquipoCrear
 
 _USUARIO_RED = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
@@ -219,7 +219,7 @@ class HorarioPublicoOut(BaseModel):
 class TorneoPublicoOut(BaseModel):
     id: uuid.UUID
     nombre: str
-    rama: str
+    rama: Rama
     fecha_inicio: date
     fecha_fin: date
     fecha_limite_inscripcion: date
@@ -260,7 +260,7 @@ class InscripcionSitioIn(EquipoCrear):
 
 
 class InscripcionSitioOut(BaseModel):
-    estado: str  # pendiente_pago | en_espera | confirmado
+    estado: EstadoEquipo  # pendiente_pago | en_espera | confirmado
     valor: int
     mensaje: str
     registrado_en: datetime | None = None

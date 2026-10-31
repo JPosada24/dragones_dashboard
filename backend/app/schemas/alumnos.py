@@ -5,7 +5,14 @@ from typing import ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.fechas import hoy
-from app.schemas.comunes import Rama, TipoDocumento, normalizar_documento, normalizar_email, normalizar_telefono
+from app.schemas.comunes import (
+    EstadoInscripcion,
+    Rama,
+    TipoDocumento,
+    normalizar_documento,
+    normalizar_email,
+    normalizar_telefono,
+)
 
 TipoArchivo = Literal["identidad", "eps", "consentimiento", "certificado_medico", "foto", "otro"]
 
@@ -157,14 +164,14 @@ class AlumnoOut(BaseModel):
     fecha_nacimiento: date
     edad: int
     es_menor: bool
-    rama: str
+    rama: Rama
     telefono: str | None
     email: str | None
     direccion: str | None
     eps: str | None
     usuario_id: uuid.UUID | None
     activo: bool
-    inscripcion_estado: str | None  # del año en curso
+    inscripcion_estado: EstadoInscripcion | None  # del año en curso
     acudientes: list[AcudienteVinculadoOut]
     autorizacion: AutorizacionOut | None  # None = aún no registrada
 

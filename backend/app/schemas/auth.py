@@ -3,6 +3,7 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.security import validar_politica_password
+from app.schemas.comunes import RolCodigo
 from app.schemas.comunes import normalizar_email as _normalizar_email
 
 
@@ -22,7 +23,7 @@ class UsuarioOut(BaseModel):
     id: uuid.UUID
     email: str
     nombre: str
-    rol: str
+    rol: RolCodigo
     activo: bool
     permisos: list[str]
 

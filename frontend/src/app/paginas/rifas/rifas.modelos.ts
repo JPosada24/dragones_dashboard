@@ -1,62 +1,14 @@
-export type EstadoRifa = 'abierta' | 'sorteada' | 'cancelada'; // las eliminadas no llegan del servidor
+import type { Esquema } from '../../core/api/tipos';
 
-export interface Rifa {
-  id: string;
-  nombre: string;
-  anio: number;
-  numero: number; // 1.ª, 2.ª… del año
-  premio: string;
-  fecha_sorteo: string;
-  puestos_por_talonario: number;
-  precio_puesto: number;
-  valor_talonario: number;
-  estado: EstadoRifa;
-  motivo_cancelacion: string | null;
-  talonarios: number;
-  talonarios_pagados: number;
-  recaudado: number;
-  esperado: number;
-}
-
-export interface PagoTalonario {
-  id: string;
-  fecha: string;
-  monto: number; // negativo si es una anulación
-  anula_id: string | null;
-  motivo: string | null;
-  creado_en: string;
-}
-
-export interface Talonario {
-  id: string;
-  alumno_id: string;
-  alumno_nombre: string;
-  rama: string;
-  codigo: string; // F012: sus boletas son F012-01 … F012-20
-  boletas: number;
-  recaudado: number;
-  saldo: number;
-  pagado: boolean;
-  pagos: PagoTalonario[];
-}
-
+export type EstadoRifa = Esquema<'RifaOut'>['estado'];
+export type Rifa = Esquema<'RifaOut'>;
+export type PagoTalonario = Esquema<'PagoTalonarioOut'>;
+/** Talonario de un alumno: sus boletas se leen código-número (F012-01 … F012-20). */
+export type Talonario = Esquema<'TalonarioOut'>;
 /** Una jugada del sorteo (una rifa se puede jugar varias veces). */
-export interface Acta {
-  id: string;
-  rifa_id: string;
-  orden: number;
-  codigo: string;
-  boleta: number;
-  alumno_id: string; // dueño del talonario ganador
-  alumno_nombre: string;
-  rama: string;
-  total_participantes: number;
-  participantes: string[];
-  huella: string;
-  jugado_en: string;
-}
+export type Acta = Esquema<'ActaOut'>;
 
-/** Fila de la matriz de paz y salvo: un alumno y su talonario en cada rifa del año. */
+/** Fila de la matriz de paz y salvo: un alumno y su talonario en cada rifa del año (se arma en el navegador). */
 export interface FilaPazYSalvo {
   alumno_id: string;
   codigo: string;

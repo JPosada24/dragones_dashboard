@@ -4,7 +4,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.comunes import MotivoOpcional
+from app.schemas.comunes import (
+    CausaCancelacion,
+    EstadoAsistencia,
+    EstadoJustificacion,
+    EstadoMulta,
+    MotivoOpcional,
+    Rama,
+)
 
 
 class _Entrada(BaseModel):
@@ -73,7 +80,7 @@ class SesionOut(BaseModel):
     lugar: str | None
     automatica: bool
     cancelada: bool
-    causa_cancelacion: str | None
+    causa_cancelacion: CausaCancelacion | None
     motivo_cancelacion: str | None
     cerrada: bool
 
@@ -106,19 +113,19 @@ class CorreccionIn(_Entrada):
 class FilaPlanillaOut(BaseModel):
     alumno_id: uuid.UUID
     alumno_nombre: str
-    rama: str
-    asistencia: str | None
-    justificacion: str | None
-    multa: str | None
+    rama: Rama
+    asistencia: EstadoAsistencia | None
+    justificacion: EstadoJustificacion | None
+    multa: EstadoMulta | None
 
 
 class HistorialOut(BaseModel):
     sesion_id: uuid.UUID
     fecha: date
     hora_inicio: time
-    estado: str
+    estado: EstadoAsistencia
     multa_valor: int | None
-    multa_estado: str | None
+    multa_estado: EstadoMulta | None
 
 
 class JustificarIn(_Entrada):
@@ -148,11 +155,11 @@ class JustificacionOut(BaseModel):
     id: uuid.UUID
     sesion_id: uuid.UUID
     fecha_sesion: date
-    rama: str
+    rama: Rama
     alumno_id: uuid.UUID
     alumno_nombre: str
     motivo: str | None
-    estado: str
+    estado: EstadoJustificacion
     comentario: str | None
     creado_en: datetime
     revisada_en: datetime | None
@@ -167,7 +174,7 @@ class CierreOut(BaseModel):
 class AlertaOut(BaseModel):
     alumno_id: uuid.UUID
     alumno_nombre: str
-    rama: str
+    rama: Rama
     inasistencias_seguidas: int
 
 
@@ -175,11 +182,11 @@ class MultaOut(BaseModel):
     id: uuid.UUID
     alumno_id: uuid.UUID
     alumno_nombre: str
-    rama: str
+    rama: Rama
     sesion_id: uuid.UUID
     fecha_sesion: date
     valor: int
-    estado: str
+    estado: EstadoMulta
     fecha_pago: date | None
     motivo_anulacion: str | None
 

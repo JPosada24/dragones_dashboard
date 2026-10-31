@@ -33,7 +33,7 @@ const alumno = (id: string, extra: Partial<Alumno> = {}): Alumno => ({
 });
 
 const CUENTA: EstadoCuenta = {
-  alumno_id: 'a1', inscripcion_estado: 'activo', inscripcion_saldo: 0, multas_pendientes: 1, multas_saldo: 2000,
+  alumno_id: 'a1', anio: 2026, inscripcion_estado: 'activo', inscripcion_saldo: 0, multas_pendientes: 1, multas_saldo: 2000,
   rifas: [], total: 2000, al_dia: false, en_mora: false, entra_en_mora: '2027-01-15',
 };
 

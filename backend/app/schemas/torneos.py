@@ -3,7 +3,15 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.schemas.comunes import MotivoOpcional, Rama, normalizar_email, normalizar_telefono
+from app.schemas.comunes import (
+    EstadoEquipo,
+    EstadoTorneo,
+    MotivoOpcional,
+    OrigenEquipo,
+    Rama,
+    normalizar_email,
+    normalizar_telefono,
+)
 
 
 class _Entrada(BaseModel):
@@ -37,14 +45,14 @@ class TorneoActualizar(_Entrada):
 class TorneoOut(BaseModel):
     id: uuid.UUID
     nombre: str
-    rama: str
+    rama: Rama
     fecha_inicio: date
     fecha_fin: date
     fecha_limite_inscripcion: date
     lugar: str | None
     cupo_equipos: int
     valor_inscripcion: int
-    estado: str
+    estado: EstadoTorneo
     motivo_cancelacion: str | None
     ocupados: int
     confirmados: int
@@ -103,12 +111,12 @@ class EquipoOut(BaseModel):
     delegado_nombre: str
     delegado_telefono: str
     delegado_email: str | None
-    estado: str
+    estado: EstadoEquipo
     valor: int
     monto_pagado: int
     saldo: int
     motivo_retiro: str | None
-    origen: str  # staff | sitio
+    origen: OrigenEquipo  # staff | sitio
     pagos: list[PagoEquipoOut]
 
 

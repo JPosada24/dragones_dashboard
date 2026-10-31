@@ -5,9 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.alumnos import AlumnoCrear
-from app.schemas.comunes import MotivoOpcional
-
-EstadoInscripcion = Literal["pendiente_pago", "activo", "a_expulsar", "expulsado", "rechazado"]
+from app.schemas.comunes import CausaExpulsion, CausaRechazo, EstadoInscripcion, MotivoOpcional, Rama
 
 
 class _Entrada(BaseModel):
@@ -87,16 +85,16 @@ class InscripcionOut(BaseModel):
     alumno_id: uuid.UUID
     alumno_nombre: str
     anio: int
-    rama: str
+    rama: Rama
     fecha_inscripcion: date
     fecha_limite_pago: date
     valor: int
     fecha_pago: date | None
     monto_pagado: int | None
     saldo: int
-    estado: str
-    causa_rechazo: str | None
-    causa_expulsion: str | None  # mora (la marcó el sistema) | manual
+    estado: EstadoInscripcion
+    causa_rechazo: CausaRechazo | None
+    causa_expulsion: CausaExpulsion | None  # mora (la marcó el sistema) | manual
     motivo: str | None
     prorrogas: list[ProrrogaOut]
     pagos: list[PagoOut]

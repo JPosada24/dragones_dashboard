@@ -1,32 +1,10 @@
-/** Tipos que devuelve la API (backend FastAPI). */
+/** Tipos que devuelve la API (generados del contrato OpenAPI del backend FastAPI). */
+import type { Esquema } from './api/tipos';
 
-export type Rol = 'SUPERADMIN' | 'ADMIN' | 'ENTRENADOR' | 'MIEMBRO';
-
-export interface Usuario {
-  id: string;
-  email: string;
-  nombre: string;
-  rol: Rol;
-  activo: boolean;
-  permisos: string[];
-}
-
-export interface TokenOut {
-  access_token: string;
-  token_type: 'bearer';
-  expires_in: number;
-  usuario: Usuario;
-}
-
-export interface Notificacion {
-  id: string;
-  tipo: string;
-  titulo: string;
-  mensaje: string;
-  alumno_id: string | null;
-  leida: boolean;
-  creado_en: string;
-}
+export type Usuario = Esquema<'UsuarioOut'>;
+export type Rol = Usuario['rol'];
+export type TokenOut = Esquema<'TokenOut'>;
+export type Notificacion = Esquema<'NotificacionOut'>;
 
 export const NOMBRE_ROL: Record<Rol, string> = {
   SUPERADMIN: 'SuperAdmin',

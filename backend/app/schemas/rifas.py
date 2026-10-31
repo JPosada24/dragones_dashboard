@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.comunes import MotivoOpcional
+from app.schemas.comunes import EstadoInscripcion, EstadoRifa, MotivoOpcional, Rama
 
 
 class _Entrada(BaseModel):
@@ -27,7 +27,7 @@ class RifaOut(BaseModel):
     puestos_por_talonario: int
     precio_puesto: int
     valor_talonario: int
-    estado: str
+    estado: EstadoRifa
     motivo_cancelacion: str | None
     talonarios: int
     talonarios_pagados: int
@@ -67,7 +67,7 @@ class TalonarioOut(BaseModel):
     id: uuid.UUID
     alumno_id: uuid.UUID
     alumno_nombre: str
-    rama: str
+    rama: Rama
     codigo: str  # código del alumno cuando recibió el talonario (F012); sus boletas son F012-01 … F012-20
     boletas: int
     recaudado: int
@@ -84,7 +84,7 @@ class ActaOut(BaseModel):
     boleta: int  # boleta dentro del talonario: la ganadora se lee F012-07
     alumno_id: uuid.UUID
     alumno_nombre: str
-    rama: str
+    rama: Rama
     total_participantes: int
     participantes: list[str]
     huella: str
@@ -99,7 +99,7 @@ class DeudaRifaOut(BaseModel):
 class EstadoCuentaOut(BaseModel):
     alumno_id: uuid.UUID
     anio: int
-    inscripcion_estado: str | None
+    inscripcion_estado: EstadoInscripcion | None
     inscripcion_saldo: int
     multas_pendientes: int
     multas_saldo: int
