@@ -278,10 +278,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   configuración, matriz «Roles y permisos» de solo lectura desde `GET /configuracion/roles` (`config.ver`; los
   permisos se cambian con migración). Sin «Zona crítica» hasta que existan cierre de año y respaldo.
 - HECHO (aviso de inasistencia, 2026-10-30): migración 0016 (`justificaciones.motivo` opcional). La familia (o el
-  staff) **avisa que el alumno no asistirá, sin explicar el motivo** («Avisar que no asiste», comentario opcional).
+  staff) **avisa que el alumno no asistirá, sin explicar el motivo**: casilla **J** junto a P/A, sin popup. La familia
+  pulsa J (POST de justificación sin motivo); en la planilla del staff J marca `justificado` directo (`MarcaIn`).
   Aviso antes del inicio del entrenamiento → `aprobada` automática, asistencia `justificado`, sin multa; aviso ya
   empezado o después (dentro de `dias_para_justificar`) → `pendiente` y lo revisa el staff como antes. En
-  Configuración se quitaron las políticas fijas (solo queda el interruptor real de expulsión). 198 pruebas backend, 89 frontend.
+  Configuración se quitaron las políticas fijas (solo queda el interruptor real de expulsión). 199 pruebas backend, 89 frontend.
 - SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), agente de IA, endurecer
   para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 

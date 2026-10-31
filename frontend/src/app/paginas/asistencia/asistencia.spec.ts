@@ -220,14 +220,12 @@ describe('AsistenciaPage', () => {
     backend.expectOne(`${API}/sesiones/s1/asistencia`).flush([fila('a1', 'Laura Pérez', { asistencia: 'ausente', multa: 'pendiente' })]);
     await estable();
 
-    expect(el().querySelector('.marca')).toBeNull();
+    expect(el().querySelector('.marca[data-marca="presente"]')).toBeNull();
     expect(boton('Corregir')).toBeUndefined();
     expect(boton('Editar')).toBeUndefined();
     expect(boton('Marcar presente')).toBeUndefined(); // no es hoy
-    boton('Avisar que no asiste')!.click();
-    await estable();
-    expect(dialogo()!.textContent).toContain('el club revisará');
-    boton('Enviar aviso', dialogo()!)!.click(); // el comentario es opcional
+    el().querySelector<HTMLButtonElement>('[aria-label="Avisar que no asiste: Laura Pérez"]')!.click(); // sin popup
+    expect(dialogo()).toBeNull();
     const req = backend.expectOne(`${API}/sesiones/s1/justificaciones`);
     expect(req.request.body).toEqual({ alumno_id: 'a1', motivo: null });
     req.flush({ ...JUSTIFICACION, alumno_id: 'a1' });
@@ -235,7 +233,9 @@ describe('AsistenciaPage', () => {
     backend.expectOne((r) => r.url === `${API}/justificaciones`).flush([]);
     await estable();
     expect(texto()).toContain('Aviso enviado');
-    expect(boton('Avisar que no asiste')).toBeUndefined();
+    const j = el().querySelector<HTMLButtonElement>('[aria-label="Ya avisó que no asiste: Laura Pérez"]')!;
+    expect(j.disabled).toBe(true);
+    expect(j.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('si la API rechaza, el error se muestra dentro del popup sin perder lo escrito', async () => {

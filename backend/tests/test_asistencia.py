@@ -466,3 +466,13 @@ def test_una_sesion_con_multas_pagadas_no_se_elimina(client, h_admin, familia, r
     client.post(f"{M}/{multa['id']}/pago", json={"fecha_pago": LUNES.isoformat()}, headers=h_admin)
     r = client.delete(f"{S}/{extra['id']}", headers=h_admin)
     assert r.status_code == 409 and "pagadas" in r.json()["detail"]
+
+
+def test_el_staff_marca_j_y_el_cierre_no_multa(client, h_admin, reloj):
+    alumna = alumno_inscrito(client, h_admin)
+    sesion = crear_sesion(client, h_admin)
+    reloj(en_hora(LUNES, 19))
+    assert marcar_asistencia(client, h_admin, sesion["id"], (alumna["id"], "justificado")).status_code == 200
+    assert ver_planilla(client, h_admin, sesion["id"])[alumna["id"]]["asistencia"] == "justificado"
+    reloj(en_hora(LUNES, 23, 59))
+    assert cerrar_dia(client, h_admin)["multas"] == 0

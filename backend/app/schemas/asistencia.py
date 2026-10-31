@@ -80,7 +80,7 @@ class SesionOut(BaseModel):
 
 class MarcaIn(_Entrada):
     alumno_id: uuid.UUID
-    estado: Literal["presente", "ausente"]
+    estado: Literal["presente", "ausente", "justificado"]  # J: el staff justifica directamente
 
 
 class MarcarGrupoIn(_Entrada):

@@ -120,6 +120,8 @@
                           [attr.aria-label]="'Presente: ' + f.alumno_nombre" (click)="marcar(f, 'presente')">P</button>
                   <button type="button" class="marca" data-marca="ausente" [attr.aria-pressed]="estadoDe(f) === 'ausente'"
                           [attr.aria-label]="'Ausente: ' + f.alumno_nombre" (click)="marcar(f, 'ausente')">A</button>
+                  <button type="button" class="marca" data-marca="justificado" [attr.aria-pressed]="estadoDe(f) === 'justificado'"
+                          [attr.aria-label]="'Justificado: ' + f.alumno_nombre" (click)="marcar(f, 'justificado')">J</button>
                 }
                 @if (s.cerrada && puedeCorregir()) {
                   <button type="button" class="boton secundario chico" (click)="abrirCorregir(f)">Corregir</button>
@@ -127,8 +129,11 @@
                 @if (puedeMarcarPropia(f)) {
                   <button type="button" class="boton chico" [disabled]="ocupado()" (click)="marcarPropia(f)">Marcar presente</button>
                 }
-                @if (puedeJustificar(f)) {
-                  <button type="button" class="boton secundario chico" (click)="abrirJustificar(f)">Avisar que no asiste</button>
+                @if (esFamilia() && (puedeJustificar(f) || avisado(f))) {
+                  <button type="button" class="marca" data-marca="justificado" [attr.aria-pressed]="avisado(f)"
+                          [disabled]="avisado(f) || ocupado()" title="Avisar que no asiste"
+                          [attr.aria-label]="(avisado(f) ? 'Ya avisó que no asiste: ' : 'Avisar que no asiste: ') + f.alumno_nombre"
+                          (click)="avisarInasistencia(f)">J</button>
                 }
               </div>
             </div>
@@ -357,25 +362,6 @@
       <div class="acciones">
         <button type="button" class="boton secundario chico" (click)="corrigiendo.set(null)">Cancelar</button>
         <button type="submit" class="boton chico" [disabled]="formCorregir.invalid || ocupado()">Guardar</button>
-      </div>
-    </form>
-  </app-dialogo>
-}
-
-@if (justificando(); as f) {
-  <app-dialogo [titulo]="'No asistirá · ' + f.alumno_nombre" (cerrar)="justificando.set(null)"
-               [descripcion]="avisoATiempo()
-                 ? 'Con el aviso queda justificado de una vez: no hay multa. No hace falta explicar el motivo.'
-                 : 'El entrenamiento ya empezó: el club revisará este aviso antes de quitar la multa.'">
-    <form class="formulario" [formGroup]="formJustificar" (ngSubmit)="enviarJustificacion()">
-      <label class="campo">
-        <span class="etiqueta">Comentario (opcional)</span>
-        <textarea class="control" formControlName="motivo" maxlength="500" rows="2" placeholder="Ej.: viaje familiar, está enferma…"></textarea>
-      </label>
-      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
-      <div class="acciones">
-        <button type="button" class="boton secundario chico" (click)="justificando.set(null)">Cancelar</button>
-        <button type="submit" class="boton chico" [disabled]="formJustificar.invalid || ocupado()">Enviar aviso</button>
       </div>
     </form>
   </app-dialogo>

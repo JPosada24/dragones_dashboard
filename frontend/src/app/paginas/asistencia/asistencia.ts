@@ -84,7 +84,6 @@ export class AsistenciaPage implements OnInit {
   protected readonly cancelandoSesion = signal(false);
   protected readonly eliminandoSesion = signal(false);
   protected readonly corrigiendo = signal<FilaPlanilla | null>(null);
-  protected readonly justificando = signal<FilaPlanilla | null>(null);
   protected readonly rechazando = signal<Justificacion | null>(null);
 
   protected readonly formHorario = this.fb.group({
@@ -108,9 +107,6 @@ export class AsistenciaPage implements OnInit {
   protected readonly formCorregir = this.fb.group({
     estado: this.fb.control<EstadoAsistencia | ''>('', Validators.required),
     motivo: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(255)]],
-  });
-  protected readonly formJustificar = this.fb.group({
-    motivo: ['', Validators.maxLength(500)], // opcional: basta con avisar
   });
   protected readonly formRechazar = this.fb.group({
     comentario: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
@@ -275,7 +271,7 @@ export class AsistenciaPage implements OnInit {
   protected puedeJustificar(f: FilaPlanilla): boolean {
     const s = this.seleccionada();
     return (
-      !!s && !s.cancelada && (this.esFamilia() || this.puedeMarcar()) && f.asistencia !== 'presente' &&
+      !!s && !s.cancelada && this.esFamilia() && f.asistencia !== 'presente' &&
       this.estadoDe(f) !== 'presente' && f.justificacion !== 'pendiente' && f.justificacion !== 'aprobada'
     );
   }
@@ -408,30 +404,22 @@ export class AsistenciaPage implements OnInit {
     }, true);
   }
 
-  protected abrirJustificar(f: FilaPlanilla): void {
-    this.formJustificar.reset();
-    this.abrir(() => this.justificando.set(f));
-  }
-
-  protected enviarJustificacion(): void {
+  /** J de la familia: avisa que el alumno no asiste (sin motivo ni popup). */
+  protected avisarInasistencia(f: FilaPlanilla): void {
     const s = this.seleccionada();
-    const f = this.justificando();
-    if (!s || !f || this.formJustificar.invalid) return;
-    const cuerpo = { alumno_id: f.alumno_id, motivo: this.formJustificar.getRawValue().motivo.trim() || null };
+    if (!s) return;
+    const cuerpo = { alumno_id: f.alumno_id, motivo: null };
     this.ejecutar(this.http.post<Justificacion>(`${sesionUrl(s.id)}/justificaciones`, cuerpo), (j) => {
-      this.justificando.set(null);
       this.recargarPlanilla();
       this.cargarJustificaciones();
       this.avisar(null, j.estado === 'aprobada'
         ? `Aviso registrado: ${f.alumno_nombre} queda justificado, sin multa.`
         : 'Aviso enviado. Como el entrenamiento ya empezó, el club lo revisará.');
-    }, true);
+    });
   }
 
-  /** El aviso llega antes de que empiece el entrenamiento (hora de Colombia, sin horario de verano). */
-  protected avisoATiempo(): boolean {
-    const s = this.seleccionada();
-    return !!s && Date.now() < new Date(`${s.fecha}T${s.hora_inicio.slice(0, 5)}:00-05:00`).getTime();
+  protected avisado(f: FilaPlanilla): boolean {
+    return f.justificacion === 'aprobada' || f.justificacion === 'pendiente';
   }
 
   protected abrirRechazo(j: Justificacion): void {

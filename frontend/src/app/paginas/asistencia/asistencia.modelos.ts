@@ -2,7 +2,7 @@
 
 export type Rama = 'masculina' | 'femenina';
 export type EstadoAsistencia = 'presente' | 'ausente' | 'justificado';
-export type Marca = 'presente' | 'ausente';
+export type Marca = 'presente' | 'ausente' | 'justificado';
 
 /** Entrenamiento general del club (ambas ramas). */
 export interface Sesion {
