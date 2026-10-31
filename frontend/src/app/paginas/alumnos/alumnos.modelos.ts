@@ -31,6 +31,8 @@ export interface Alumno {
   activo: boolean;
   inscripcion_estado: string | null;
   acudientes: AcudienteVinculado[];
+  /** Autorización de tratamiento de datos (Ley 1581); null = aún no registrada. */
+  autorizacion: { nombre: string; imagen: boolean; registrada_en: string } | null;
 }
 
 export interface Acudiente {

@@ -27,6 +27,7 @@ const alumno = (id: string, extra: Partial<Alumno> = {}): Alumno => ({
   id, codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', tipo_documento: 'TI', documento: '****4321', fecha_nacimiento: '2013-05-04',
   edad: 13, es_menor: true, rama: 'femenina', telefono: null, email: null, direccion: null, eps: 'Sura',
   usuario_id: null, activo: true, inscripcion_estado: 'activo',
+  autorizacion: { nombre: 'Marta Gómez', imagen: true, registrada_en: '2026-01-10T15:00:00Z' },
   acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '3001234567', parentesco: 'madre', principal: true }],
   ...extra,
 });
@@ -69,6 +70,13 @@ describe('AlumnosPage', () => {
     campo.value = valor;
     campo.dispatchEvent(new Event(campo instanceof HTMLSelectElement ? 'change' : 'input'));
   }
+  /** Llena la autorización de datos (obligatoria al registrar un alumno). */
+  function autorizar() {
+    escribir('dialog [formcontrolname="nombre"]', 'Marta Gómez (madre)');
+    escribir('dialog [formcontrolname="imagen"]', 'no');
+    dialogo().querySelector<HTMLInputElement>('[formcontrolname="confirmada"]')!.click();
+  }
+
   function responderFicha(a: Alumno, inscripciones: unknown[] = []) {
     backend.expectOne((r) => r.url === `${API}/inscripciones` && r.params.get('alumno_id') === a.id).flush(inscripciones);
     backend.expectOne(`${API}/alumnos/${a.id}`).flush(a);
@@ -193,6 +201,13 @@ describe('AlumnosPage', () => {
     escribir('dialog fieldset [formcontrolname="telefono"]', '3001234567');
     await estable();
 
+    // Sin autorización de datos no se envía nada.
+    boton('Registrar alumno', dialogo())!.click();
+    await estable();
+    expect(dialogo().querySelector('[role="alert"]')?.textContent).toContain('quién autorizó');
+    autorizar();
+    await estable();
+
     boton('Registrar alumno', dialogo())!.click();
     const nuevoAcudiente = backend.expectOne((r) => r.method === 'POST' && r.url === `${API}/acudientes`);
     expect(nuevoAcudiente.request.body).toMatchObject({ nombres: 'Marta', documento: '43111222', telefono: '3001234567' });
@@ -232,12 +247,15 @@ describe('AlumnosPage', () => {
     (dialogo().querySelector('input[type="radio"][value="parcial"]') as HTMLInputElement).click();
     await estable();
     escribir('dialog [formcontrolname="monto"]', '40000');
+    autorizar();
     await estable();
 
     boton('Inscribir alumno', dialogo())!.click();
     backend.expectNone((r) => r.method === 'POST' && r.url === `${API}/alumnos`);
     const alta = backend.expectOne(`${API}/inscripciones/alumno-nuevo`);
-    expect(alta.request.body.alumno).toMatchObject({ nombres: 'Sara', documento: '1012345678', acudientes: [] });
+    expect(alta.request.body.alumno).toMatchObject({
+      nombres: 'Sara', documento: '1012345678', acudientes: [], autorizacion: { nombre: 'Marta Gómez (madre)', imagen: false },
+    });
     expect(alta.request.body.pago).toEqual({ forma: 'parcial', monto: 40000 });
     alta.flush(inscripcion({ alumno_id: 'a8', alumno_nombre: 'Sara Ríos', monto_pagado: 40000, saldo: 50000 }));
     pedirLista().flush([]);
@@ -245,6 +263,31 @@ describe('AlumnosPage', () => {
     await estable();
     expect(texto()).toContain('Sara Ríos quedó inscrito');
     expect(texto()).toContain('Abonó $40.000; saldo $50.000 hasta el 29/11/2026');
+  });
+
+  it('un alumno sin autorización de datos se marca en la ficha y se registra ahí mismo', async () => {
+    crear(INSCRIBE);
+    pedirLista().flush([alumno('a1', { autorizacion: null })]);
+    await estable();
+    (el().querySelector('.item') as HTMLButtonElement).click();
+    responderFicha(alumno('a1', { autorizacion: null }));
+    await estable();
+    const tarjeta = el().querySelector('.autorizacion')!;
+    expect(tarjeta.getAttribute('data-tono')).toBe('mal');
+    expect(tarjeta.textContent).toContain('Sin autorización registrada');
+
+    boton('Registrar', tarjeta)!.click();
+    await estable();
+    autorizar();
+    await estable();
+    boton('Guardar', dialogo())!.click();
+    const r = backend.expectOne(`${API}/alumnos/a1/autorizacion`);
+    expect(r.request.method).toBe('PUT');
+    expect(r.request.body).toEqual({ nombre: 'Marta Gómez (madre)', imagen: false });
+    r.flush(alumno('a1', { autorizacion: { nombre: 'Marta Gómez (madre)', imagen: false, registrada_en: '2026-10-31T20:00:00Z' } }));
+    await estable();
+    expect(el().querySelector('.autorizacion')!.getAttribute('data-tono')).toBe('ok');
+    expect(el().querySelector('.autorizacion')!.textContent).toContain('No autoriza');
   });
 
   it('la ficha muestra la inscripción del año y registra un abono ahí mismo', async () => {

@@ -39,6 +39,7 @@ const acta = (orden: number, boleta: number): Acta => ({
 });
 const GANADORA = {
   id: 'a-F001', codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', telefono: null,
+  autorizacion: { nombre: 'Marta Gómez', imagen: true, registrada_en: '2026-01-10T15:00:00Z' },
   acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '300 123 4567', parentesco: 'madre', principal: true }],
 };
 

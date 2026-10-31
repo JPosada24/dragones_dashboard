@@ -37,6 +37,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Acudientes', texto: 'Los menores de edad necesitan al menos uno. Se busca por documento: si ya está registrado (por ejemplo, de un hermano), se reutiliza.' },
       { titulo: 'Inscripción del año', texto: 'La tarjeta de la ficha muestra lo pagado, el saldo y el límite. Quien viene del año pasado se renueva con "Renovar inscripción".' },
       { titulo: 'Documentos', texto: 'Solo PDF, JPG o PNG; se guardan cifrados. El número de documento completo solo lo ven Admin y SuperAdmin, y cada consulta queda registrada.' },
+      { titulo: 'Autorización de datos', texto: 'Por la Ley 1581, cada alumno necesita la autorización de su acudiente (o la suya si es mayor de edad). Se registra al inscribirlo: quién autorizó y si permite publicar fotos donde aparezca. A los que no la tienen, la ficha los marca en rojo con «Registrar», y el Resumen avisa cuántos faltan. Guarda el formato firmado como documento «Consentimiento informado».', permisos: ['alumnos.editar'] },
       { titulo: 'Inactivo', texto: 'Si deja el club, se desactiva desde "Editar": su historial se conserva.', permisos: ['alumnos.editar'] },
       { titulo: 'Eliminar', texto: 'La papelera de la ficha borra al alumno con toda su información (pagos, asistencia, rifas, documentos). No se puede deshacer: pide escribir su código para confirmar.', permisos: ['alumnos.eliminar'] },
     ],

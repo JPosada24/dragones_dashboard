@@ -344,6 +344,14 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   `compartido/reducir-imagen.ts`: el panel reduce en el navegador las fotos de más de 2 MB (lado mayor 2560 px, JPEG
   0,9, sin EXIF) antes de subirlas (las de cámara superaban `foto_max_mb`); si no puede leerla, sube el original. Si
   una foto falla, el aviso dice el motivo de cada una. 232 pruebas backend, 109 frontend.
+- HECHO (habeas data, 2026-10-31): política de tratamiento de datos (Ley 1581) publicada en el sitio DVC_CLAUDE
+  (`public/politica-de-datos.html`, estática e imprimible, con formato de autorización; datos del club marcados
+  `[POR COMPLETAR]`). Migración 0022: `alumnos.autoriza_datos_en/_nombre/_registro` y `autoriza_imagen` (check: todo
+  o nada). **El alta exige `autorizacion` {nombre de quien autorizó, imagen}** (`AlumnoCrear`, también en
+  `/inscripciones/alumno-nuevo`); `PUT /alumnos/{id}/autorizacion` (`alumnos.editar`) la registra para los alumnos
+  anteriores. La auditoría guarda solo registrada/imagen (nunca el nombre). `AlumnoOut.autorizacion` (null = falta).
+  Panel: campos en el alta, tarjeta «Autorización de datos» en la ficha (roja si falta, «Registrar»/«Actualizar») y
+  alerta del Resumen «N alumnos sin autorización de datos». 238 pruebas backend, 110 frontend.
 - SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)

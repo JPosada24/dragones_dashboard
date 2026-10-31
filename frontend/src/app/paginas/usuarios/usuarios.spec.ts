@@ -14,6 +14,7 @@ const CUENTAS = [
 ];
 const ALUMNA = {
   id: 'a1', codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', edad: 12, es_menor: true,
+  autorizacion: { nombre: 'Marta Gómez', imagen: true, registrada_en: '2026-01-10T15:00:00Z' },
   acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '3001234567', parentesco: 'madre', principal: true }],
 };
 

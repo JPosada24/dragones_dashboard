@@ -14,6 +14,8 @@ from app.schemas.alumnos import (
     AlumnoActualizar,
     AlumnoCrear,
     AlumnoOut,
+    AutorizacionIn,
+    AutorizacionOut,
     DocumentoIdentidadOut,
     DocumentoOut,
     TipoArchivo,
@@ -59,6 +61,14 @@ def alumno_a_out(alumno: Alumno, edad_mayoria: int, inscripcion_estado: str | No
             )
             for v in alumno.vinculos
         ],
+        autorizacion=(
+            AutorizacionOut(
+                nombre=alumno.autoriza_datos_nombre, imagen=bool(alumno.autoriza_imagen),
+                registrada_en=alumno.autoriza_datos_en,
+            )
+            if alumno.autoriza_datos_en and alumno.autoriza_datos_nombre
+            else None
+        ),
     )
 
 
@@ -116,6 +126,21 @@ def actualizar(
     servicio.actualizar_alumno(
         db, alumno, cambios=datos.model_dump(exclude_unset=True), actor=actor, ip=ip_cliente(request)
     )
+    db.commit()
+    return _out(db, alumno)
+
+
+@router.put("/{alumno_id}/autorizacion", response_model=AlumnoOut)
+def registrar_autorizacion(
+    alumno_id: uuid.UUID,
+    datos: AutorizacionIn,
+    request: Request,
+    actor: Usuario = Depends(requiere("alumnos.editar")),
+    db: Session = Depends(get_db),
+) -> AlumnoOut:
+    """Registra (o actualiza, p. ej. si cambian el permiso de fotos) la autorización de datos del alumno."""
+    alumno = servicio.obtener_visible(db, actor, alumno_id)
+    servicio.registrar_autorizacion(db, alumno, datos.model_dump(), actor=actor, ip=ip_cliente(request))
     db.commit()
     return _out(db, alumno)
 

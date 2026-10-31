@@ -7,7 +7,7 @@ from sqlalchemy import ColumnElement, Integer, cast, delete, false, func, or_, s
 from sqlalchemy.orm import Session
 
 from app.core import cifrado
-from app.core.fechas import edad, hoy
+from app.core.fechas import ahora, edad, hoy
 from app.models.acceso import Usuario
 from app.models.alumnos import (
     Acudiente,
@@ -213,10 +213,12 @@ def siguiente_codigo(db: Session, rama: str) -> str:
 def crear_alumno(
     db: Session, *, datos: dict[str, Any], vinculos: list[dict[str, Any]], actor: Usuario, ip: str | None
 ) -> Alumno:
+    autorizacion = datos.pop("autorizacion")
     _aplicar_documento(datos)
     _verificar_documento_libre(db, Alumno, datos)
     _verificar_usuario(db, Alumno, datos)
     alumno = Alumno(**datos, codigo=siguiente_codigo(db, datos["rama"]))
+    _aplicar_autorizacion(alumno, autorizacion, actor)
     db.add(alumno)
     for v in vinculos:
         _vincular(db, alumno, **v)
@@ -225,7 +227,35 @@ def crear_alumno(
     db.flush()
     auditoria.registrar(
         db, accion="alumno.crear", entidad="alumno", entidad_id=str(alumno.id), usuario_id=actor.id,
-        despues={**_resumen_alumno(alumno), "acudientes": [str(v.acudiente_id) for v in alumno.vinculos]}, ip=ip,
+        despues={
+            **_resumen_alumno(alumno), "acudientes": [str(v.acudiente_id) for v in alumno.vinculos],
+            "autoriza_imagen": alumno.autoriza_imagen,
+        },
+        ip=ip,
+    )
+    return alumno
+
+
+def _aplicar_autorizacion(alumno: Alumno, autorizacion: dict[str, Any], actor: Usuario) -> None:
+    alumno.autoriza_datos_en = ahora()
+    alumno.autoriza_datos_nombre = autorizacion["nombre"]
+    alumno.autoriza_imagen = autorizacion["imagen"]
+    alumno.autoriza_datos_registro = actor.id
+
+
+def registrar_autorizacion(
+    db: Session, alumno: Alumno, autorizacion: dict[str, Any], *, actor: Usuario, ip: str | None
+) -> Alumno:
+    """Autorización de datos (Ley 1581) de un alumno: queda quién la dio, cuándo y quién la registró.
+
+    El nombre de quien autorizó no va a la auditoría (es un dato personal); basta con la fecha y el permiso de fotos.
+    """
+    antes = {"registrada": alumno.autoriza_datos_en is not None, "imagen": alumno.autoriza_imagen}
+    _aplicar_autorizacion(alumno, autorizacion, actor)
+    db.flush()
+    auditoria.registrar(
+        db, accion="alumno.autorizacion", entidad="alumno", entidad_id=str(alumno.id), usuario_id=actor.id,
+        antes=antes, despues={"registrada": True, "imagen": alumno.autoriza_imagen}, ip=ip,
     )
     return alumno
 

@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from sqlalchemy import text
+
 from tests.fabrica import (
     LUNES,
     I,
@@ -82,3 +84,17 @@ def test_proximo_torneo_y_su_cartera(client, h_admin):
 
 def test_las_familias_no_ven_el_tablero_del_staff(client, familia):
     assert client.get(RES, headers=familia["h"]).status_code == 403
+
+
+def test_avisa_de_alumnos_sin_autorizacion_de_datos(client, h_admin, db):
+    crear_alumno(client, h_admin)
+    crear_alumno(client, h_admin, documento="1000000009")
+    tipos = [a["tipo"] for a in client.get(RES, headers=h_admin).json()["alertas"]]
+    assert "autorizacion" not in tipos  # todas las altas traen autorización
+
+    db.execute(text(
+        "UPDATE alumnos SET autoriza_datos_en = NULL, autoriza_datos_nombre = NULL, autoriza_imagen = NULL"
+    ))
+    db.commit()
+    alerta = next(a for a in client.get(RES, headers=h_admin).json()["alertas"] if a["tipo"] == "autorizacion")
+    assert alerta["titulo"] == "2 alumnos sin autorización de datos" and alerta["ruta"] == "/alumnos"

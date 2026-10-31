@@ -116,6 +116,7 @@ export class AlumnosPage implements OnInit {
   protected readonly eliminandoDocumento = signal<Documento | null>(null);
   protected readonly inscribiendo = signal(false);
   protected readonly abonando = signal(false);
+  protected readonly registrandoAutorizacion = signal(false);
   protected readonly eliminando = signal(false);
   /** Para confirmar hay que escribir el código del alumno (evita borrar por un clic). */
   protected readonly confirmacion = signal('');
@@ -146,6 +147,12 @@ export class AlumnosPage implements OnInit {
     email: ['', [Validators.email, Validators.maxLength(254)]],
   });
   protected readonly formDocumento = this.fb.group({ tipo: ['', Validators.required] });
+  /** Autorización de datos: quién la dio, si permite fotos y la confirmación de que quedó por escrito. */
+  protected readonly formAutorizacion = this.fb.group({
+    nombre: ['', Validators.maxLength(120)],
+    imagen: this.fb.control<'si' | 'no' | ''>(''),
+    confirmada: false,
+  });
   protected readonly formAbono = this.fb.group({
     monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(1), Validators.max(100_000_000)]),
     fecha_pago: [''], // vacía = hoy
@@ -297,6 +304,7 @@ export class AlumnosPage implements OnInit {
   // ---------- Alumno: crear / editar ----------
   protected abrirNuevo(): void {
     this.formAlumno.reset({ rama: '' });
+    this.formAutorizacion.reset();
     this.reiniciarAcudiente();
     this.reiniciarInscripcion();
     this.abrir(() => this.editandoAlumno.set('nuevo'));
@@ -329,9 +337,9 @@ export class AlumnosPage implements OnInit {
     };
 
     if (modo === 'nuevo') {
-      const error = this.problemaAcudiente(false) ?? this.problemaInscripcion();
+      const error = this.problemaAcudiente(false) ?? this.problemaAutorizacion() ?? this.problemaInscripcion();
       if (error) return this.errorDialogo.set(error);
-      const ficha = { ...base, tipo_documento: f.tipo_documento, documento: f.documento };
+      const ficha = { ...base, tipo_documento: f.tipo_documento, documento: f.documento, autorizacion: this.autorizacion() };
       const pago = this.formInscripcion.getRawValue();
       if (!this.puedeInscribir()) {
         // Sin permiso de inscribir solo se registra la ficha (hoy ningún rol está en ese caso).
@@ -364,6 +372,37 @@ export class AlumnosPage implements OnInit {
       this.reemplazar(a);
       this.documentoCompleto.set(null);
       this.avisar(null, 'Cambios guardados.');
+    }, true);
+  }
+
+  // ---------- Autorización de datos (Ley 1581) ----------
+  private problemaAutorizacion(): string | null {
+    const f = this.formAutorizacion.getRawValue();
+    if (f.nombre.trim().length < 3) return 'Escribe quién autorizó el tratamiento de datos.';
+    if (!f.imagen) return 'Indica si autorizó publicar fotos del alumno.';
+    if (!f.confirmada) return 'Confirma que la autorización quedó firmada o por escrito.';
+    return null;
+  }
+
+  private autorizacion(): { nombre: string; imagen: boolean } {
+    const f = this.formAutorizacion.getRawValue();
+    return { nombre: f.nombre.trim(), imagen: f.imagen === 'si' };
+  }
+
+  protected abrirAutorizacion(): void {
+    this.formAutorizacion.reset();
+    this.abrir(() => this.registrandoAutorizacion.set(true));
+  }
+
+  protected guardarAutorizacion(): void {
+    const a = this.alumno();
+    if (!a) return;
+    const error = this.problemaAutorizacion();
+    if (error) return this.errorDialogo.set(error);
+    this.ejecutar(this.http.put<Alumno>(`${alumnoUrl(a.id)}/autorizacion`, this.autorizacion()), (r) => {
+      this.registrandoAutorizacion.set(false);
+      this.reemplazar(r);
+      this.avisar(null, 'Autorización de datos registrada.');
     }, true);
   }
 

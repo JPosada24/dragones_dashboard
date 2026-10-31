@@ -581,3 +581,23 @@ h2 {
     display: inline-flex;
   }
 }
+
+/* Autorización de datos: si falta, la tarjeta se marca en rojo para que se registre. */
+.autorizacion[data-tono='mal'] {
+  border-left: 3px solid var(--tono);
+}
+
+.sin-autorizacion {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--texto-2);
+
+  .icono {
+    flex: none;
+    font-size: 18px;
+    color: var(--tono);
+  }
+}

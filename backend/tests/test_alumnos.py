@@ -1,4 +1,5 @@
 import json
+import uuid
 
 import pytest
 from sqlalchemy import select, text
@@ -235,4 +236,56 @@ def test_el_codigo_lo_pone_el_sistema(client, h_admin, db):
     crear_alumno(client, h_admin)
     with pytest.raises(IntegrityError):  # y la base de datos solo admite el formato F001 / M001
         db.execute(text("UPDATE alumnos SET codigo = 'X1'"))
+    db.rollback()
+
+
+# ---------- Autorización de tratamiento de datos (Ley 1581) ----------
+def test_alta_sin_autorizacion_de_datos_se_rechaza(client, h_admin):
+    datos = datos_alumno()
+    del datos["autorizacion"]
+    assert client.post(A, json=datos, headers=h_admin).status_code == 422
+    datos["autorizacion"] = {"nombre": "", "imagen": True}
+    assert client.post(A, json=datos, headers=h_admin).status_code == 422
+
+
+def test_alta_guarda_quien_autorizo_y_el_permiso_de_fotos(client, h_admin, db):
+    alumno = crear_alumno(client, h_admin, autorizacion={"nombre": "Marta Gómez (madre)", "imagen": False})
+    assert alumno["autorizacion"]["nombre"] == "Marta Gómez (madre)"
+    assert alumno["autorizacion"]["imagen"] is False and alumno["autorizacion"]["registrada_en"]
+    fila = db.get(Alumno, uuid.UUID(alumno["id"]))
+    assert fila.autoriza_datos_registro is not None
+
+
+def test_registrar_autorizacion_de_un_alumno_anterior(client, h_admin, crear_usuario, auth_header, db):
+    alumno = crear_alumno(client, h_admin)
+    db.execute(text(
+        "UPDATE alumnos SET autoriza_datos_en = NULL, autoriza_datos_nombre = NULL, autoriza_imagen = NULL,"
+        " autoriza_datos_registro = NULL"
+    ))
+    db.commit()
+    assert client.get(f"{A}/{alumno['id']}", headers=h_admin).json()["autorizacion"] is None
+
+    crear_usuario("coach@club.com", "ENTRENADOR")  # el entrenador inscribe, así que también la registra
+    h_coach = auth_header("coach@club.com")
+    r = client.put(f"{A}/{alumno['id']}/autorizacion", json={"nombre": "Laura Pérez", "imagen": True}, headers=h_coach)
+    assert r.status_code == 200, r.text
+    assert r.json()["autorizacion"]["nombre"] == "Laura Pérez"
+    # El nombre de quien autorizó no va a la auditoría.
+    registro = db.scalars(select(Auditoria).where(Auditoria.accion == "alumno.autorizacion")).one()
+    assert "Laura" not in json.dumps(registro.antes, default=str) + json.dumps(registro.despues, default=str)
+    assert registro.despues == {"registrada": True, "imagen": True}
+
+
+def test_la_familia_no_registra_autorizaciones(client, familia):
+    r = client.put(
+        f"{A}/{familia['hija']['id']}/autorizacion", json={"nombre": "Alguien", "imagen": True}, headers=familia["h"],
+    )
+    assert r.status_code == 403
+
+
+def test_autorizacion_a_medias_la_rechaza_la_base(db, client, h_admin):
+    alumno = crear_alumno(client, h_admin)
+    with pytest.raises(IntegrityError):
+        db.execute(text("UPDATE alumnos SET autoriza_imagen = NULL WHERE id = :id"), {"id": alumno["id"]})
+        db.flush()
     db.rollback()

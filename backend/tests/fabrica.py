@@ -35,7 +35,8 @@ def datos_acudiente(documento: str = "1000000001", **extra) -> dict:
 def datos_alumno(documento: str = "1000000002", anios: int = 20, rama: str = "femenina", **extra) -> dict:
     return {
         "nombres": "Laura", "apellidos": "Pérez", "tipo_documento": "CC" if anios >= 18 else "TI",
-        "documento": documento, "fecha_nacimiento": nacido_hace(anios), "rama": rama, **extra,
+        "documento": documento, "fecha_nacimiento": nacido_hace(anios), "rama": rama,
+        "autorizacion": {"nombre": "Marta Gómez", "imagen": True}, **extra,
     }
 
 

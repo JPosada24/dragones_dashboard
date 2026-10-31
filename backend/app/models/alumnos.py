@@ -28,6 +28,11 @@ class Alumno(UUIDMixin, TiempoMixin, Base):
         CheckConstraint(en("rama", RAMAS), name="ck_alumnos_rama"),
         CheckConstraint(en("tipo_documento", TIPOS_DOCUMENTO), name="ck_alumnos_tipo_documento"),
         CheckConstraint("codigo ~ '^[FM][0-9]{3,5}$'", name="ck_alumnos_codigo"),
+        CheckConstraint(
+            "(autoriza_datos_en IS NULL) = (autoriza_datos_nombre IS NULL)"
+            " AND (autoriza_datos_en IS NULL) = (autoriza_imagen IS NULL)",
+            name="ck_alumnos_autorizacion_completa",
+        ),
     )
 
     # F001, F002… (femenina) o M001… (masculina). Lo asigna el sistema; identifica el talonario en el sorteo.
@@ -48,6 +53,14 @@ class Alumno(UUIDMixin, TiempoMixin, Base):
     # Cuenta propia del alumno mayor de edad (rol Miembro).
     usuario_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"), unique=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Autorización de tratamiento de datos (Ley 1581): quién la dio, cuándo se registró, quién del club la
+    # registró y si permite publicar fotos donde aparezca. Null = aún no registrada (alumnos anteriores).
+    autoriza_datos_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    autoriza_datos_nombre: Mapped[str | None] = mapped_column(String(120))
+    autoriza_datos_registro: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("usuarios.id", name="fk_alumnos_autoriza_registro")
+    )
+    autoriza_imagen: Mapped[bool | None] = mapped_column(Boolean)
 
     vinculos: Mapped[list["AlumnoAcudiente"]] = relationship(
         back_populates="alumno", lazy="selectin", cascade="all, delete-orphan"

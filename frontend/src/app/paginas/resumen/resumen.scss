@@ -104,7 +104,8 @@ h2 {
   }
 
   &[data-tipo='inasistencias'],
-  &[data-tipo='riesgo_mora'] {
+  &[data-tipo='riesgo_mora'],
+  &[data-tipo='autorizacion'] {
     --tono: var(--oro);
   }
 }

@@ -23,7 +23,7 @@ DIAS_VENCE_PRONTO = 7
 
 @dataclass
 class Alerta:
-    tipo: str  # expulsion | justificaciones | vence_inscripcion | inasistencias | riesgo_mora
+    tipo: str  # expulsion | justificaciones | vence_inscripcion | inasistencias | riesgo_mora | autorizacion
     gravedad: int  # 1 = la más urgente
     titulo: str
     detalle: str
@@ -139,6 +139,15 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
                 "riesgo_mora", 3, f"{_nombre(s.alumno)} · deuda próxima a mora",
                 f"{formato_pesos(s.total_vencido)} sin pagar", f"el {formato_fecha(s.entra_en_mora)}", "/multas",
             ))
+    sin_autorizacion = db.scalar(
+        select(func.count(Alumno.id)).where(visibles, Alumno.activo.is_(True), Alumno.autoriza_datos_en.is_(None))
+    )
+    if sin_autorizacion:
+        r.alertas.append(Alerta(
+            "autorizacion", 3,
+            f"{sin_autorizacion} alumno{' sin' if sin_autorizacion == 1 else 's sin'} autorización de datos",
+            "Regístrala en la ficha de cada alumno (Ley 1581)", "", "/alumnos",
+        ))
     r.alertas.sort(key=lambda a: a.gravedad)
 
     # ---------- Entrenamiento de hoy ----------

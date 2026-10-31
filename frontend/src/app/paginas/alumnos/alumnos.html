@@ -211,6 +211,33 @@
             }
           </section>
 
+          <!-- Autorización de datos (Ley 1581) -->
+          @if (esStaff()) {
+            <section class="panel relleno autorizacion" [attr.data-tono]="a.autorizacion ? 'ok' : 'mal'">
+              <div class="fila-base">
+                <h2>Autorización de datos</h2>
+                @if (puedeEditar()) {
+                  <button type="button" class="boton secundario chico" (click)="abrirAutorizacion()">
+                    {{ a.autorizacion ? 'Actualizar' : 'Registrar' }}
+                  </button>
+                }
+              </div>
+              @if (a.autorizacion; as au) {
+                <dl class="datos">
+                  <div><dt>Autorizó</dt><dd>{{ au.nombre }}</dd></div>
+                  <div><dt>Registrada</dt><dd>{{ au.registrada_en | date: 'd MMM y' }}</dd></div>
+                  <div><dt>Fotos en el sitio</dt><dd>{{ au.imagen ? 'Sí autoriza' : 'No autoriza: no publicar fotos donde aparezca' }}</dd></div>
+                </dl>
+              } @else {
+                <p class="sin-autorizacion" role="status">
+                  <span class="icono" aria-hidden="true">warning</span>
+                  <span>Sin autorización registrada. Por ley, el club necesita la autorización del acudiente (o del
+                  alumno mayor de edad) para tratar sus datos.</span>
+                </p>
+              }
+            </section>
+          }
+
           <!-- Estado de cuenta -->
           @if (cuenta(); as c) {
             <section class="panel relleno">
@@ -372,6 +399,10 @@
           <legend>Acudiente <span class="nota-chica">(obligatorio si es menor de edad)</span></legend>
           <ng-container *ngTemplateOutlet="acudienteCampos" />
         </fieldset>
+        <fieldset class="grupo-acudiente">
+          <legend>Autorización de datos <span class="nota-chica">(Ley 1581: obligatoria)</span></legend>
+          <ng-container *ngTemplateOutlet="autorizacionCampos" />
+        </fieldset>
         @if (puedeInscribir()) {
           <fieldset class="grupo-acudiente">
             <legend>Inscripción {{ hoy.slice(0, 4) }} <span class="nota-chica">(30 días para completar el pago; se aceptan abonos)</span></legend>
@@ -441,6 +472,27 @@
   </div>
 </ng-template>
 
+<!-- Autorización de datos (en "Nuevo alumno" y en "Autorización de datos") -->
+<ng-template #autorizacionCampos>
+  <div class="formulario" [formGroup]="formAutorizacion">
+    <div class="rejilla">
+      <label class="campo"><span class="etiqueta">Quién autorizó</span>
+        <input class="control" formControlName="nombre" maxlength="120" autocomplete="off"
+               placeholder="Ej.: Marta Gómez (madre)" /></label>
+      <label class="campo"><span class="etiqueta">Fotos en el sitio</span>
+        <select class="control" formControlName="imagen">
+          <option value="" disabled>Selecciona…</option>
+          <option value="si">Sí autoriza publicar fotos</option>
+          <option value="no">No autoriza publicar fotos</option>
+        </select></label>
+    </div>
+    <label class="casilla">
+      <input type="checkbox" formControlName="confirmada" />
+      <span>El acudiente (o el alumno mayor de edad) firmó o aceptó por escrito la política de tratamiento de datos del club.</span>
+    </label>
+  </div>
+</ng-template>
+
 <!-- Inscripción del año y primer abono (en "Nuevo alumno" y en "Inscribir") -->
 <ng-template #inscripcionCampos>
   <div class="formulario" [formGroup]="formInscripcion">
@@ -460,6 +512,21 @@
     }
   </div>
 </ng-template>
+
+@if (registrandoAutorizacion() && alumno(); as a) {
+  <app-dialogo titulo="Autorización de datos" [descripcion]="a.nombres + ' ' + a.apellidos + ' · ' + a.codigo"
+               (cerrar)="registrandoAutorizacion.set(false)">
+    <form class="formulario" [formGroup]="formAutorizacion" (ngSubmit)="guardarAutorizacion()">
+      <ng-container *ngTemplateOutlet="autorizacionCampos" />
+      <p class="nota-campo">Guarda el formato firmado (o el mensaje) en los documentos del alumno, tipo «Consentimiento informado».</p>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="registrandoAutorizacion.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
 
 @if (inscribiendo()) {
   <app-dialogo [titulo]="'Inscripción ' + hoy.slice(0, 4)" (cerrar)="inscribiendo.set(false)"

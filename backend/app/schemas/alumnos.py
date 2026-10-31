@@ -90,6 +90,19 @@ class VinculoIn(_Entrada):
     principal: bool = False
 
 
+class AutorizacionIn(_Entrada):
+    """Autorización de tratamiento de datos (Ley 1581) que dio el acudiente o el alumno mayor de edad."""
+
+    nombre: str = Field(min_length=3, max_length=120)  # quién autorizó
+    imagen: bool  # si permite publicar fotos donde aparezca el alumno
+
+
+class AutorizacionOut(BaseModel):
+    nombre: str
+    imagen: bool
+    registrada_en: datetime
+
+
 class AlumnoCrear(_Entrada):
     nombres: str = Field(min_length=2, max_length=80)
     apellidos: str = Field(min_length=2, max_length=80)
@@ -103,6 +116,7 @@ class AlumnoCrear(_Entrada):
     eps: str | None = Field(default=None, max_length=80)
     usuario_id: uuid.UUID | None = None
     acudientes: list[VinculoIn] = Field(default_factory=list, max_length=5)
+    autorizacion: AutorizacionIn  # obligatoria: sin ella no se pueden tratar los datos
 
 
 class AlumnoActualizar(_SinNulos):
@@ -152,6 +166,7 @@ class AlumnoOut(BaseModel):
     activo: bool
     inscripcion_estado: str | None  # del año en curso
     acudientes: list[AcudienteVinculadoOut]
+    autorizacion: AutorizacionOut | None  # None = aún no registrada
 
 
 class DocumentoIdentidadOut(BaseModel):
