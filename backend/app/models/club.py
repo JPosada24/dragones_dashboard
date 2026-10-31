@@ -16,13 +16,17 @@ class PerfilClub(Base):
     """Una sola fila (id = 1) con los textos y contactos del sitio."""
 
     __tablename__ = "perfil_club"
-    __table_args__ = (CheckConstraint("id = 1", name="ck_perfil_club_unico"),)
+    __table_args__ = (
+        CheckConstraint("id = 1", name="ck_perfil_club_unico"),
+        CheckConstraint("fundado_en BETWEEN 1900 AND 2100", name="ck_perfil_club_fundado"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     nombre: Mapped[str] = mapped_column(String(120))
     lema: Mapped[str | None] = mapped_column(String(160))
     ciudad: Mapped[str | None] = mapped_column(String(80))
     sede: Mapped[str | None] = mapped_column(String(160))  # lugar de entrenamiento
+    fundado_en: Mapped[int | None] = mapped_column(Integer)  # año: el sitio calcula los años del club
     mision: Mapped[str | None] = mapped_column(Text)
     vision: Mapped[str | None] = mapped_column(Text)
     historia: Mapped[str | None] = mapped_column(Text)

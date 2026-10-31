@@ -9,7 +9,7 @@ from app.models.notificaciones import Notificacion
 from app.models.torneos import EquipoTorneo
 from app.services.club import youtube_id
 from app.services.errores import ErrorNegocio
-from tests.fabrica import T, crear_torneo
+from tests.fabrica import T, alumno_inscrito, crear_torneo
 
 C = "/api/v1/club"
 P = "/api/v1/publico"
@@ -165,3 +165,17 @@ def test_trampa_de_bots_y_limite_por_ip(client, h_admin, reloj, db):
         client.post(url, json={**DATOS_CLUB, "nombre_club": f"Club {i}"})
     r = client.post(url, json={**DATOS_CLUB, "nombre_club": "Uno más"})
     assert r.status_code == 429
+
+
+def test_cifras_publicas_solo_totales(client, h_admin, reloj):
+    alumno_inscrito(client, h_admin, documento="2000000001", rama="femenina")
+    alumno_inscrito(client, h_admin, documento="2000000002", rama="femenina")
+    alumno_inscrito(client, h_admin, documento="2000000003", rama="masculina")
+    crear_torneo(client, h_admin)
+    client.put("/api/v1/sesiones/horario", headers=h_admin, json={"dias": [
+        {"dia_semana": d, "hora_inicio": "18:00", "hora_fin": "20:00"} for d in (0, 2, 5)]})
+    publicar(client, h_admin, fundado_en=2018)
+    c = client.get(f"{P}/club").json()["cifras"]
+    assert c == {"deportistas_activos": 3, "femenina": 2, "masculina": 1, "entrenamientos_semana": 3,
+                 "torneos_anio": 1, "anios": 8}
+    assert client.patch(f"{C}/perfil", json={"fundado_en": 1800}, headers=h_admin).status_code == 422

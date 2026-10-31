@@ -8,7 +8,7 @@ import { SitioPage } from './sitio';
 
 const SITIO = {
   perfil: {
-    nombre: 'Club Dragones', lema: 'Garra y corazón', ciudad: 'Manizales', sede: 'Coliseo', mision: '<b>Formar</b>',
+    nombre: 'Club Dragones', lema: 'Garra y corazón', ciudad: 'Manizales', sede: 'Coliseo', fundado_en: null, mision: '<b>Formar</b>',
     vision: null, historia: null, whatsapp: '3001234567', correo: 'contacto@club.com', instagram: 'dragones',
     facebook: null, publicado: true,
   },

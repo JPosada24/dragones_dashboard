@@ -127,6 +127,7 @@
           <dt>Lema</dt><dd>{{ p.perfil.lema || '—' }}</dd>
           <dt>Ciudad</dt><dd>{{ p.perfil.ciudad || '—' }}</dd>
           <dt>Sede</dt><dd>{{ p.perfil.sede || '—' }}</dd>
+          <dt>Fundado en</dt><dd class="mono">{{ p.perfil.fundado_en || '—' }}</dd>
           <dt>WhatsApp</dt><dd class="mono">{{ p.perfil.whatsapp || '—' }}</dd>
           <dt>Correo</dt><dd>{{ p.perfil.correo || '—' }}</dd>
           <dt>Instagram</dt><dd>{{ p.perfil.instagram ? '@' + p.perfil.instagram : '—' }}</dd>
@@ -194,6 +195,8 @@
           <input class="control" formControlName="ciudad" maxlength="80" placeholder="Ej.: Manizales" /></label>
         <label class="campo"><span class="etiqueta">Sede de entrenamiento</span>
           <input class="control" formControlName="sede" maxlength="160" placeholder="Ej.: Coliseo menor" /></label>
+        <label class="campo"><span class="etiqueta">Año de fundación</span>
+          <input class="control mono" formControlName="fundado_en" inputmode="numeric" maxlength="4" placeholder="Ej.: 2018" /></label>
         <label class="campo"><span class="etiqueta">WhatsApp del club</span>
           <input class="control mono" formControlName="whatsapp" inputmode="tel" placeholder="Ej.: 3001234567" /></label>
         <label class="campo"><span class="etiqueta">Correo</span>

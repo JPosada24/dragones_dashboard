@@ -69,6 +69,7 @@ export class PerfilClubPage implements OnInit {
     lema: ['', Validators.maxLength(160)],
     ciudad: ['', Validators.maxLength(80)],
     sede: ['', Validators.maxLength(160)],
+    fundado_en: ['', Validators.pattern(/^(19|20)\d{2}$/)],
     whatsapp: [''],
     correo: ['', Validators.email],
     instagram: [''],
@@ -180,18 +181,20 @@ export class PerfilClubPage implements OnInit {
     const p = this.panel()?.perfil;
     if (!p) return;
     this.formDatos.reset({
-      nombre: p.nombre, lema: p.lema ?? '', ciudad: p.ciudad ?? '', sede: p.sede ?? '', whatsapp: p.whatsapp ?? '',
+      nombre: p.nombre, lema: p.lema ?? '', ciudad: p.ciudad ?? '', sede: p.sede ?? '',
+      fundado_en: p.fundado_en ? String(p.fundado_en) : '', whatsapp: p.whatsapp ?? '',
       correo: p.correo ?? '', instagram: p.instagram ?? '', facebook: p.facebook ?? '',
     });
     this.abrir(() => this.editandoDatos.set(true));
   }
 
   protected guardarDatos(): void {
-    if (this.formDatos.invalid) return this.errorDialogo.set('Revisa el nombre del club y el correo.');
+    if (this.formDatos.invalid) return this.errorDialogo.set('Revisa el nombre del club, el año de fundación y el correo.');
     const f = this.formDatos.getRawValue();
     const vacio = (v: string) => v.trim() || null;
     this.guardarPerfil({
       nombre: f.nombre.trim(), lema: vacio(f.lema), ciudad: vacio(f.ciudad), sede: vacio(f.sede),
+      fundado_en: f.fundado_en.trim() ? Number(f.fundado_en) : null,
       whatsapp: vacio(f.whatsapp), correo: vacio(f.correo), instagram: vacio(f.instagram), facebook: vacio(f.facebook),
     }, 'Datos del club actualizados.', true, () => this.editandoDatos.set(false));
   }

@@ -8,7 +8,7 @@ import { PerfilClubPage } from './perfil-club';
 
 const PANEL = {
   perfil: {
-    nombre: 'Club Dragones', lema: null, ciudad: null, sede: null, mision: 'Formar deportistas', vision: null,
+    nombre: 'Club Dragones', lema: null, ciudad: null, sede: null, fundado_en: null, mision: 'Formar deportistas', vision: null,
     historia: null, whatsapp: null, correo: null, instagram: null, facebook: null, publicado: false,
   },
   albumes: [{ id: 'a1', nombre: 'Copa', fecha: null, publicado: false, fotos: [{ id: 'f1', ancho: 10, alto: 10 }] }],

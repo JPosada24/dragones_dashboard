@@ -10,6 +10,7 @@ from app.core.limites import limitador_sitio
 from app.db.session import get_db
 from app.schemas.club import (
     AlbumOut,
+    CifrasOut,
     HorarioPublicoOut,
     InscripcionSitioIn,
     InscripcionSitioOut,
@@ -34,6 +35,7 @@ def sitio(db: Session = Depends(get_db)) -> SitioOut:
     d = servicio.publico(db)
     return SitioOut(
         perfil=PerfilOut.model_validate(d["perfil"]),
+        cifras=CifrasOut(**d["cifras"]),
         horario=[HorarioPublicoOut.model_validate(h) for h in d["horario"]],
         albumes=[AlbumOut.model_validate(a) for a in d["albumes"]],
         videos=[VideoOut.model_validate(v) for v in d["videos"]],

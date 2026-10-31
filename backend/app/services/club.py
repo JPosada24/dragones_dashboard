@@ -7,13 +7,15 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from PIL import Image, ImageOps, UnidentifiedImageError
-from sqlalchemy import select
+from sqlalchemy import extract, func, select
 from sqlalchemy.orm import Session
 
 from app.core import fechas
 from app.models.acceso import Usuario
+from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import HorarioEntrenamiento
 from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, Video
+from app.models.dominio import ESTADOS_VIGENTES
 from app.models.torneos import EquipoTorneo, Torneo
 from app.services import auditoria, configuracion, notificaciones, torneos
 from app.services.errores import ErrorNegocio, NoEncontrado
@@ -153,6 +155,26 @@ def torneos_abiertos(db: Session) -> list[tuple[Torneo, int]]:
     return [(t, max(0, t.cupo_equipos - torneos.resumen(db, t)["ocupados"])) for t in filas]
 
 
+def cifras(db: Session, p: PerfilClub) -> dict[str, Any]:
+    """Totales para la portada del sitio. Solo números agregados: nada identifica a un alumno."""
+    hoy = fechas.hoy()
+    por_rama = dict(db.execute(
+        select(Alumno.rama, func.count(func.distinct(Alumno.id)))
+        .join(Inscripcion, Inscripcion.alumno_id == Alumno.id)
+        .where(Alumno.activo.is_(True), Inscripcion.anio == hoy.year, Inscripcion.estado.in_(ESTADOS_VIGENTES))
+        .group_by(Alumno.rama)
+    ).all())
+    return {
+        "deportistas_activos": sum(por_rama.values()),
+        "femenina": por_rama.get("femenina", 0),
+        "masculina": por_rama.get("masculina", 0),
+        "entrenamientos_semana": db.scalar(select(func.count()).select_from(HorarioEntrenamiento)) or 0,
+        "torneos_anio": db.scalar(select(func.count()).select_from(Torneo).where(
+            extract("year", Torneo.fecha_inicio) == hoy.year, Torneo.estado == "programado")) or 0,
+        "anios": hoy.year - p.fundado_en if p.fundado_en and p.fundado_en <= hoy.year else None,
+    }
+
+
 def publico(db: Session) -> dict[str, Any]:
     p = perfil(db)
     if not p.publicado:
@@ -162,6 +184,7 @@ def publico(db: Session) -> dict[str, Any]:
     ).all()
     return {
         "perfil": p,
+        "cifras": cifras(db, p),
         "horario": db.scalars(select(HorarioEntrenamiento).order_by(
             HorarioEntrenamiento.dia_semana, HorarioEntrenamiento.hora_inicio)).all(),
         "albumes": [a for a in albumes if a.fotos],

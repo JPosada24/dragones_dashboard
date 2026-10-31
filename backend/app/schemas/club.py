@@ -27,6 +27,7 @@ class PerfilIn(_Entrada):
     lema: str | None = _texto(160)
     ciudad: str | None = _texto(80)
     sede: str | None = _texto(160)
+    fundado_en: int | None = Field(default=None, ge=1900, le=2100)
     mision: str | None = _texto(2000)
     vision: str | None = _texto(2000)
     historia: str | None = _texto(4000)
@@ -70,6 +71,7 @@ class PerfilOut(BaseModel):
     lema: str | None
     ciudad: str | None
     sede: str | None
+    fundado_en: int | None
     mision: str | None
     vision: str | None
     historia: str | None
@@ -186,8 +188,20 @@ class TorneoPublicoOut(BaseModel):
     cupos_libres: int
 
 
+class CifrasOut(BaseModel):
+    """Totales del club para el sitio (nunca datos de una persona)."""
+
+    deportistas_activos: int  # con inscripción vigente este año (misma definición que el Resumen)
+    femenina: int
+    masculina: int
+    entrenamientos_semana: int  # días del horario semanal
+    torneos_anio: int  # torneos que organiza el club este año (sin cancelados)
+    anios: int | None  # desde el año de fundación, si está
+
+
 class SitioOut(BaseModel):
     perfil: PerfilOut
+    cifras: CifrasOut
     horario: list[HorarioPublicoOut]
     albumes: list[AlbumOut]
     videos: list[VideoOut]

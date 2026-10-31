@@ -4,6 +4,7 @@ export interface PerfilClub {
   lema: string | null;
   ciudad: string | null;
   sede: string | null;
+  fundado_en: number | null;
   mision: string | null;
   vision: string | null;
   historia: string | null;

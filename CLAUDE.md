@@ -316,7 +316,11 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   torneos con inscripción) y si la API no responde deja su contenido fijo. URL de la API en su `site.config.json`
   (`apiUrl`/`API_URL`); su CSP solo se abre hacia esa API. En la plataforma, `core/cors.py` (`CorsSitio`):
   los orígenes de `SITIO_ORIGENES` solo pueden usar `/api/v1/publico/*` (GET/POST) y **sin credenciales**
-  (el CORS del panel sí las permite). La página `/sitio` de la plataforma queda como vista previa. 224 pruebas backend.
+  (el CORS del panel sí las permite). La página `/sitio` de la plataforma queda como vista previa.
+  Migración 0019 (`perfil_club.fundado_en`): `GET /publico/club` trae `cifras` (solo totales: deportistas con
+  inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
+  portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno
+  con rama femenina y masculina (solo en el sitio; la plataforma aún no modela niveles). 225 pruebas backend, 99 frontend.
 - SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)
