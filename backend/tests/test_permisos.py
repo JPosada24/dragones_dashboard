@@ -161,3 +161,48 @@ def test_matriz_de_roles_solo_lectura_para_quien_ve_la_configuracion(client, cre
     assert {p["codigo"] for p in datos["permisos"]} >= por_rol["SUPERADMIN"]
     # Quien no ve la configuración tampoco ve la matriz.
     assert client.get("/api/v1/configuracion/roles", headers=auth_header("ent@club.com")).status_code == 403
+
+
+# ---------- Eliminar usuarios (solo SuperAdmin) ----------
+def test_solo_el_superadmin_elimina_usuarios(client, crear_usuario, auth_header):
+    crear_usuario("adm@club.com", "ADMIN")
+    crear_usuario("coach@club.com", "ENTRENADOR")
+    victima = crear_usuario("otro@club.com", "ENTRENADOR")
+    for email in ("adm@club.com", "coach@club.com"):
+        r = client.delete(f"/api/v1/usuarios/{victima.id}", headers=auth_header(email))
+        assert r.status_code == 403
+
+
+def test_eliminar_usuario_le_quita_el_acceso_y_libera_el_correo(client, crear_usuario, auth_header, login, db):
+    from sqlalchemy import select
+
+    from app.models.sistema import Auditoria
+    from tests.fabrica import crear_menor
+
+    crear_usuario("root@club.com", "SUPERADMIN")
+    h = auth_header("root@club.com")
+    hija = crear_menor(client, h)
+    cuenta = {"email": "marta@club.com", "nombre": "Marta Gómez", "password": PASSWORD, "rol": "MIEMBRO",
+              "vincular_acudiente_id": hija["acudientes"][0]["acudiente_id"]}
+    marta = client.post("/api/v1/usuarios", json=cuenta, headers=h).json()
+    h_marta = auth_header("marta@club.com")
+
+    assert client.delete(f"/api/v1/usuarios/{marta['id']}", headers=h).status_code == 204
+    # Pierde el acceso de inmediato y ya no puede entrar.
+    assert client.get("/api/v1/auth/me", headers=h_marta).status_code == 401
+    assert login("marta@club.com").status_code == 401
+    # Desaparece de la lista; no se edita ni se elimina otra vez.
+    assert "marta@club.com" not in [u["email"] for u in client.get("/api/v1/usuarios", headers=h).json()]
+    assert client.patch(f"/api/v1/usuarios/{marta['id']}", json={"nombre": "Otro Nombre"}, headers=h).status_code == 404
+    assert client.delete(f"/api/v1/usuarios/{marta['id']}", headers=h).status_code == 404
+    # La acudiente y la alumna siguen; el correo queda libre para una cuenta nueva.
+    assert client.get(f"/api/v1/alumnos/{hija['id']}", headers=h).status_code == 200
+    assert client.post("/api/v1/usuarios", json=cuenta, headers=h).status_code == 201
+    registro = db.scalars(select(Auditoria).where(Auditoria.accion == "usuario.eliminar")).one()
+    assert "marta@club.com" not in str(registro.antes) + str(registro.despues)
+
+
+def test_nadie_se_elimina_a_si_mismo(client, crear_usuario, auth_header):
+    root = crear_usuario("root@club.com", "SUPERADMIN")
+    r = client.delete(f"/api/v1/usuarios/{root.id}", headers=auth_header("root@club.com"))
+    assert r.status_code == 422 and "propia" in r.json()["detail"]

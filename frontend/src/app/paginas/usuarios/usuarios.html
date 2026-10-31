@@ -45,6 +45,11 @@
                     title="Cambiar contraseña"><span class="icono" aria-hidden="true">key</span></button>
             <button type="button" class="boton-icono" (click)="abrirEditar(u)" [attr.aria-label]="'Editar la cuenta de ' + u.nombre"
                     title="Editar"><span class="icono" aria-hidden="true">edit</span></button>
+            @if (puedeEliminar() && u.id !== yo()) {
+              <button type="button" class="boton-icono peligro" (click)="abrirEliminar(u)"
+                      [attr.aria-label]="'Eliminar la cuenta de ' + u.nombre" title="Eliminar">
+                <span class="icono" aria-hidden="true">delete</span></button>
+            }
           </span>
         </li>
       } @empty {
@@ -149,6 +154,25 @@
         <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
       </div>
     </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Eliminar ---------- -->
+@if (eliminando(); as u) {
+  <app-dialogo titulo="Eliminar cuenta" [descripcion]="u.nombre + ' · ' + u.email" (cerrar)="eliminando.set(null)">
+    <p class="advertencia">
+      La persona pierde el acceso de inmediato y la cuenta desaparece de la lista. No se puede deshacer.
+    </p>
+    <ul class="nota-chica lista-efectos">
+      <li>Su correo queda libre: puedes crearle una cuenta nueva más adelante.</li>
+      @if (u.vinculado_a) { <li>{{ u.vinculado_a }}: sus datos se conservan, solo pierde la cuenta.</li> }
+      <li>Lo que registró (pagos, asistencias, auditoría) se conserva con su nombre.</li>
+    </ul>
+    @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+    <div class="acciones">
+      <button type="button" class="boton secundario" (click)="eliminando.set(null)">Cancelar</button>
+      <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="eliminar()">Eliminar cuenta</button>
+    </div>
   </app-dialogo>
 }
 

@@ -352,6 +352,12 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   anteriores. La auditoría guarda solo registrada/imagen (nunca el nombre). `AlumnoOut.autorizacion` (null = falta).
   Panel: campos en el alta, tarjeta «Autorización de datos» en la ficha (roja si falta, «Registrar»/«Actualizar») y
   alerta del Resumen «N alumnos sin autorización de datos». 238 pruebas backend, 110 frontend.
+- HECHO (eliminar usuarios, 2026-10-31): migración 0023 (`usuarios.eliminado_en`) y permiso `usuarios.eliminar`
+  (solo SA; lo siembra el catálogo). `DELETE /usuarios/{id}`: la fila **no se borra** (27 FKs: pagos, asistencias,
+  auditoría guardan quién registró): se conserva el nombre, el correo pasa a `eliminado-<id>@usuarios.invalid`
+  (queda libre), contraseña aleatoria, inactivo, `credenciales_version`+1 y sesiones revocadas; se desvincula del
+  alumno/acudiente. Fuera de la lista; PATCH/DELETE posteriores → 404. Nadie se elimina a sí mismo. Auditoría sin
+  correo. Panel: papelera por cuenta con confirmación. 241 pruebas backend, 112 frontend.
 - SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)

@@ -2,6 +2,7 @@
 
 PERMISOS: dict[str, str] = {
     "usuarios.gestionar": "Crear usuarios, cambiar roles y desactivar cuentas",
+    "usuarios.eliminar": "Eliminar una cuenta de usuario (no se puede deshacer)",
     "config.ver": "Ver los parámetros del club",
     "config.editar": "Cambiar parámetros críticos (multa, plazos, políticas)",
     "auditoria.ver": "Consultar la bitácora de auditoría",

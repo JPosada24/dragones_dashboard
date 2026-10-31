@@ -60,6 +60,7 @@ export class UsuariosPage implements OnInit {
   protected readonly roles = ROLES;
   protected readonly nombreRol = NOMBRE_ROL;
   protected readonly yo = computed(() => this.auth.usuario()?.id ?? null);
+  protected readonly puedeEliminar = computed(() => this.auth.tiene('usuarios.eliminar'));
 
   protected readonly usuarios = signal<UsuarioLista[] | null>(null);
   protected readonly buscar = signal('');
@@ -73,6 +74,7 @@ export class UsuariosPage implements OnInit {
   protected readonly creando = signal(false);
   protected readonly editando = signal<UsuarioLista | null>(null);
   protected readonly cambiandoClave = signal<UsuarioLista | null>(null);
+  protected readonly eliminando = signal<UsuarioLista | null>(null);
   /** Contraseña recién asignada: se muestra una vez para entregarla a la persona. */
   protected readonly claveEntregada = signal<{ email: string; clave: string } | null>(null);
   protected readonly candidatos = signal<Alumno[] | null>(null);
@@ -226,6 +228,21 @@ export class UsuariosPage implements OnInit {
     this.ejecutar(this.http.patch<Usuario>(`${API}/usuarios/${encodeURIComponent(u.id)}`, { password }), () => {
       this.cambiandoClave.set(null);
       this.claveEntregada.set({ email: u.email, clave: password });
+    });
+  }
+
+  // ---------- Eliminar (solo SuperAdmin) ----------
+  protected abrirEliminar(u: UsuarioLista): void {
+    this.abrir(() => this.eliminando.set(u));
+  }
+
+  protected eliminar(): void {
+    const u = this.eliminando();
+    if (!u) return;
+    this.ejecutar(this.http.delete(`${API}/usuarios/${encodeURIComponent(u.id)}`), () => {
+      this.eliminando.set(null);
+      this.usuarios.update((l) => l?.filter((x) => x.id !== u.id) ?? l);
+      this.avisar(`Se eliminó la cuenta de ${u.nombre}.`);
     });
   }
 

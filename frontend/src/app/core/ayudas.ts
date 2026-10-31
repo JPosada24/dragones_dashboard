@@ -152,6 +152,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Entrenador', texto: 'Asistente general (ambas ramas): alumnos, asistencia e inscripciones con abonos. No cobra multas ni rifas, no ve el documento completo ni cambia el horario.' },
       { titulo: 'Miembro', texto: 'Acudiente o alumno mayor de edad: solo consulta lo suyo. Al crear la cuenta se elige a qué alumno pertenece.' },
       { titulo: 'Contraseña', texto: 'La llave cambia la contraseña y cierra sus sesiones abiertas. Desactivar una cuenta le impide entrar sin borrar nada.' },
+      { titulo: 'Eliminar', texto: 'La papelera (solo el SuperAdmin) elimina la cuenta: la persona pierde el acceso al instante y su correo queda libre. Lo que registró (pagos, asistencias, auditoría) se conserva con su nombre, y el alumno o acudiente vinculado sigue intacto. Nadie puede eliminar su propia cuenta.', permisos: ['usuarios.eliminar'] },
     ],
   },
 };

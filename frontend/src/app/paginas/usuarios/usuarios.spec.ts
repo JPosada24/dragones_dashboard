@@ -118,6 +118,26 @@ describe('UsuariosPage', () => {
     expect(dialogo().textContent).toContain('no puedes cambiar tu propio rol');
   });
 
+  it('sin el permiso no aparece la opción de eliminar', () => {
+    expect(el().querySelector('[aria-label^="Eliminar la cuenta"]')).toBeNull();
+  });
+
+  it('el SuperAdmin elimina otra cuenta (nunca la suya) tras confirmar', async () => {
+    TestBed.inject(AuthService).usuario.set({ ...YO, permisos: ['usuarios.gestionar', 'usuarios.eliminar'] });
+    await estable();
+    expect(el().querySelector('[aria-label="Eliminar la cuenta de Dueño"]')).toBeNull();
+    el().querySelector<HTMLButtonElement>('[aria-label="Eliminar la cuenta de Marta Gómez"]')!.click();
+    await estable();
+    expect(dialogo().textContent).toContain('Acudiente de F001 Laura: sus datos se conservan');
+    boton('Eliminar cuenta', dialogo())!.click();
+    const r = backend.expectOne(`${API}/usuarios/u3`);
+    expect(r.request.method).toBe('DELETE');
+    r.flush(null, { status: 204, statusText: 'No Content' });
+    await estable();
+    expect(el().textContent).not.toContain('marta@club.com');
+    expect(el().textContent).toContain('Se eliminó la cuenta de Marta Gómez');
+  });
+
   it('restablece la contraseña de otra cuenta', async () => {
     el().querySelector<HTMLButtonElement>('[aria-label="Cambiar la contraseña de Ana Coach"]')!.click();
     await estable();

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -36,7 +36,9 @@ def listar(
     _: Usuario = Depends(requiere("usuarios.gestionar")),
     db: Session = Depends(get_db),
 ) -> list[UsuarioListaOut]:
-    filas = list(db.scalars(select(Usuario).order_by(Usuario.nombre).offset(skip).limit(limit)))
+    filas = list(db.scalars(
+        select(Usuario).where(Usuario.eliminado_en.is_(None)).order_by(Usuario.nombre).offset(skip).limit(limit)
+    ))
     vinculos = _vinculos(db, [u.id for u in filas])
     return [UsuarioListaOut(**usuario_a_out(u).model_dump(), vinculado_a=vinculos.get(u.id)) for u in filas]
 
@@ -61,6 +63,13 @@ def _vincular(db: Session, usuario: Usuario, datos: UsuarioCrear) -> str | None:
         raise Conflicto("Ese alumno o acudiente ya tiene una cuenta.")
     destino.usuario_id = usuario.id
     return f"{'alumno' if isinstance(destino, Alumno) else 'acudiente'}:{destino.id}"
+
+
+def _obtener(db: Session, usuario_id: uuid.UUID) -> Usuario:
+    usuario = db.get(Usuario, usuario_id)
+    if usuario is None or usuario.eliminado_en is not None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    return usuario
 
 
 @router.post("", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
@@ -97,9 +106,7 @@ def actualizar(
     actor: Usuario = Depends(requiere("usuarios.gestionar")),
     db: Session = Depends(get_db),
 ) -> UsuarioOut:
-    usuario = db.get(Usuario, usuario_id)
-    if usuario is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    usuario = _obtener(db, usuario_id)
     if usuario.id == actor.id and (datos.activo is False or (datos.rol and datos.rol != usuario.rol.codigo)):
         # Evita que el único SuperAdmin se quite el acceso a sí mismo.
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No puedes cambiar tu propio rol ni desactivarte")
@@ -132,3 +139,15 @@ def actualizar(
     )
     db.commit()
     return usuario_a_out(usuario)
+
+
+@router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar(
+    usuario_id: uuid.UUID,
+    request: Request,
+    actor: Usuario = Depends(requiere("usuarios.eliminar")),  # solo el SuperAdmin
+    db: Session = Depends(get_db),
+) -> Response:
+    servicio.eliminar_usuario(db, _obtener(db, usuario_id), actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

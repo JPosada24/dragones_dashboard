@@ -44,6 +44,9 @@ class Usuario(UUIDMixin, TiempoMixin, Base):
     ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Va dentro del token de acceso; sube al cambiar la contraseña o el rol y los tokens anteriores dejan de valer.
     credenciales_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # Eliminado por el SuperAdmin: sin acceso, sin correo (se libera) y fuera de la lista; la fila queda porque
+    # pagos, asistencias y auditoría guardan quién los registró.
+    eliminado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     rol: Mapped[Rol] = relationship(lazy="joined")
 
