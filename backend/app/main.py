@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+from app.core.cors import CorsSitio
 from app.core.limites import LimiteCuerpo
 from app.services.errores import ErrorNegocio
 
@@ -26,6 +27,9 @@ def crear_app() -> FastAPI:
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
     )
+
+    # El sitio público (otro dominio) solo usa /publico y sin credenciales; va por fuera del CORS del panel.
+    app.add_middleware(CorsSitio, origenes=s.sitio_origenes_lista)
 
     # Tope de tamaño antes que nada: una petición gigante no llega a leerse entera.
     app.add_middleware(LimiteCuerpo, max_bytes=s.max_cuerpo_mb * 1024 * 1024)

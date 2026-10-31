@@ -311,6 +311,12 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   enlaces al ingreso** (la URL del panel la tiene el staff); escudo oficial `public/escudo.png` (82 px, no agrandar);
   menú con `routerLink="/sitio" fragment=…` + `anchorScrolling` (un `href="#x"` iría a la raíz = panel). En Torneos, etiqueta
   «desde el sitio». 221 pruebas backend, 98 frontend.
+- HECHO (sitio oficial conectado, 2026-10-31): el sitio público oficial es el proyecto aparte **DVC_CLAUDE** (Angular 22
+  prerenderizado, Netlify; git local propio). Lee `GET /api/v1/publico/club` en el navegador (equipo, galería,
+  torneos con inscripción) y si la API no responde deja su contenido fijo. URL de la API en su `site.config.json`
+  (`apiUrl`/`API_URL`); su CSP solo se abre hacia esa API. En la plataforma, `core/cors.py` (`CorsSitio`):
+  los orígenes de `SITIO_ORIGENES` solo pueden usar `/api/v1/publico/*` (GET/POST) y **sin credenciales**
+  (el CORS del panel sí las permite). La página `/sitio` de la plataforma queda como vista previa. 224 pruebas backend.
 - SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)

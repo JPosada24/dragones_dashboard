@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     refresh_token_dias: int = 7
     cookie_secure: bool = False
     cors_origins: str = "http://localhost:4200"
+    # Dominios del sitio público del club (otro proyecto): solo pueden leer /api/v1/publico, sin credenciales.
+    sitio_origenes: str = ""
 
     max_intentos_login: int = 5
     bloqueo_minutos: int = 15
@@ -88,6 +90,10 @@ class Settings(BaseSettings):
     @property
     def cors_lista(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def sitio_origenes_lista(self) -> list[str]:
+        return [o.strip() for o in self.sitio_origenes.split(",") if o.strip()]
 
     @model_validator(mode="after")
     def _validar_produccion(self) -> "Settings":
