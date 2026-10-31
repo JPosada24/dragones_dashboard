@@ -93,9 +93,18 @@ describe('SitioPage', () => {
     expect(el().querySelector('dialog [role="status"]')?.textContent).toContain('Recibimos la inscripción');
   });
 
-  it('si el sitio no está publicado lo dice y ofrece ingresar', async () => {
+  it('si el sitio no está publicado lo dice, sin enlaces a la plataforma', async () => {
     await cargar({ detail: 'no' }, 404);
     expect(el().textContent).toContain('Muy pronto');
-    expect(el().querySelector('a[href="/login"]')).not.toBeNull();
+    expect(el().querySelector('a[href*="login"]')).toBeNull();
+  });
+
+  it('es solo informativo: el menú se queda en /sitio y no hay enlaces al ingreso', async () => {
+    await cargar(SITIO);
+    const menu = [...el().querySelectorAll<HTMLAnchorElement>('nav a')].map((a) => a.getAttribute('href'));
+    expect(menu).toEqual(['/sitio#nosotros', '/sitio#entrenamientos', '/sitio#galeria', '/sitio#torneos', '/sitio#contacto']);
+    expect(el().querySelector('a[href*="login"]')).toBeNull();
+    expect(el().textContent).not.toContain('Ingresar');
+    expect(el().querySelector('img.escudo')?.getAttribute('src')).toBe('escudo.png');
   });
 });

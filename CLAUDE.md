@@ -307,7 +307,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   (club externo: mismas reglas de cupo/plazo con `torneos.inscribir(actor=None)`, autorización Ley 1581 obligatoria,
   campo trampa `sitio_web` para bots, `SITIO_ENVIOS_POR_HORA`=5 por IP → 429, aviso al staff). Sitio en `/sitio`
   (`paginas/sitio/`, fuera del marco y sin login; enlace desde el login): portada, nosotros, horario, equipo,
-  galería con visor, videos, torneos abiertos con formulario de inscripción y contacto. En Torneos, etiqueta
+  galería con visor, videos, torneos abiertos con formulario de inscripción y contacto. **Solo informativo: sin
+  enlaces al ingreso** (la URL del panel la tiene el staff); escudo oficial `public/escudo.png` (82 px, no agrandar);
+  menú con `routerLink="/sitio" fragment=…` + `anchorScrolling` (un `href="#x"` iría a la raíz = panel). En Torneos, etiqueta
   «desde el sitio». 221 pruebas backend, 98 frontend.
 - SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 

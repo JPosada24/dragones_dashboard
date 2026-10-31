@@ -4,10 +4,9 @@
   }
   @case ('no_publicado') {
     <main class="aviso-pagina">
-      <span class="escudo" aria-hidden="true"><span class="icono">sports_volleyball</span></span>
+      <img class="escudo" src="escudo.png" alt="Escudo Club Dragones" width="82" height="81" />
       <h1>Muy pronto</h1>
       <p>El sitio del club estará disponible en unos días.</p>
-      <a class="boton secundario" routerLink="/login">Ingresar a la plataforma</a>
     </main>
   }
   @case ('error') {
@@ -19,22 +18,24 @@
   @default {
     @if (sitio(); as s) {
       <header class="barra">
-        <a class="marca" href="#inicio">
-          <span class="escudo chico" aria-hidden="true"><span class="icono">sports_volleyball</span></span>
+        <a class="marca" routerLink="/sitio" fragment="inicio">
+          <img class="escudo chico" src="escudo.png" alt="" width="38" height="38" />
           <span>{{ s.perfil.nombre }}</span>
         </a>
         <nav aria-label="Secciones del sitio">
-          <a href="#nosotros">Nosotros</a>
-          <a href="#entrenamientos">Entrenamientos</a>
-          @if (s.albumes.length || s.videos.length) { <a href="#galeria">Galería</a> }
-          @if (s.torneos.length) { <a href="#torneos">Torneos</a> }
-          <a href="#contacto">Contacto</a>
+          @if (s.perfil.mision || s.perfil.vision || s.perfil.historia) {
+            <a routerLink="/sitio" fragment="nosotros">Nosotros</a>
+          }
+          <a routerLink="/sitio" fragment="entrenamientos">Entrenamientos</a>
+          @if (s.albumes.length || s.videos.length) { <a routerLink="/sitio" fragment="galeria">Galería</a> }
+          @if (s.torneos.length) { <a routerLink="/sitio" fragment="torneos">Torneos</a> }
+          <a routerLink="/sitio" fragment="contacto">Contacto</a>
         </nav>
-        <a class="boton secundario chico" routerLink="/login">Ingresar</a>
       </header>
 
       <main>
         <section id="inicio" class="portada">
+          <img class="escudo grande" src="escudo.png" alt="Escudo Club Dragones" width="82" height="81" />
           <p class="sobretitulo mono">Club de voleibol@if (s.perfil.ciudad) { · {{ s.perfil.ciudad }} }</p>
           <h1>{{ s.perfil.nombre }}</h1>
           @if (s.perfil.lema) { <p class="lema">{{ s.perfil.lema }}</p> }
@@ -46,7 +47,7 @@
               </a>
             }
             @if (s.torneos.length) {
-              <a class="boton secundario" href="#torneos">Inscribe tu club a un torneo</a>
+              <a class="boton secundario" routerLink="/sitio" fragment="torneos">Inscribe tu club a un torneo</a>
             }
           </div>
         </section>
@@ -174,8 +175,8 @@
       </main>
 
       <footer class="pie">
-        <span>© {{ s.perfil.nombre }}</span>
-        <a routerLink="/login">Plataforma del club</a>
+        <img src="escudo.png" alt="" width="28" height="28" />
+        <span>© {{ s.perfil.nombre }}@if (s.perfil.ciudad) { · {{ s.perfil.ciudad }} }</span>
       </footer>
 
       @if (fotoAmpliada(); as f) {
