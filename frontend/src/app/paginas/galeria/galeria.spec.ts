@@ -96,6 +96,29 @@ describe('GaleriaPage', () => {
     expect(boton('Seleccionar todas')).toBeUndefined();
   });
 
+  it('si una foto falla, las demás se suben y el aviso dice el motivo', async () => {
+    await cargar('a2');
+    boton('Subir fotos')!.click();
+    await estable();
+    const input = dialogo().querySelector<HTMLInputElement>('input[type="file"]')!;
+    const archivos = ['uno.jpg', 'dos.jpg'].map((n) => new File(['x'], n, { type: 'image/jpeg' }));
+    Object.defineProperty(input, 'files', { value: archivos });
+    input.dispatchEvent(new Event('change'));
+    dialogo().querySelector<HTMLInputElement>('[formcontrolname="autorizacion"]')!.click();
+    boton('Subir', dialogo().querySelector('.acciones')!)!.click();
+    await estable();
+    backend.expectOne(`${C}/albumes/a2/fotos`).flush(
+      { detail: 'La foto supera el máximo de 12 MB.' }, { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await estable();
+    backend.expectOne(`${C}/albumes/a2/fotos`).flush({ id: 'f9', ancho: 10, alto: 10 });
+    await estable();
+    backend.expectOne(`${C}/fotos/f9?tam=mini`).flush(new Blob(['x']));
+    await estable();
+    expect(dialogo().textContent).toContain('Se subieron 1 de 2');
+    expect(dialogo().textContent).toContain('uno.jpg (La foto supera el máximo de 12 MB.)');
+  });
+
   it('elige una portada propia que no queda entre las fotos', async () => {
     await cargar('a1');
     for (const f of FOTOS) backend.expectOne(`${C}/fotos/${f.id}?tam=mini`).flush(new Blob(['x']));

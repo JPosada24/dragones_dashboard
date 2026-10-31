@@ -8,6 +8,7 @@ import { IntegranteClub, iniciales } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
+import { reducirImagen } from '../../compartido/reducir-imagen';
 import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { API } from '../../core/modelos';
 
@@ -114,7 +115,11 @@ export class EquipoTecnicoPage implements OnInit {
 
   protected elegirRetrato(archivos: File[]): void {
     this.archivoRetrato = archivos[0] ?? null;
-    if (this.archivoRetrato) this.quitarRetrato.set(false);
+    if (this.archivoRetrato) {
+      this.quitarRetrato.set(false);
+      const original = this.archivoRetrato;
+      void reducirImagen(original).then((f) => { if (this.archivoRetrato === original) this.archivoRetrato = f; });
+    }
   }
 
   protected guardar(): void {

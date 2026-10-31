@@ -341,6 +341,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
   portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno
   con rama femenina y masculina (solo en el sitio; la plataforma aún no modela niveles). 225 pruebas backend, 99 frontend.
+  `compartido/reducir-imagen.ts`: el panel reduce en el navegador las fotos de más de 2 MB (lado mayor 2560 px, JPEG
+  0,9, sin EXIF) antes de subirlas (las de cámara superaban `foto_max_mb`); si no puede leerla, sube el original. Si
+  una foto falla, el aviso dice el motivo de cada una. 232 pruebas backend, 109 frontend.
 - SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)

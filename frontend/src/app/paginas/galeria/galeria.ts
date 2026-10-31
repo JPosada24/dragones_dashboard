@@ -12,6 +12,7 @@ import { AlbumClub, FotoClub, VideoClub, miniaturaYoutube } from '../../comparti
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
+import { reducirImagen } from '../../compartido/reducir-imagen';
 import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { API } from '../../core/modelos';
 
@@ -141,7 +142,9 @@ export class GaleriaPage implements OnInit {
   }
 
   protected elegirPortada(archivos: File[]): void {
-    this.archivoPortada = archivos[0] ?? null;
+    const original = archivos[0] ?? null;
+    this.archivoPortada = original;
+    if (original) void reducirImagen(original).then((f) => { if (this.archivoPortada === original) this.archivoPortada = f; });
   }
 
   protected guardarPortada(): void {
@@ -278,7 +281,7 @@ export class GaleriaPage implements OnInit {
         this.ocupado.set(false);
         this.progreso.set(null);
         if (fallidas.length) {
-          this.errorDialogo.set(`Se subieron ${subidas} de ${total}. No se pudieron subir: ${fallidas.join(', ')}.`);
+          this.errorDialogo.set(`Se subieron ${subidas} de ${total}. No se pudieron subir: ${fallidas.join('; ')}.`);
         } else {
           this.subiendo.set(false);
           this.exito(`${subidas} ${subidas === 1 ? 'foto subida' : 'fotos subidas'} a «${a.nombre}».`);
@@ -286,19 +289,21 @@ export class GaleriaPage implements OnInit {
         return;
       }
       this.progreso.set(`Subiendo ${total - pendientes.length} de ${total}…`);
-      const datos = new FormData();
-      datos.append('archivo', archivo);
-      datos.append('autorizacion', 'true');
-      this.http.post<FotoClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/fotos`, datos).subscribe({
-        next: (foto) => {
-          subidas++;
-          this.albumes.update((l) => (l ?? []).map((x) => (x.id === a.id ? { ...x, fotos: [...x.fotos, foto] } : x)));
-          siguiente();
-        },
-        error: () => {
-          fallidas.push(archivo.name);
-          siguiente();
-        },
+      void reducirImagen(archivo).then((reducida) => {
+        const datos = new FormData();
+        datos.append('archivo', reducida);
+        datos.append('autorizacion', 'true');
+        this.http.post<FotoClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/fotos`, datos).subscribe({
+          next: (foto) => {
+            subidas++;
+            this.albumes.update((l) => (l ?? []).map((x) => (x.id === a.id ? { ...x, fotos: [...x.fotos, foto] } : x)));
+            siguiente();
+          },
+          error: (e: unknown) => {
+            fallidas.push(`${archivo.name} (${mensajeError(e)})`);
+            siguiente();
+          },
+        });
       });
     };
     siguiente();
