@@ -1,7 +1,6 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere, usuario_actual
@@ -96,16 +95,12 @@ def estado_correos(
     _: Usuario = Depends(GESTIONAR),
     db: Session = Depends(get_db),
 ) -> list[CorreoEstadoOut]:
-    q = select(Notificacion).where(Notificacion.email_destino.is_not(None))
-    if estado:
-        q = q.where(Notificacion.email_estado == estado)
-    filas = db.scalars(q.order_by(Notificacion.creado_en.desc()).limit(limit))
     return [
         CorreoEstadoOut(
             id=n.id, tipo=n.tipo, titulo=n.titulo, email=_enmascarar_email(n.email_destino), estado=n.email_estado,
             intentos=n.email_intentos, error=n.email_error, creado_en=n.creado_en,
         )
-        for n in filas
+        for n in servicio.listar_correos(db, estado=estado, limit=limit)
     ]
 
 

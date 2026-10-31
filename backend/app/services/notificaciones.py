@@ -269,3 +269,11 @@ def marcar_whatsapp(
         usuario_id=actor.id, ip=ip,
     )
     return n
+
+
+def listar_correos(db: Session, *, estado: str | None, limit: int) -> list[Notificacion]:
+    """Los avisos que salen por correo, los más recientes primero (para revisar envíos y fallos)."""
+    q = select(Notificacion).where(Notificacion.email_destino.is_not(None))
+    if estado:
+        q = q.where(Notificacion.email_estado == estado)
+    return list(db.scalars(q.order_by(Notificacion.creado_en.desc()).limit(limit)))

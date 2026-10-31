@@ -17,7 +17,7 @@ from app.models.asistencia import HorarioEntrenamiento
 from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, Video
 from app.models.dominio import ESTADOS_VIGENTES
 from app.models.torneos import EquipoTorneo, Torneo
-from app.services import auditoria, configuracion, notificaciones, torneos
+from app.services import auditoria, notificaciones, torneos
 from app.services.errores import ErrorNegocio, NoEncontrado
 
 # Una foto de más de 40 megapíxeles no es una foto de celular: probablemente es una "bomba" de descompresión.
@@ -48,6 +48,10 @@ def perfil(db: Session) -> PerfilClub:
 def actualizar_perfil(
     db: Session, cambios: dict[str, Any], *, actor: Usuario, ip: str | None
 ) -> PerfilClub:
+    if "nombre" in cambios and not cambios["nombre"]:
+        raise ErrorNegocio("El nombre del club es obligatorio.")
+    if cambios.get("publicado") is None:
+        cambios.pop("publicado", None)  # null = no cambiarlo
     p = perfil(db)
     antes = {k: getattr(p, k) for k in cambios}
     for k, v in cambios.items():
@@ -109,9 +113,7 @@ def procesar_foto(datos: bytes) -> tuple[bytes, bytes, int, int]:
 def subir_foto(
     db: Session, album: Album, datos: bytes, *, almacen: Any, actor: Usuario, ip: str | None
 ) -> Foto:
-    maximo = configuracion.obtener(db, "foto_max_mb") * 1024 * 1024
-    if len(datos) > maximo:
-        raise ErrorNegocio(f"La foto supera el máximo de {configuracion.obtener(db, 'foto_max_mb')} MB.")
+    """Guarda una foto del álbum (los bytes ya vienen limitados por `club_panel.leer_foto`)."""
     grande, miniatura, ancho, alto = procesar_foto(datos)
     clave, clave_mini = uuid.uuid4().hex, uuid.uuid4().hex
     almacen.guardar(clave, grande)

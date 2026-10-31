@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.acceso import Permiso, Rol
 from app.models.sistema import Configuracion
 from app.services import auditoria
 
@@ -85,3 +86,16 @@ def actualizar(
     )
     db.commit()
     return fila
+
+
+ORDEN_ROLES = ("SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO")
+
+
+def roles_y_permisos(db: Session) -> tuple[list[Permiso], list[Rol]]:
+    """Catálogo de permisos y los roles del más al menos privilegiado (para la matriz de solo lectura)."""
+    permisos = list(db.scalars(select(Permiso).order_by(Permiso.codigo)))
+    roles = sorted(
+        db.scalars(select(Rol)),
+        key=lambda r: ORDEN_ROLES.index(r.codigo) if r.codigo in ORDEN_ROLES else len(ORDEN_ROLES),
+    )
+    return permisos, roles

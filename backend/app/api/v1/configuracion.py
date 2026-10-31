@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere
 from app.db.session import get_db
-from app.models.acceso import Permiso, Rol, Usuario
+from app.models.acceso import Usuario
 from app.schemas.configuracion import ConfigActualizar, ConfigOut, PermisoOut, RolesOut, RolOut
 from app.services import configuracion as servicio
 
@@ -16,17 +15,10 @@ def listar(_: Usuario = Depends(requiere("config.ver")), db: Session = Depends(g
     return [ConfigOut(clave=c.clave, valor=c.valor, descripcion=c.descripcion) for c in servicio.listar(db)]
 
 
-ORDEN_ROLES = ("SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO")
-
-
 @router.get("/roles", response_model=RolesOut)
 def roles(_: Usuario = Depends(requiere("config.ver")), db: Session = Depends(get_db)) -> RolesOut:
     """Quién puede hacer qué. Solo lectura: los permisos de cada rol se cambian con una migración."""
-    permisos = db.scalars(select(Permiso).order_by(Permiso.codigo)).all()
-    filas = sorted(
-        db.scalars(select(Rol)).all(),
-        key=lambda r: ORDEN_ROLES.index(r.codigo) if r.codigo in ORDEN_ROLES else len(ORDEN_ROLES),
-    )
+    permisos, filas = servicio.roles_y_permisos(db)
     return RolesOut(
         permisos=[PermisoOut(codigo=p.codigo, descripcion=p.descripcion) for p in permisos],
         roles=[

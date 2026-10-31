@@ -1,8 +1,11 @@
-"""Panel del perfil del club (lo que se publica en el sitio). Todo exige `club.editar`."""
+"""Panel del perfil del club (lo que se publica en el sitio). Todo exige `club.editar`.
+
+Las rutas solo traducen HTTP: la lógica vive en `services/club.py` y `services/club_panel.py`.
+"""
 import uuid
+from collections.abc import Iterable
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere
@@ -10,7 +13,6 @@ from app.core.almacen import Almacen, get_almacen
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.acceso import Usuario
-from app.models.club import Album, Foto, IntegranteEquipo, Video
 from app.schemas.club import (
     AlbumCambios,
     AlbumIn,
@@ -28,11 +30,24 @@ from app.schemas.club import (
     VideoOut,
 )
 from app.services import club as servicio
-from app.services import configuracion
-from app.services.errores import ErrorNegocio, NoEncontrado
+from app.services import club_panel as panel
+from app.services.errores import NoEncontrado
 
 router = APIRouter(prefix="/club", tags=["club"])
 EDITAR = requiere("club.editar")
+SIN_CACHE = {"Cache-Control": "private, no-store"}
+
+
+def _confirmar(db: Session, almacen: Almacen, claves: Iterable[str | None]) -> None:
+    """Confirma la transacción y solo entonces borra los archivos que quedaron sin uso."""
+    db.commit()
+    for clave in claves:
+        if clave:
+            almacen.borrar(clave)
+
+
+def _jpeg(datos: bytes) -> Response:
+    return Response(datos, media_type="image/jpeg", headers=SIN_CACHE)
 
 
 @router.get("", response_model=ClubPanelOut)
@@ -41,11 +56,9 @@ def ver(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> ClubPane
     return ClubPanelOut(
         sitio_url=url if url.startswith(("https://", "http://localhost")) else None,
         perfil=PerfilOut.model_validate(servicio.perfil(db)),
-        albumes=[AlbumOut.model_validate(a) for a in
-                 db.scalars(select(Album).order_by(Album.fecha.desc().nulls_last(), Album.creado_en.desc()))],
-        videos=[VideoOut.model_validate(v) for v in db.scalars(select(Video).order_by(Video.creado_en.desc()))],
-        equipo=[IntegranteOut.model_validate(i) for i in
-                db.scalars(select(IntegranteEquipo).order_by(IntegranteEquipo.orden, IntegranteEquipo.nombre))],
+        albumes=[AlbumOut.model_validate(a) for a in panel.listar_albumes(db)],
+        videos=[VideoOut.model_validate(v) for v in panel.listar_videos(db)],
+        equipo=[IntegranteOut.model_validate(i) for i in panel.listar_equipo(db)],
     )
 
 
@@ -53,12 +66,7 @@ def ver(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> ClubPane
 def actualizar_perfil(
     datos: PerfilIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
 ) -> PerfilOut:
-    cambios = datos.model_dump(exclude_unset=True)
-    if "nombre" in cambios and not cambios["nombre"]:
-        raise ErrorNegocio("El nombre del club es obligatorio.")
-    if cambios.get("publicado") is None:
-        cambios.pop("publicado", None)
-    p = servicio.actualizar_perfil(db, cambios, actor=actor, ip=ip_cliente(request))
+    p = servicio.actualizar_perfil(db, datos.model_dump(exclude_unset=True), actor=actor, ip=ip_cliente(request))
     db.commit()
     return PerfilOut.model_validate(p)
 
@@ -66,18 +74,14 @@ def actualizar_perfil(
 # ---------- Álbumes y fotos ----------
 @router.get("/albumes", response_model=list[AlbumOut])
 def listar_albumes(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[AlbumOut]:
-    filas = db.scalars(select(Album).order_by(Album.fecha.desc().nulls_last(), Album.creado_en.desc()))
-    return [AlbumOut.model_validate(a) for a in filas]
+    return [AlbumOut.model_validate(a) for a in panel.listar_albumes(db)]
 
 
 @router.post("/albumes", response_model=AlbumOut, status_code=status.HTTP_201_CREATED)
 def crear_album(
     datos: AlbumIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
 ) -> AlbumOut:
-    a = Album(**datos.model_dump())
-    db.add(a)
-    db.flush()
-    servicio.auditar(db, "club.album_crear", "album", a.id, actor, ip_cliente(request), despues={"nombre": a.nombre})
+    a = panel.crear_album(db, datos.model_dump(), actor=actor, ip=ip_cliente(request))
     db.commit()
     db.refresh(a)
     return AlbumOut.model_validate(a)
@@ -88,12 +92,10 @@ def actualizar_album(
     album_id: uuid.UUID, datos: AlbumCambios, request: Request, actor: Usuario = Depends(EDITAR),
     db: Session = Depends(get_db),
 ) -> AlbumOut:
-    a = servicio.obtener_album(db, album_id)
-    cambios = {k: v for k, v in datos.model_dump(exclude_unset=True).items() if v is not None or k == "fecha"}
-    for k, v in cambios.items():
-        setattr(a, k, v)
-    servicio.auditar(db, "club.album_editar", "album", a.id, actor, ip_cliente(request),
-                      despues={k: str(v) for k, v in cambios.items()})
+    a = panel.editar_album(
+        db, servicio.obtener_album(db, album_id), datos.model_dump(exclude_unset=True),
+        actor=actor, ip=ip_cliente(request),
+    )
     db.commit()
     return AlbumOut.model_validate(a)
 
@@ -103,14 +105,8 @@ def eliminar_album(
     album_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
     almacen: Almacen = Depends(get_almacen),
 ) -> Response:
-    a = servicio.obtener_album(db, album_id)
-    claves = servicio.claves_de(a.fotos) + ([a.portada_clave] if a.portada_clave else [])
-    servicio.auditar(db, "club.album_eliminar", "album", a.id, actor, ip_cliente(request),
-                      antes={"nombre": a.nombre, "fotos": len(a.fotos)})
-    db.delete(a)
-    db.commit()
-    for c in claves:  # después del commit: si la transacción falla, los archivos siguen ahí
-        almacen.borrar(c)
+    claves = panel.eliminar_album(db, servicio.obtener_album(db, album_id), actor=actor, ip=ip_cliente(request))
+    _confirmar(db, almacen, claves)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -124,12 +120,11 @@ def subir_foto(
     db: Session = Depends(get_db),
     almacen: Almacen = Depends(get_almacen),
 ) -> FotoOut:
-    if not autorizacion:
-        raise ErrorNegocio("Confirma que tienes autorización de los acudientes de los menores que aparecen.")
+    panel.exigir_autorizacion(autorizacion)
     a = servicio.obtener_album(db, album_id)
-    maximo = configuracion.obtener(db, "foto_max_mb") * 1024 * 1024
-    datos = archivo.file.read(maximo + 1)  # nunca se lee más de lo permitido
-    foto = servicio.subir_foto(db, a, datos, almacen=almacen, actor=actor, ip=ip_cliente(request))
+    foto = servicio.subir_foto(
+        db, a, panel.leer_foto(db, archivo.file), almacen=almacen, actor=actor, ip=ip_cliente(request),
+    )
     db.commit()
     return FotoOut.model_validate(foto)
 
@@ -141,8 +136,7 @@ def ver_foto(
 ) -> Response:
     """Vista previa en el panel (incluye álbumes sin publicar)."""
     foto = servicio.obtener_foto(db, foto_id, solo_publicada=False)
-    datos = almacen.leer(foto.clave_miniatura if tam == "mini" else foto.clave)
-    return Response(datos, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+    return _jpeg(almacen.leer(foto.clave_miniatura if tam == "mini" else foto.clave))
 
 
 @router.post("/fotos/eliminar")
@@ -151,16 +145,9 @@ def eliminar_fotos(
     almacen: Almacen = Depends(get_almacen),
 ) -> dict[str, int]:
     """Elimina varias fotos de una vez (todas o ninguna). Las que ya no existen se ignoran."""
-    fotos = list(db.scalars(select(Foto).where(Foto.id.in_(set(datos.ids)))))
-    claves = servicio.claves_de(fotos)
-    for f in fotos:
-        db.delete(f)
-    servicio.auditar(db, "club.fotos_eliminar", "foto", len(fotos), actor, ip_cliente(request),
-                     antes={"ids": [str(f.id) for f in fotos]})
-    db.commit()
-    for c in claves:  # después del commit: si la transacción falla, los archivos siguen ahí
-        almacen.borrar(c)
-    return {"eliminadas": len(fotos)}
+    n, claves = panel.eliminar_fotos(db, set(datos.ids), actor=actor, ip=ip_cliente(request))
+    _confirmar(db, almacen, claves)
+    return {"eliminadas": n}
 
 
 @router.delete("/fotos/{foto_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -169,171 +156,8 @@ def eliminar_foto(
     almacen: Almacen = Depends(get_almacen),
 ) -> Response:
     foto = servicio.obtener_foto(db, foto_id, solo_publicada=False)
-    claves = servicio.claves_de([foto])
-    servicio.auditar(db, "club.foto_eliminar", "foto", foto.id, actor, ip_cliente(request))
-    db.delete(foto)
-    db.commit()
-    for c in claves:
-        almacen.borrar(c)
+    _confirmar(db, almacen, panel.eliminar_foto(db, foto, actor=actor, ip=ip_cliente(request)))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ---------- Videos ----------
-def _video(db: Session, video_id: uuid.UUID) -> Video:
-    v = db.get(Video, video_id)
-    if v is None:
-        raise NoEncontrado("Video no encontrado.")
-    return v
-
-
-@router.get("/videos", response_model=list[VideoOut])
-def listar_videos(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[VideoOut]:
-    return [VideoOut.model_validate(v) for v in db.scalars(select(Video).order_by(Video.creado_en.desc()))]
-
-
-@router.post("/videos", response_model=VideoOut, status_code=status.HTTP_201_CREATED)
-def crear_video(
-    datos: VideoIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
-) -> VideoOut:
-    v = Video(titulo=datos.titulo, youtube_id=servicio.youtube_id(datos.enlace), publicado=datos.publicado)
-    db.add(v)
-    db.flush()
-    servicio.auditar(db, "club.video_crear", "video", v.id, actor, ip_cliente(request), despues={"titulo": v.titulo})
-    db.commit()
-    return VideoOut.model_validate(v)
-
-
-@router.patch("/videos/{video_id}", response_model=VideoOut)
-def actualizar_video(
-    video_id: uuid.UUID, datos: VideoCambios, request: Request, actor: Usuario = Depends(EDITAR),
-    db: Session = Depends(get_db),
-) -> VideoOut:
-    v = _video(db, video_id)
-    cambios = {k: val for k, val in datos.model_dump(exclude_unset=True).items() if val is not None}
-    for k, val in cambios.items():
-        setattr(v, k, val)
-    servicio.auditar(db, "club.video_editar", "video", v.id, actor, ip_cliente(request), despues=cambios)
-    db.commit()
-    return VideoOut.model_validate(v)
-
-
-@router.delete("/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_video(
-    video_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
-) -> Response:
-    v = _video(db, video_id)
-    servicio.auditar(db, "club.video_eliminar", "video", v.id, actor, ip_cliente(request),
-                      antes={"titulo": v.titulo})
-    db.delete(v)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ---------- Equipo de trabajo ----------
-def _integrante(db: Session, integrante_id: uuid.UUID) -> IntegranteEquipo:
-    i = db.get(IntegranteEquipo, integrante_id)
-    if i is None:
-        raise NoEncontrado("Integrante no encontrado.")
-    return i
-
-
-@router.get("/equipo", response_model=list[IntegranteOut])
-def listar_equipo(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[IntegranteOut]:
-    filas = db.scalars(select(IntegranteEquipo).order_by(IntegranteEquipo.orden, IntegranteEquipo.nombre))
-    return [IntegranteOut.model_validate(i) for i in filas]
-
-
-@router.post("/equipo", response_model=IntegranteOut, status_code=status.HTTP_201_CREATED)
-def crear_integrante(
-    datos: IntegranteIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
-) -> IntegranteOut:
-    i = IntegranteEquipo(**datos.model_dump())
-    db.add(i)
-    db.flush()
-    servicio.auditar(db, "club.equipo_crear", "integrante", i.id, actor, ip_cliente(request),
-                      despues={"nombre": i.nombre, "cargo": i.cargo})
-    db.commit()
-    return IntegranteOut.model_validate(i)
-
-
-@router.patch("/equipo/{integrante_id}", response_model=IntegranteOut)
-def actualizar_integrante(
-    integrante_id: uuid.UUID, datos: IntegranteCambios, request: Request, actor: Usuario = Depends(EDITAR),
-    db: Session = Depends(get_db),
-) -> IntegranteOut:
-    i = _integrante(db, integrante_id)
-    cambios = {k: v for k, v in datos.model_dump(exclude_unset=True).items() if v is not None or k == "bio"}
-    for k, v in cambios.items():
-        setattr(i, k, v or None if k == "bio" else v)
-    servicio.auditar(db, "club.equipo_editar", "integrante", i.id, actor, ip_cliente(request), despues=cambios)
-    db.commit()
-    return IntegranteOut.model_validate(i)
-
-
-@router.delete("/equipo/{integrante_id}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_integrante(
-    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
-    almacen: Almacen = Depends(get_almacen),
-) -> Response:
-    i = _integrante(db, integrante_id)
-    clave = i.foto_clave
-    servicio.auditar(db, "club.equipo_eliminar", "integrante", i.id, actor, ip_cliente(request),
-                      antes={"nombre": i.nombre})
-    db.delete(i)
-    db.commit()
-    if clave:
-        almacen.borrar(clave)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ---------- Foto de un integrante ----------
-@router.post("/equipo/{integrante_id}/foto", response_model=IntegranteOut)
-def subir_foto_integrante(
-    integrante_id: uuid.UUID,
-    request: Request,
-    archivo: UploadFile = File(),
-    actor: Usuario = Depends(EDITAR),
-    db: Session = Depends(get_db),
-    almacen: Almacen = Depends(get_almacen),
-) -> IntegranteOut:
-    i = _integrante(db, integrante_id)
-    maximo = configuracion.obtener(db, "foto_max_mb") * 1024 * 1024
-    datos = archivo.file.read(maximo + 1)
-    if len(datos) > maximo:
-        raise ErrorNegocio(f"La foto supera el máximo de {configuracion.obtener(db, 'foto_max_mb')} MB.")
-    nueva, anterior = uuid.uuid4().hex, i.foto_clave
-    almacen.guardar(nueva, servicio.procesar_retrato(datos))
-    i.foto_clave = nueva
-    servicio.auditar(db, "club.equipo_foto", "integrante", i.id, actor, ip_cliente(request))
-    db.commit()
-    if anterior:  # después del commit: si la transacción falla, la foto anterior sigue
-        almacen.borrar(anterior)
-    return IntegranteOut.model_validate(i)
-
-
-@router.delete("/equipo/{integrante_id}/foto", response_model=IntegranteOut)
-def quitar_foto_integrante(
-    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
-    almacen: Almacen = Depends(get_almacen),
-) -> IntegranteOut:
-    i = _integrante(db, integrante_id)
-    anterior, i.foto_clave = i.foto_clave, None
-    servicio.auditar(db, "club.equipo_foto_quitar", "integrante", i.id, actor, ip_cliente(request))
-    db.commit()
-    if anterior:
-        almacen.borrar(anterior)
-    return IntegranteOut.model_validate(i)
-
-
-@router.get("/equipo/{integrante_id}/foto")
-def ver_foto_integrante(
-    integrante_id: uuid.UUID, _: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
-    almacen: Almacen = Depends(get_almacen),
-) -> Response:
-    i = _integrante(db, integrante_id)
-    if not i.foto_clave:
-        raise NoEncontrado("Sin foto.")
-    return Response(almacen.leer(i.foto_clave), media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
 
 
 # ---------- Portada propia del álbum (no es una foto del álbum) ----------
@@ -347,20 +171,12 @@ def subir_portada(
     db: Session = Depends(get_db),
     almacen: Almacen = Depends(get_almacen),
 ) -> AlbumOut:
-    if not autorizacion:
-        raise ErrorNegocio("Confirma que tienes autorización de los acudientes de los menores que aparecen.")
+    panel.exigir_autorizacion(autorizacion)
     a = servicio.obtener_album(db, album_id)
-    maximo = configuracion.obtener(db, "foto_max_mb") * 1024 * 1024
-    datos = archivo.file.read(maximo + 1)
-    if len(datos) > maximo:
-        raise ErrorNegocio(f"La foto supera el máximo de {configuracion.obtener(db, 'foto_max_mb')} MB.")
-    nueva, anterior = uuid.uuid4().hex, a.portada_clave
-    almacen.guardar(nueva, servicio.procesar_portada(datos))
-    a.portada_clave = nueva
-    servicio.auditar(db, "club.album_portada", "album", a.id, actor, ip_cliente(request))
-    db.commit()
-    if anterior:  # después del commit: si la transacción falla, la portada anterior sigue
-        almacen.borrar(anterior)
+    anterior = panel.cambiar_portada(
+        db, a, panel.leer_foto(db, archivo.file), almacen=almacen, actor=actor, ip=ip_cliente(request),
+    )
+    _confirmar(db, almacen, [anterior])
     return AlbumOut.model_validate(a)
 
 
@@ -370,11 +186,7 @@ def quitar_portada(
     almacen: Almacen = Depends(get_almacen),
 ) -> AlbumOut:
     a = servicio.obtener_album(db, album_id)
-    anterior, a.portada_clave = a.portada_clave, None
-    servicio.auditar(db, "club.album_portada_quitar", "album", a.id, actor, ip_cliente(request))
-    db.commit()
-    if anterior:
-        almacen.borrar(anterior)
+    _confirmar(db, almacen, [panel.quitar_portada(db, a, actor=actor, ip=ip_cliente(request))])
     return AlbumOut.model_validate(a)
 
 
@@ -386,5 +198,117 @@ def ver_portada(
     a = servicio.obtener_album(db, album_id)
     if not a.portada_clave:
         raise NoEncontrado("El álbum no tiene portada propia.")
-    return Response(almacen.leer(a.portada_clave), media_type="image/jpeg",
-                    headers={"Cache-Control": "private, no-store"})
+    return _jpeg(almacen.leer(a.portada_clave))
+
+
+# ---------- Videos ----------
+@router.get("/videos", response_model=list[VideoOut])
+def listar_videos(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[VideoOut]:
+    return [VideoOut.model_validate(v) for v in panel.listar_videos(db)]
+
+
+@router.post("/videos", response_model=VideoOut, status_code=status.HTTP_201_CREATED)
+def crear_video(
+    datos: VideoIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
+) -> VideoOut:
+    v = panel.crear_video(db, datos.titulo, datos.enlace, datos.publicado, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return VideoOut.model_validate(v)
+
+
+@router.patch("/videos/{video_id}", response_model=VideoOut)
+def actualizar_video(
+    video_id: uuid.UUID, datos: VideoCambios, request: Request, actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+) -> VideoOut:
+    v = panel.editar_video(
+        db, panel.obtener_video(db, video_id), datos.model_dump(exclude_unset=True),
+        actor=actor, ip=ip_cliente(request),
+    )
+    db.commit()
+    return VideoOut.model_validate(v)
+
+
+@router.delete("/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_video(
+    video_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
+) -> Response:
+    panel.eliminar_video(db, panel.obtener_video(db, video_id), actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------- Equipo técnico ----------
+@router.get("/equipo", response_model=list[IntegranteOut])
+def listar_equipo(_: Usuario = Depends(EDITAR), db: Session = Depends(get_db)) -> list[IntegranteOut]:
+    return [IntegranteOut.model_validate(i) for i in panel.listar_equipo(db)]
+
+
+@router.post("/equipo", response_model=IntegranteOut, status_code=status.HTTP_201_CREATED)
+def crear_integrante(
+    datos: IntegranteIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db)
+) -> IntegranteOut:
+    i = panel.crear_integrante(db, datos.model_dump(), actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return IntegranteOut.model_validate(i)
+
+
+@router.patch("/equipo/{integrante_id}", response_model=IntegranteOut)
+def actualizar_integrante(
+    integrante_id: uuid.UUID, datos: IntegranteCambios, request: Request, actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+) -> IntegranteOut:
+    i = panel.editar_integrante(
+        db, panel.obtener_integrante(db, integrante_id), datos.model_dump(exclude_unset=True),
+        actor=actor, ip=ip_cliente(request),
+    )
+    db.commit()
+    return IntegranteOut.model_validate(i)
+
+
+@router.delete("/equipo/{integrante_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_integrante(
+    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    i = panel.obtener_integrante(db, integrante_id)
+    _confirmar(db, almacen, [panel.eliminar_integrante(db, i, actor=actor, ip=ip_cliente(request))])
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/equipo/{integrante_id}/foto", response_model=IntegranteOut)
+def subir_foto_integrante(
+    integrante_id: uuid.UUID,
+    request: Request,
+    archivo: UploadFile = File(),
+    actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> IntegranteOut:
+    i = panel.obtener_integrante(db, integrante_id)
+    anterior = panel.cambiar_retrato(
+        db, i, panel.leer_foto(db, archivo.file), almacen=almacen, actor=actor, ip=ip_cliente(request),
+    )
+    _confirmar(db, almacen, [anterior])
+    return IntegranteOut.model_validate(i)
+
+
+@router.delete("/equipo/{integrante_id}/foto", response_model=IntegranteOut)
+def quitar_foto_integrante(
+    integrante_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> IntegranteOut:
+    i = panel.obtener_integrante(db, integrante_id)
+    _confirmar(db, almacen, [panel.quitar_retrato(db, i, actor=actor, ip=ip_cliente(request))])
+    return IntegranteOut.model_validate(i)
+
+
+@router.get("/equipo/{integrante_id}/foto")
+def ver_foto_integrante(
+    integrante_id: uuid.UUID, _: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    i = panel.obtener_integrante(db, integrante_id)
+    if not i.foto_clave:
+        raise NoEncontrado("Sin foto.")
+    return _jpeg(almacen.leer(i.foto_clave))

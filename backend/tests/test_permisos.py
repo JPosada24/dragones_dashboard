@@ -52,7 +52,7 @@ def test_rol_inexistente_da_422(client, crear_usuario, auth_header):
 def test_superadmin_no_puede_desactivarse_a_si_mismo(client, crear_usuario, auth_header):
     u = crear_usuario("root@club.com", "SUPERADMIN")
     r = client.patch(f"/api/v1/usuarios/{u.id}", json={"activo": False}, headers=auth_header("root@club.com"))
-    assert r.status_code == 400
+    assert r.status_code == 422 and "propio rol" in r.json()["detail"]
 
 
 def test_desactivar_usuario_cierra_sus_sesiones(client, crear_usuario, auth_header, login):
