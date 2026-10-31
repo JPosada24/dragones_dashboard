@@ -190,7 +190,8 @@
             <li class="equipo" [attr.data-estado]="e.estado">
               <div class="equipo-cabecera">
                 <div class="equipo-textos">
-                  <span class="equipo-nombre">{{ e.nombre_club }} <span class="nota-chica">· {{ e.ciudad }}</span></span>
+                  <span class="equipo-nombre">{{ e.nombre_club }} <span class="nota-chica">· {{ e.ciudad }}</span>
+                    @if (e.origen === 'sitio') { <span class="desde-sitio mono" title="Se inscribió solo desde el sitio público">desde el sitio</span> }</span>
                   <span class="nota-chica">
                     {{ e.delegado_nombre }} · <span class="mono">{{ e.delegado_telefono }}</span>
                     @if (whatsapp(e); as url) { · <a class="enlace" [href]="url" target="_blank" rel="noopener noreferrer">WhatsApp</a> }

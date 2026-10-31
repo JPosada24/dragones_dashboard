@@ -295,8 +295,21 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   de la API → 502. Pantalla `paginas/asistente/` (chat, sugerencias por rol, «Consultó: …», respuestas como
   texto plano). `mensajeError` muestra el detalle del 429. Pruebas con un cliente falso (`tests/test_agente.py`).
   207 pruebas backend, 92 frontend.
-- SIGUIENTE: sitio público del club (incluida la inscripción pública de clubes a torneos), endurecer
-  para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
+- HECHO (sitio público, 2026-10-31): migración 0018 (`perfil_club` fila única, `albumes`, `fotos`, `videos`,
+  `integrantes_equipo`; `equipos_torneo.origen` staff|sitio y `autoriza_datos_en`; parámetro `foto_max_mb`, 12).
+  Panel `/club` (`club.editar`, Admin/SA) y pantalla `paginas/perfil-club/` como el prototipo (galería por álbumes,
+  videos, Misión/Visión/Historia, datos y contacto, equipo; interruptor de publicar en sitio, álbum, video e
+  integrante). Fotos: Pillow las vuelve a codificar (orientación, **sin EXIF/GPS**, 1920 px + miniatura 480 px,
+  tope de 40 Mpx contra bombas), exigen confirmar autorización de los acudientes; vista previa del panel con token
+  (blob). Videos: solo YouTube, se guarda el id (11 caracteres) y el sitio muestra la portada con enlace (sin
+  iframes). Redes: solo el usuario; el sitio arma el enlace. Público sin sesión `/publico` (404 si no está
+  publicado): `GET /club`, `GET /fotos/{id}` (solo de álbumes publicados, caché 1 día), `POST /torneos/{id}/inscripcion`
+  (club externo: mismas reglas de cupo/plazo con `torneos.inscribir(actor=None)`, autorización Ley 1581 obligatoria,
+  campo trampa `sitio_web` para bots, `SITIO_ENVIOS_POR_HORA`=5 por IP → 429, aviso al staff). Sitio en `/sitio`
+  (`paginas/sitio/`, fuera del marco y sin login; enlace desde el login): portada, nosotros, horario, equipo,
+  galería con visor, videos, torneos abiertos con formulario de inscripción y contacto. En Torneos, etiqueta
+  «desde el sitio». 221 pruebas backend, 98 frontend.
+- SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);

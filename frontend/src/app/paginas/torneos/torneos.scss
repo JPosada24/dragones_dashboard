@@ -295,3 +295,13 @@ h2 {
     grid-template-columns: auto auto minmax(0, 1fr);
   }
 }
+
+.desde-sitio {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid rgba(245, 183, 49, 0.45);
+  border-radius: 4px;
+  font-size: 9.5px;
+  color: var(--oro);
+  vertical-align: middle;
+}

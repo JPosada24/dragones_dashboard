@@ -92,6 +92,15 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Entrenamientos', texto: 'Los días de torneo se cancelan los entrenamientos; si el torneo se cancela, vuelven.' },
     ],
   },
+  'perfil-club': {
+    titulo: 'Cómo funciona el perfil del club',
+    pasos: [
+      { titulo: 'Sitio público', texto: 'Todo lo de aquí se muestra en el sitio del club (/sitio), que cualquiera puede ver sin cuenta. Nada privado de los alumnos sale allí.' },
+      { titulo: 'Publicar', texto: 'El sitio, cada álbum, video e integrante tienen su interruptor: lo que está en borrador no se ve.' },
+      { titulo: 'Fotos', texto: 'Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación del celular). Sube solo fotos con autorización de los acudientes de los menores que aparecen.' },
+      { titulo: 'Torneos', texto: 'Los torneos con inscripciones abiertas aparecen en el sitio y los clubes externos se inscriben solos; quedan en Torneos marcados «desde el sitio» y te llega un aviso.' },
+    ],
+  },
   asistente: {
     titulo: 'Cómo funciona el asistente',
     pasos: [

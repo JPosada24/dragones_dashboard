@@ -65,6 +65,11 @@ export const SECCIONES: Seccion[] = [
     descripcion: 'Torneos del club con clubes inscritos, lista de espera y pagos.',
   },
   {
+    ruta: 'perfil-club', etiqueta: 'Perfil del club', icono: 'shield', grupo: 'Club', permisos: ['club.editar'],
+    titulo: 'Perfil del club', subtitulo: 'Contenido del sitio público',
+    descripcion: 'Galería, videos, misión, visión, historia, contacto y equipo del club que se muestran en el sitio.',
+  },
+  {
     ruta: 'avisos', etiqueta: 'Avisos WhatsApp', icono: 'chat', grupo: 'Club', permisos: ['notificaciones.gestionar'],
     titulo: 'Avisos por WhatsApp', subtitulo: 'Mensajes listos para enviar con un clic',
     descripcion: 'Cola de avisos con el enlace de WhatsApp listo, y estado de los correos enviados.',

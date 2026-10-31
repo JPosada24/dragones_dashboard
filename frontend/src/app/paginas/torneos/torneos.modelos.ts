@@ -41,6 +41,7 @@ export interface Equipo {
   monto_pagado: number;
   saldo: number;
   motivo_retiro: string | null;
+  origen?: 'staff' | 'sitio';
   pagos: PagoEquipo[];
 }
 

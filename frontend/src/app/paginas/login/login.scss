@@ -92,3 +92,14 @@
   padding: 12px;
   margin-top: 4px;
 }
+
+.ver-sitio {
+  justify-self: center;
+  font-size: 12px;
+  color: var(--texto-3);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--naranja);
+  }
+}

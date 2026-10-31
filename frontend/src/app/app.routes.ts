@@ -20,11 +20,18 @@ const PANTALLAS: Record<string, Cargar> = {
   torneos: () => import('./paginas/torneos/torneos').then((m) => m.TorneosPage),
   configuracion: () => import('./paginas/configuracion/configuracion').then((m) => m.ConfiguracionPage),
   avisos: () => import('./paginas/avisos/avisos').then((m) => m.AvisosPage),
+  'perfil-club': () => import('./paginas/perfil-club/perfil-club').then((m) => m.PerfilClubPage),
   asistente: () => import('./paginas/asistente/asistente').then((m) => m.AsistentePage),
   'alumnos/inscripciones': () => import('./paginas/inscripciones/inscripciones').then((m) => m.InscripcionesPage),
 };
 
 export const routes: Routes = [
+  {
+    // Sitio público del club: sin sesión.
+    path: 'sitio',
+    title: 'Club Deportivo Dragones',
+    loadComponent: () => import('./paginas/sitio/sitio').then((m) => m.SitioPage),
+  },
   {
     path: 'login',
     canActivate: [soloInvitado],
