@@ -10,10 +10,10 @@ pydantic>=2.8,<3.0
 pydantic-settings>=2.4,<3.0
 argon2-cffi>=23.1,<26.0
 pyjwt>=2.9,<3.0
-cryptography>=43,<50
+cryptography>=50,<51
 python-multipart>=0.0.9,<1.0
 tzdata>=2024.1
 anthropic>=2.3,<3.0
-pillow>=11,<13
+pillow>=13,<14
 # Reporte de errores opcional (solo se activa con SENTRY_DSN)
 sentry-sdk>=2.18,<3.0
