@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.core.fechas import hoy
 from app.schemas.comunes import (
     EstadoInscripcion,
+    Nivel,
     Rama,
     TipoDocumento,
     normalizar_documento,
@@ -117,6 +118,7 @@ class AlumnoCrear(_Entrada):
     documento: str
     fecha_nacimiento: date
     rama: Rama
+    nivel: Nivel = "iniciacion"
     telefono: str | None = None
     email: str | None = None
     direccion: str | None = Field(default=None, max_length=200)
@@ -128,7 +130,7 @@ class AlumnoCrear(_Entrada):
 
 class AlumnoActualizar(_SinNulos):
     OBLIGATORIOS: ClassVar[tuple[str, ...]] = (
-        "nombres", "apellidos", "tipo_documento", "documento", "fecha_nacimiento", "rama", "activo",
+        "nombres", "apellidos", "tipo_documento", "documento", "fecha_nacimiento", "rama", "nivel", "activo",
     )
 
     nombres: str | None = Field(default=None, min_length=2, max_length=80)
@@ -137,6 +139,7 @@ class AlumnoActualizar(_SinNulos):
     documento: str | None = None
     fecha_nacimiento: date | None = None
     rama: Rama | None = None
+    nivel: Nivel | None = None
     telefono: str | None = None
     email: str | None = None
     direccion: str | None = Field(default=None, max_length=200)
@@ -165,6 +168,7 @@ class AlumnoOut(BaseModel):
     edad: int
     es_menor: bool
     rama: Rama
+    nivel: Nivel
     telefono: str | None
     email: str | None
     direccion: str | None

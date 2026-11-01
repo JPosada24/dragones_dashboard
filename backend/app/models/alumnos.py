@@ -18,7 +18,15 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.dominio import ESTADOS_INSCRIPCION, ESTADOS_VIGENTES, RAMAS, TIPOS_ARCHIVO, TIPOS_DOCUMENTO, en
+from app.models.dominio import (
+    ESTADOS_INSCRIPCION,
+    ESTADOS_VIGENTES,
+    NIVELES,
+    RAMAS,
+    TIPOS_ARCHIVO,
+    TIPOS_DOCUMENTO,
+    en,
+)
 from app.models.mixins import TiempoMixin, UUIDMixin
 
 
@@ -26,6 +34,7 @@ class Alumno(UUIDMixin, TiempoMixin, Base):
     __tablename__ = "alumnos"
     __table_args__ = (
         CheckConstraint(en("rama", RAMAS), name="ck_alumnos_rama"),
+        CheckConstraint(en("nivel", NIVELES), name="ck_alumnos_nivel"),
         CheckConstraint(en("tipo_documento", TIPOS_DOCUMENTO), name="ck_alumnos_tipo_documento"),
         CheckConstraint("codigo ~ '^[FM][0-9]{3,5}$'", name="ck_alumnos_codigo"),
         CheckConstraint(
@@ -46,6 +55,8 @@ class Alumno(UUIDMixin, TiempoMixin, Base):
     documento_ultimos: Mapped[str] = mapped_column(String(4))
     fecha_nacimiento: Mapped[date] = mapped_column(Date)
     rama: Mapped[str] = mapped_column(String(10), index=True)
+    # Iniciación o avanzado (el sitio publica el horario de cada nivel; ambas ramas en los dos).
+    nivel: Mapped[str] = mapped_column(String(10), index=True, server_default=text("'iniciacion'"))
     telefono: Mapped[str | None] = mapped_column(String(20))
     email: Mapped[str | None] = mapped_column(String(254))
     direccion: Mapped[str | None] = mapped_column(String(200))

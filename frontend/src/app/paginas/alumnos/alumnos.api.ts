@@ -6,7 +6,7 @@ import { Esquema } from '../../core/api/tipos';
 import { API } from '../../core/modelos';
 import { inscripcionUrl } from '../inscripciones/inscribir';
 import { Inscripcion } from '../inscripciones/inscripciones.modelos';
-import { Acudiente, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial } from './alumnos.modelos';
+import { Acudiente, Alumno, Documento, EstadoCuenta, Nivel, Rama, RegistroHistorial } from './alumnos.modelos';
 
 const url = (id: string) => `${API}/alumnos/${encodeURIComponent(id)}`;
 
@@ -14,6 +14,7 @@ export interface FiltroAlumnos {
   limite: number;
   buscar?: string;
   rama?: Rama | '';
+  nivel?: Nivel | '';
   activo?: boolean;
 }
 
@@ -41,6 +42,7 @@ export class AlumnosApi {
     let params = new HttpParams().set('limit', f.limite);
     if (f.buscar && f.buscar.trim().length >= 2) params = params.set('buscar', f.buscar.trim());
     if (f.rama) params = params.set('rama', f.rama);
+    if (f.nivel) params = params.set('nivel', f.nivel);
     if (f.activo !== undefined) params = params.set('activo', f.activo);
     return this.http.get<Alumno[]>(`${API}/alumnos`, { params });
   }

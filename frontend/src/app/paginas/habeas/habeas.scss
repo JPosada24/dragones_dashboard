@@ -1,0 +1,105 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+  list-style: none;
+}
+
+.solicitudes {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.solicitud {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+}
+
+.cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  h2 {
+    flex: 1;
+    margin: 0;
+    font: 600 13.5px var(--f-titulo);
+    color: var(--texto-blanco);
+  }
+}
+
+.chip {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--naranja-tenue);
+  color: var(--naranja);
+  font: 600 10px var(--f-texto);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  &.reclamo {
+    background: var(--oro-tenue);
+    color: var(--oro);
+  }
+}
+
+.plazo {
+  font: 600 11.5px var(--f-texto);
+  color: var(--tono);
+}
+
+[data-tono='ok'] {
+  --tono: var(--texto-2);
+}
+
+[data-tono='pendiente'] {
+  --tono: var(--oro);
+}
+
+[data-tono='mal'] {
+  --tono: var(--rojo);
+}
+
+.nota {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--texto-3);
+}
+
+.texto {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--texto-2);
+  white-space: pre-line;
+}
+
+.respuesta {
+  padding-left: 10px;
+  border-left: 2px solid var(--borde-fuerte);
+}
+
+.acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -16,14 +16,14 @@ from app.models.asistencia import Asistencia, Justificacion, Multa, Sesion
 from app.models.dominio import ESTADOS_VIGENTES
 from app.models.rifas import RIFA_FUERA, Rifa, Talonario
 from app.models.torneos import OCUPAN_CUPO, EquipoTorneo, Torneo
-from app.services import alumnos, asistencia, configuracion, mora
+from app.services import alumnos, asistencia, configuracion, habeas, mora
 
 DIAS_VENCE_PRONTO = 7
 
 
 @dataclass
 class Alerta:
-    tipo: str  # expulsion | justificaciones | vence_inscripcion | inasistencias | riesgo_mora | autorizacion
+    tipo: str  # expulsion | justificaciones | vence_inscripcion | inasistencias | riesgo_mora | autorizacion | habeas
     gravedad: int  # 1 = la más urgente
     titulo: str
     detalle: str
@@ -148,6 +148,15 @@ def calcular(db: Session, usuario: Usuario) -> Resumen:
             f"{sin_autorizacion} alumno{' sin' if sin_autorizacion == 1 else 's sin'} autorización de datos",
             "Regístrala en la ficha de cada alumno (Ley 1581)", "", "/alumnos",
         ))
+    if "habeas.gestionar" in permisos:
+        for s in habeas.por_vencer(db):
+            faltan = habeas.habiles_entre(hoy, s.vence_el)
+            estado = "vencida" if faltan < 0 else "por vencer"
+            r.alertas.append(Alerta(
+                "habeas", 1 if faltan < 0 else 2, f"Solicitud de datos ({s.tipo}) {estado}",
+                "La ley exige responder dentro del plazo", "vencida" if faltan < 0 else f"en {faltan} d hábiles",
+                "/habeas",
+            ))
     r.alertas.sort(key=lambda a: a.gravedad)
 
     # ---------- Entrenamiento de hoy ----------

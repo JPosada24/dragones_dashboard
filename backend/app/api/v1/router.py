@@ -7,12 +7,14 @@ from app.api.v1 import (
     auth,
     club,
     configuracion,
+    habeas,
     inscripciones,
     justificaciones,
     mora,
     multas,
     notificaciones,
     publico,
+    reportes,
     resumen,
     rifas,
     salud,
@@ -40,3 +42,5 @@ api_router.include_router(resumen.router)
 api_router.include_router(agente.router)
 api_router.include_router(club.router)
 api_router.include_router(publico.router)
+api_router.include_router(reportes.router)
+api_router.include_router(habeas.router)

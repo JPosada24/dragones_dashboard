@@ -55,6 +55,11 @@ export const SECCIONES: Seccion[] = [
   },
 
   {
+    ruta: 'reportes', etiqueta: 'Reportes', icono: 'monitoring', grupo: 'Dinero', permisos: ['reportes.ver'],
+    titulo: 'Reportes', subtitulo: 'Ingresos del club por mes',
+    descripcion: 'Ingresos por mes y concepto, y descarga de los movimientos para la contabilidad.',
+  },
+  {
     ruta: 'multas', etiqueta: 'Multas y mora', icono: 'gavel', grupo: 'Dinero', permisos: VER_ALUMNOS,
     titulo: 'Multas y mora', subtitulo: 'Deudas por cobrar',
     descripcion: 'Multas por inasistencia, pagos y alumnos en riesgo o en mora.',
@@ -92,6 +97,11 @@ export const SECCIONES: Seccion[] = [
     ruta: 'configuracion', etiqueta: 'Configuración', icono: 'settings', grupo: 'Sistema', permisos: ['config.ver'],
     titulo: 'Configuración', subtitulo: 'Parámetros del club',
     descripcion: 'Multa, plazos, valores, mora y demás parámetros (solo el SuperAdmin los cambia).',
+  },
+  {
+    ruta: 'habeas', etiqueta: 'Datos personales', icono: 'shield_person', grupo: 'Sistema', permisos: ['habeas.gestionar'],
+    titulo: 'Solicitudes de datos personales', subtitulo: 'Ley 1581: consultas en 10 días hábiles, reclamos en 15',
+    descripcion: 'Consultas y reclamos de los titulares sobre sus datos, con su plazo legal.',
   },
   {
     ruta: 'usuarios', etiqueta: 'Usuarios', icono: 'manage_accounts', grupo: 'Sistema', permisos: ['usuarios.gestionar'],

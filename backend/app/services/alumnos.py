@@ -88,7 +88,8 @@ def _resumen_alumno(a: Alumno) -> dict[str, Any]:
     return {
         "codigo": a.codigo, "nombres": a.nombres, "apellidos": a.apellidos, "tipo_documento": a.tipo_documento,
         "documento": enmascarar(a.documento_ultimos), "fecha_nacimiento": a.fecha_nacimiento.isoformat(),
-        "rama": a.rama, "telefono": a.telefono, "email": a.email, "direccion": a.direccion, "eps": a.eps,
+        "rama": a.rama, "nivel": a.nivel, "telefono": a.telefono, "email": a.email, "direccion": a.direccion,
+        "eps": a.eps,
         "usuario_id": str(a.usuario_id) if a.usuario_id else None, "activo": a.activo,
     }
 
@@ -148,11 +149,13 @@ def _indices_documento(texto: str) -> list[str]:
 
 def listar(
     db: Session, usuario: Usuario, *, rama: str | None, buscar: str | None, activo: bool | None = None,
-    skip: int, limit: int,
+    nivel: str | None = None, skip: int, limit: int,
 ) -> list[Alumno]:
     q = select(Alumno).where(filtro_visibles(usuario))
     if rama:
         q = q.where(Alumno.rama == rama)
+    if nivel:
+        q = q.where(Alumno.nivel == nivel)
     if activo is not None:
         q = q.where(Alumno.activo.is_(activo))
     if buscar:

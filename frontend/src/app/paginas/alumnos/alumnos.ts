@@ -16,7 +16,7 @@ import { PesosPipe } from '../../compartido/pesos.pipe';
 import { AuthService } from '../../core/auth/auth.service';
 import { AlumnosApi, VinculoNuevo } from './alumnos.api';
 import {
-  Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, Rama, RegistroHistorial,
+  Acudiente, AcudienteVinculado, Alumno, Documento, EstadoCuenta, NOMBRE_NIVEL, Nivel, Rama, RegistroHistorial,
 } from './alumnos.modelos';
 import { DocumentosAlumno } from './documentos-alumno';
 import { FormaPago, inscribirConPago, problemaPago, resumenPago } from '../inscripciones/inscribir';
@@ -69,6 +69,8 @@ export class AlumnosPage implements OnInit {
   protected readonly alumnos = signal<Alumno[] | null>(null);
   protected readonly buscar = signal('');
   protected readonly filtroRama = signal<Rama | ''>('');
+  protected readonly filtroNivel = signal<Nivel | ''>('');
+  protected readonly nombreNivel = NOMBRE_NIVEL;
   protected readonly verInactivos = signal(false);
   protected readonly errorLista = signal(false);
   private temporizador: ReturnType<typeof setTimeout> | undefined;
@@ -113,6 +115,7 @@ export class AlumnosPage implements OnInit {
     documento: ['', Validators.maxLength(30)],
     fecha_nacimiento: ['', Validators.required],
     rama: this.fb.control<Rama | ''>('', Validators.required),
+    nivel: this.fb.control<Nivel | ''>('', Validators.required),
     telefono: ['', Validators.maxLength(20)],
     email: ['', [Validators.email, Validators.maxLength(254)]],
     direccion: ['', Validators.maxLength(200)],
@@ -165,7 +168,7 @@ export class AlumnosPage implements OnInit {
   // ---------- Lista ----------
   protected cargarLista(): void {
     const filtro = {
-      limite: LIMITE_LISTA, buscar: this.buscar(), rama: this.filtroRama(),
+      limite: LIMITE_LISTA, buscar: this.buscar(), rama: this.filtroRama(), nivel: this.filtroNivel(),
       activo: this.esStaff() ? !this.verInactivos() : undefined,
     };
     this.api.listar(filtro).subscribe({
@@ -188,6 +191,11 @@ export class AlumnosPage implements OnInit {
 
   protected cambiarRama(rama: Rama | ''): void {
     this.filtroRama.set(rama);
+    this.cargarLista();
+  }
+
+  protected cambiarNivel(nivel: Nivel | ''): void {
+    this.filtroNivel.update((actual) => (actual === nivel ? '' : nivel)); // tocar el activo lo quita
     this.cargarLista();
   }
 
@@ -285,7 +293,7 @@ export class AlumnosPage implements OnInit {
   protected abrirEditar(a: Alumno): void {
     this.formAlumno.reset({
       nombres: a.nombres, apellidos: a.apellidos, tipo_documento: a.tipo_documento, documento: '',
-      fecha_nacimiento: a.fecha_nacimiento, rama: a.rama, telefono: a.telefono ?? '', email: a.email ?? '',
+      fecha_nacimiento: a.fecha_nacimiento, rama: a.rama, nivel: a.nivel, telefono: a.telefono ?? '', email: a.email ?? '',
       direccion: a.direccion ?? '', eps: a.eps ?? '', activo: a.activo,
     });
     this.op.abrir(() => this.editandoAlumno.set('editar'));
@@ -294,8 +302,8 @@ export class AlumnosPage implements OnInit {
   protected guardarAlumno(): void {
     const modo = this.editandoAlumno();
     const f = this.formAlumno.getRawValue();
-    const { rama, tipo_documento } = f;
-    if (this.formAlumno.invalid || !rama || !tipo_documento || (modo === 'nuevo' && !f.documento.trim())) {
+    const { rama, nivel, tipo_documento } = f;
+    if (this.formAlumno.invalid || !rama || !nivel || !tipo_documento || (modo === 'nuevo' && !f.documento.trim())) {
       this.formAlumno.markAllAsTouched();
       this.errorDialogo.set('Revisa los campos obligatorios.');
       return;
@@ -306,7 +314,7 @@ export class AlumnosPage implements OnInit {
     };
     const base = {
       nombres: f.nombres, apellidos: f.apellidos, fecha_nacimiento: f.fecha_nacimiento,
-      rama, ...opcionales,
+      rama, nivel, ...opcionales,
     };
 
     if (modo === 'nuevo') {

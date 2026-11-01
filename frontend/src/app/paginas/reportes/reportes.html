@@ -1,0 +1,91 @@
+@if (op.mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="op.mensaje.set(null)" />
+}
+
+<div class="barra">
+  <div class="anio" role="group" aria-label="Año">
+    <button type="button" class="boton-icono" (click)="cambiarAnio(-1)" aria-label="Año anterior">
+      <span class="icono" aria-hidden="true">chevron_left</span>
+    </button>
+    <span class="anio-texto mono" aria-live="polite">{{ anio() }}</span>
+    <button type="button" class="boton-icono" (click)="cambiarAnio(1)" aria-label="Año siguiente">
+      <span class="icono" aria-hidden="true">chevron_right</span>
+    </button>
+  </div>
+  <p class="nota">Neto por mes: las anulaciones restan en el mes en que se hicieron.</p>
+</div>
+
+@if (error()) {
+  <p class="panel vacio" role="alert">No se pudo cargar el reporte. Recarga la página.</p>
+} @else if (indicadores(); as k) {
+  <section class="kpis" aria-label="Indicadores">
+    <div class="kpi">
+      <div class="etiqueta">Ingresos {{ anio() }}</div>
+      <div class="kpi-valor">{{ k.total | pesos }}</div>
+      <div class="kpi-nota">todos los conceptos</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Promedio mensual</div>
+      <div class="kpi-valor">{{ k.promedio | pesos }}</div>
+      <div class="kpi-nota">meses con ingresos</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Mejor mes</div>
+      <div class="kpi-valor">{{ k.mejor }}</div>
+      <div class="kpi-nota">el de más ingresos</div>
+    </div>
+    <div class="kpi">
+      <div class="etiqueta">Inscripciones / otros</div>
+      <div class="kpi-valor">{{ k.inscripciones | pesos }}</div>
+      <div class="kpi-nota">{{ k.otros | pesos }} en multas, rifas y torneos</div>
+    </div>
+  </section>
+
+  <section class="panel tabla-panel">
+    <table class="tabla">
+      <caption class="solo-lectores">Ingresos de {{ anio() }} por mes y concepto</caption>
+      <thead>
+        <tr>
+          <th scope="col">Mes</th>
+          <th scope="col" class="num">Inscripciones</th>
+          <th scope="col" class="num">Multas</th>
+          <th scope="col" class="num">Rifas</th>
+          <th scope="col" class="num">Torneos</th>
+          <th scope="col" class="num">Total</th>
+          <th scope="col" class="barra-col"><span class="solo-lectores">Proporción</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of datos()!.meses; track m.mes) {
+          <tr [class.vacio-fila]="m.total === 0">
+            <th scope="row">{{ meses[m.mes - 1] }}</th>
+            <td class="num mono">{{ m.inscripciones | pesos }}</td>
+            <td class="num mono">{{ m.multas | pesos }}</td>
+            <td class="num mono">{{ m.rifas | pesos }}</td>
+            <td class="num mono">{{ m.torneos | pesos }}</td>
+            <td class="num mono total">{{ m.total | pesos }}</td>
+            <td class="barra-col" aria-hidden="true"><span class="barra-mes" [style.width]="ancho(m)"></span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+} @else {
+  <p class="panel vacio">Cargando…</p>
+}
+
+@if (puedeExportar()) {
+  <section class="panel exportar">
+    <h2>Movimientos para la contabilidad</h2>
+    <p class="nota">Cada abono, pago y anulación del rango en un CSV que abre Excel. La descarga queda en la auditoría.</p>
+    <form class="formulario fila-exportar" [formGroup]="form" (ngSubmit)="descargar()">
+      <label class="campo"><span class="etiqueta">Desde</span>
+        <input class="control" type="date" formControlName="desde" /></label>
+      <label class="campo"><span class="etiqueta">Hasta</span>
+        <input class="control" type="date" formControlName="hasta" /></label>
+      <button type="submit" class="boton" [disabled]="op.ocupado()">
+        <span class="icono" aria-hidden="true">download</span> Descargar CSV
+      </button>
+    </form>
+  </section>
+}

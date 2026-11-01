@@ -3,157 +3,118 @@
 [![CI](https://github.com/JPosada24/dragones_dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/JPosada24/dragones_dashboard/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688)
+![Angular](https://img.shields.io/badge/Angular-22-dd0031)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
-Sistema para administrar un club deportivo real: alumnos y acudientes, inscripciones con plazos de pago,
-abonos, documentos y, en las próximas fases, asistencia, multas, rifas y torneos. Reemplaza las hojas de
-cálculo y los mensajes sueltos por un registro único, auditable y con permisos por rol.
+*[Read in English](README.en.md)*
 
-> Proyecto en desarrollo activo: el **backend está completo** (todas las reglas del club) y el **frontend en
-> Angular** está en construcción, pantalla por pantalla. Los datos de las pruebas son inventados.
+Sistema real para administrar un club deportivo en Colombia: alumnos y acudientes, inscripciones con abonos y
+plazos, asistencia con multas automáticas, mora, rifas con sorteo verificable, torneos con clubes externos, avisos
+por correo y WhatsApp, y un sitio público alimentado por la misma API. Reemplaza hojas de cálculo y mensajes sueltos
+por un registro único, auditable y con permisos por rol. Los datos del repositorio y de las pruebas son inventados.
 
 ## Qué resuelve
 
 | Necesidad del club | Cómo lo resuelve |
 |---|---|
-| Saber quién está inscrito y quién debe | Inscripción con valor y plazo configurables, **abonos parciales**, saldo y estados (pendiente → activo → a expulsar → expulsado) |
-| Que nadie "acomode" los pagos | Abonos, prórrogas y bitácora **de solo agregar** (un trigger de PostgreSQL impide editarlos o borrarlos). Un error se corrige con una anulación que deja rastro |
-| Proteger datos de menores | Documento de identidad y archivos **cifrados en reposo**; los menores exigen acudiente |
-| Controlar la asistencia | Sesiones por rama, marcación del entrenador o del propio alumno (solo en el horario), justificaciones con revisión y **cierre diario** que genera ausencias y multas automáticamente |
-| Rifas sin enredos | Un talonario por alumno, pagos por puesto o completos, **sorteo automático** solo entre talonarios pagados, con acta inmutable verificable por su huella SHA-256 |
-| Organizar torneos | Inscripción de clubes externos con cupo, **lista de espera automática** y abonos hasta confirmar |
-| Avisar sin pagar mensajería | Correo automático, avisos en la plataforma y **WhatsApp con un clic** (enlace con el mensaje listo desde el número del club): recordatorios de pago, multas, justificaciones y alertas de inasistencia |
-| Deudas que se eternizan | **Mora automática**: una deuda con 3 meses (configurable) deja la inscripción «a expulsar» para que el dueño confirme; aviso previo a la familia y vuelta a activo al pagar |
-| ¿Quién está a paz y salvo? | Estado de cuenta por alumno: inscripción, multas y rifas en un solo número |
-| Varios entrenadores, dos ramas | Permisos por rol verificados en el servidor; un entrenador asistente solo ve su rama |
-| Reglas que cambian | Montos, plazos, edades y límites viven en la tabla `configuracion`, editable por el dueño |
+| Saber quién está inscrito y quién debe | Inscripción anual con valor y plazo configurables, **abonos parciales**, prórrogas con motivo y estados (pendiente → activo → a expulsar → expulsado) |
+| Que nadie «acomode» los pagos | Pagos, prórrogas, actas y auditoría **de solo agregar**: un trigger de PostgreSQL impide editarlos o borrarlos; un error se corrige con una anulación que deja rastro |
+| Proteger datos de menores (Ley 1581) | Documento de identidad y archivos **cifrados en reposo**, autorización de datos registrada por alumno, fotos sin metadatos, política publicada y **registro de solicitudes** con su plazo legal en días hábiles |
+| Controlar la asistencia | Entrenamientos programados solos desde el horario (salta festivos de Colombia y torneos), planilla P/A/J y **cierre diario** que marca ausencias y genera multas |
+| Deudas que se eternizan | **Mora automática** a los 3 meses (configurable), con aviso previo a la familia y confirmación del dueño |
+| Rifas sin enredos | Un talonario por alumno, pago por abonos y **sorteo** solo entre talonarios pagados, con acta inmutable verificable por su huella SHA-256 |
+| Organizar torneos | Inscripción de clubes externos (también desde el sitio público) con cupo y **lista de espera automática** |
+| Avisar sin pagar mensajería | Correo automático, bandeja en la plataforma y **WhatsApp con un clic** desde el número del club (sin bots ni API de pago) |
+| Saber cuánto entra y rendir cuentas | **Reportes** de ingresos por mes y concepto y exportación de movimientos a CSV para la contabilidad |
+| Varios entrenadores | Roles y permisos verificados en el servidor; el entrenador asistente no hereda acceso total |
 
 ## Arquitectura
 
 ```mermaid
 flowchart LR
-    C[Frontend<br/>Angular 22] -->|/api + JWT| API
-    subgraph Docker Compose
-      API[FastAPI<br/>rutas → servicios → modelos] --> DB[(PostgreSQL 16)]
-      API --> V[(Volumen de documentos<br/>cifrados)]
-      W[Worker<br/>tareas programadas] --> DB
+    S[Sitio público<br/>Angular · Netlify] -->|/api/v1/publico<br/>sin credenciales| C
+    U[Panel<br/>Angular 22] --> C[Caddy<br/>HTTPS · CSP]
+    subgraph Servidor · Docker Compose
+      C -->|/api| API[FastAPI<br/>rutas → servicios → modelos]
+      API --> DB[(PostgreSQL 16)]
+      API --> V[(Archivos<br/>cifrados)]
+      W[Worker<br/>tareas idempotentes] --> DB
+      R[Respaldo<br/>diario, cifrado con age] --> DB
+      R --> V
     end
+    R -->|rclone| X[(Almacenamiento<br/>externo)]
 ```
 
-- **Capas:** `api/v1` (rutas y permisos) → `services` (reglas de negocio) → `models` (SQLAlchemy 2).
-  La validación de entrada y salida está en `schemas` (Pydantic v2).
-- **Migraciones:** Alembic; las pruebas construyen el esquema con las migraciones reales, así que cada
-  migración y cada trigger quedan probados.
-- **Worker:** un contenedor aparte corre las tareas programadas (cierre diario de asistencia, vencimiento de
-  inscripciones, mora, recordatorios y envío de correos con reintentos). Son idempotentes y un *advisory lock* de PostgreSQL evita ejecutarlas dos veces a la vez.
-- **Errores de negocio:** excepciones propias (`services/errores.py`) que se traducen a HTTP con mensajes
-  pensados para el usuario final ("La fecha de pago supera el plazo de 30 días…").
+- **Backend:** FastAPI + SQLAlchemy 2 + Alembic + Pydantic v2. Capas `api/v1` (rutas y permiso) → `services` (reglas
+  de negocio y alcance) → `models`. Las rutas no tienen lógica.
+- **Frontend:** Angular 22 *standalone*, señales, OnPush, sin zone.js. Los tipos salen del **contrato OpenAPI** de la
+  API: si el backend cambia y el frontend no, el CI falla.
+- **Worker:** tareas programadas idempotentes con *advisory locks* de PostgreSQL (cierre de asistencia, vencimientos,
+  mora, programación de entrenamientos, avisos, correos con reintentos). Deja un latido que se monitorea.
+- **Decisiones de diseño:** [`docs/decisiones/`](docs/decisiones/README.md), una por archivo (por qué cada cosa es
+  como es).
 
 ## Seguridad
 
-La seguridad está en el diseño y en las pruebas, no en ocultar el código:
+- **Autenticación:** Argon2id; access token JWT de 15 min solo en memoria; refresh token rotativo en cookie
+  `HttpOnly` con **detección de reuso**; bloqueo por cuenta y límite por IP compartido entre procesos (en PostgreSQL).
+  Cambiar la contraseña o el rol invalida los tokens al instante.
+- **Autorización:** cada ruta declara su permiso y el servicio aplica el alcance; un recurso ajeno responde 404.
+  Hay pruebas de **qué rol no puede** hacer cada cosa.
+- **Datos sensibles:** cifrado Fernet con **índice ciego** para buscar sin descifrar; claves rotables
+  (`MultiFernet`, script de rotación). Nada sensible en la auditoría ni en los logs.
+- **Archivos:** validados por su contenido real; las fotos se vuelven a codificar (sin EXIF/GPS, con tope contra
+  bombas de descompresión).
+- **Borde:** Caddy con HTTPS automático, HSTS, CSP estricta (`script-src 'self'`) y API sin puertos públicos.
+- **Cadena de suministro:** dependencias de Python fijadas **con hashes**, `pip-audit`, `npm audit`, Trivy sobre la
+  imagen, gitleaks, Dependabot y un hook de pre-commit contra secretos.
+- **Copias de seguridad:** diarias, cifradas con la clave **pública** de age (el servidor no puede leerlas) y con
+  la restauración probada de punta a punta.
 
-- **Autenticación:** contraseñas con Argon2id; access token JWT de 15 min con algoritmo fijo; refresh token
-  opaco y rotativo en cookie `HttpOnly` + `SameSite=Strict`, con **detección de reutilización** (si se usa un
-  token ya rotado se revoca toda la cadena). Bloqueo por cuenta tras 5 fallos y límite de fallos por IP.
-- **Autorización:** cada ruta declara su permiso y el servicio aplica el alcance (todos / su rama / los
-  propios). Un recurso ajeno responde 404, para no revelar que existe.
-- **Datos sensibles:** el número de documento se guarda cifrado (Fernet) con un **índice ciego** (HMAC) para
-  buscar y evitar duplicados sin descifrar. En las respuestas sale enmascarado; verlo completo queda auditado.
-- **Archivos:** solo PDF/JPG/PNG validados por su contenido real, con tamaño máximo, cifrados y servidos como
-  descarga (`attachment`, `nosniff`, `no-store`).
-- **Abuso:** tope de tamaño por petición (413) que también corta envíos *chunked*.
-- **Secretos:** solo en `.env` (fuera de git). Un hook de pre-commit y el job de **gitleaks** en el CI frenan
-  cualquier clave que intente colarse.
-- **Producción:** la app se niega a arrancar con cookies no seguras o claves de ejemplo, y apaga la
-  documentación interactiva.
+## Calidad
 
-## Pruebas
+El CI ([`ci.yml`](.github/workflows/ci.yml)) debe pasar completo antes de mezclar:
 
-**173 pruebas** contra un PostgreSQL real; cubren cada regla de negocio y, sobre todo, **qué rol NO puede**
-hacer qué (por ejemplo: un entrenador no inscribe alumnos de otra rama, un acudiente no ve a otros niños,
-el Admin no confirma expulsiones). Las reglas con hora (cierre de las 11:59 pm, ventana para marcar
-asistencia) se prueban con un reloj simulado.
+| Backend | Frontend | Infraestructura |
+|---|---|---|
+| ruff · pytest contra PostgreSQL real · **cobertura ≥ 90 %** (líneas y ramas) · pip-audit · contrato OpenAPI al día | ESLint (strict + accesibilidad) · compilación · Vitest con **cobertura mínima** · npm audit · tipos generados al día | Trivy sobre la imagen · shellcheck · compose de producción válido · gitleaks |
 
-## Cómo correrlo
+Las pruebas construyen el esquema con las **migraciones reales** (así se prueban también los triggers) y las reglas
+con hora usan un reloj simulado.
+
+## Cómo correrlo (desarrollo)
 
 Requisito: Docker Desktop.
 
 ```powershell
-copy .env.example .env      # luego edita los valores marcados "CAMBIA"
+copy .env.example .env      # y cambia los valores marcados "CAMBIA"
 docker compose up --build
 ```
 
-Genera las claves sin instalar Python:
+- Panel: <http://localhost:4300> (ingresa con `SUPERADMIN_EMAIL` y su clave)
+- Documentación interactiva de la API: <http://localhost:8000/api/docs>
 
-```powershell
-docker compose run --rm --no-deps api python -c "import secrets; print(secrets.token_urlsafe(48))"
-docker compose run --rm --no-deps api python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
-
-> **Guarda `DATA_ENCRYPTION_KEY` en un lugar seguro.** Si se pierde, los datos cifrados no se recuperan.
-> En `POSTGRES_PASSWORD` usa solo letras y números (va dentro de una URL).
-
-Al arrancar se aplican las migraciones y se crea el primer SuperAdmin con los datos de `.env`. Luego:
-
-- **Aplicación:** <http://localhost:4300> (ingresa con `SUPERADMIN_EMAIL` y su clave)
-- Documentación interactiva: <http://localhost:8000/api/docs> (o el puerto de `API_PORT`)
-- Salud: <http://localhost:8000/api/v1/salud>
-
-Pruebas (crean una base `<nombre>_test` aparte; no tocan tus datos):
-
-```powershell
-docker compose run --rm --user root api sh -c "pip install -q -r requirements-dev.txt && pytest"
-```
-
-Pruebas del frontend:
-
-```powershell
-docker compose exec frontend npx ng test --watch=false
-```
-
-Activa el hook que bloquea secretos (una vez por clon):
-
-```powershell
-git config core.hooksPath .githooks
-```
+Pruebas y verificaciones: ver [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Producción: [`docs/despliegue.md`](docs/despliegue.md) (primera vez) y [`docs/operacion.md`](docs/operacion.md)
+(copias, restauración, rotación de claves, incidentes).
 
 ## Estructura
 
 ```
 backend/
-  app/
-    core/        configuración, seguridad, cifrado, límites, almacenamiento de archivos, permisos
-    models/      tablas (acceso, alumnos, inscripciones, abonos, asistencia, multas, rifas, torneos,
-                 notificaciones, auditoría)
-    schemas/     validación de entradas y salidas
-    services/    reglas de negocio
-    api/v1/      rutas (auth, usuarios, configuración, alumnos, acudientes, inscripciones, sesiones,
-                 justificaciones, multas, rifas, torneos, notificaciones, mora)
-  alembic/       migraciones 0001–0009
-  tests/         pruebas automatizadas
-frontend/        Angular 22 (ver frontend/README.md)
-.githooks/       pre-commit que bloquea secretos
-.github/         CI: pruebas + gitleaks
+  app/core/       configuración, seguridad, cifrado, límites, observabilidad, almacenamiento
+  app/models/     tablas (SQLAlchemy 2)
+  app/schemas/    entradas y salidas (Pydantic v2) — de aquí sale el contrato OpenAPI
+  app/services/   reglas de negocio
+  app/api/v1/     rutas
+  app/worker.py   tareas programadas
+  alembic/        migraciones
+  tests/          pruebas (PostgreSQL real)
+frontend/         panel Angular 22 (tipos generados en src/app/core/api/)
+deploy/           Caddyfile y servicio de copias de seguridad
+docs/             despliegue, operación y decisiones de arquitectura
 ```
-
-## Hoja de ruta
-
-- [x] Fase 1A — autenticación, roles, configuración y auditoría
-- [x] Fase 1B — alumnos, acudientes, documentos, inscripciones, abonos y prórrogas
-- [x] Fase 2 — sesiones, asistencia, justificaciones, cierre diario y multas
-- [x] Worker de tareas programadas (cierre diario, vencimientos)
-- [x] Fase 3A — rifas, sorteo con acta y estado de cuenta (paz y salvo)
-- [x] Fase 3B — torneos con clubes externos, cupo y lista de espera
-- [x] Notificaciones: correo, bandeja y WhatsApp con enlace
-- [x] Mora automática por deudas sin pagar
-- [x] Frontend F1 — ingreso, marco con menú por permisos, avisos
-- [x] Frontend: Resumen (tablero del staff y vista de las familias)
-- [x] Programación automática de entrenamientos (horario semanal, festivos de Colombia y torneos)
-- [x] Frontend: Asistencia (planilla, correcciones, justificaciones, horario) con formularios en ventanas emergentes
-- [ ] Frontend: Alumnos, Inscripciones, Dinero, Torneos, Configuración…
-- [ ] Sitio público del club · asistente con IA · despliegue
 
 ## Licencia
 

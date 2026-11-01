@@ -9,7 +9,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   `Dashboard Dragones (standalone).html` (oscuro, naranja #f2691e / oro #f5b731, Sora + Public Sans + IBM Plex Mono,
   Material Symbols; fuentes servidas localmente). Adaptaciones: Categoría→Rama, 20 puestos, Eventos→Torneos.
 - Todo en **Docker Compose**. El PC de desarrollo es **Windows** (comandos en PowerShell).
-- Agente de IA: API de Claude (SDK `anthropic`), solo consulta. Redis llega con producción.
+- Agente de IA: API de Claude (SDK `anthropic`), solo consulta. Sin Redis: el limitador y los locks viven en PostgreSQL.
 
 ## Decisiones de negocio (ya acordadas)
 - Deporte: voleibol. **Solo dos ramas: masculina y femenina** (no hay categorías).
@@ -54,311 +54,45 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Todo valor "configurable" vive en la tabla `configuracion` (lo cambia solo el SuperAdmin).
 
 ## Estado
-- HECHO (Fase 1 parte A): Docker, auth (Argon2id, JWT 15 min, refresh rotativo en cookie HttpOnly con detección de reuso,
-  bloqueo tras 5 intentos), roles/permisos, usuarios, configuración, auditoría append-only (trigger), migración 0001, tests.
-- HECHO (Fase 0, 2026-10-22): verificado en Docker. Migración 0001 + siembra OK, `/api/v1/salud` → ok,
-  `alembic check` sin diferencias modelo↔migración, **26 pruebas en verde**. Correcciones:
-  `tests/conftest.py` (el `import app.models` pisaba la variable `app` → TestClient recibía un módulo);
-  las pruebas ahora construyen el esquema con `alembic upgrade head` (prueban migraciones y triggers);
-  prueba nueva del trigger append-only de `auditoria`; `docker-compose.yml` ahora respeta `API_PORT`.
-- Notas: si cambias `POSTGRES_PASSWORD` con el volumen ya creado, hay que `docker compose down -v`
-  (Postgres solo usa la clave al inicializar).
-- HECHO (Fase 1 parte B, 2026-10-22): migración 0002 (alumnos, acudientes, alumno_acudiente, documentos_alumno,
-  inscripciones, prorrogas + `usuarios.rama`) 0003 (abonos) y 0004 (anulación de abonos). **89 pruebas en verde** (incluye `tests/test_seguridad.py`), `alembic check` limpio.
-  - Documento de identidad cifrado con Fernet (`DATA_ENCRYPTION_KEY` en `.env`; si se pierde, no se recupera) +
-    índice ciego HMAC para buscar/evitar duplicados. Respuestas enmascaradas (`****1234`); el completo solo en
-    `GET /alumnos/{id}/documento-identidad` (Admin/SA, auditado). Nunca en claro en la auditoría.
-  - Archivos: solo PDF/JPG/PNG validados por firma, cifrados, en el volumen `documentos` (`core/almacen.py`,
-    interfaz lista para S3). Suben/borran quienes tienen `alumnos.editar` (Entrenador solo su rama); el Miembro
-    dueño solo los ve/descarga.
-  - Inscripción: valor ($90.000) y plazo (30 días) leídos de `configuracion` al inscribir y guardados en la fila.
-    Abonos en `pagos_inscripcion` (migración 0003, append-only); `monto_pagado` = suma, `fecha_pago` = fecha en que
-    se completó; abono > saldo → 422. Abono tras el límite → 422 con mensaje claro. Valor 0 → activa de inmediato.
-    Registrar abonos (`POST /inscripciones/{id}/pagos`) exige `inscripciones.abonar` (Admin, SA y Entrenador de la rama;
-    `pagos.registrar` queda solo para Admin/SA: multas y rifas no las cobra el Entrenador salvo que se decida).
-    Anular (`POST /inscripciones/{id}/pagos/{pago_id}/anular`, `pagos.anular` = solo SA, motivo ≥10, migración 0004):
-    fila con monto negativo y `anula_id`; si la inscripción activa queda con saldo, vuelve a pendiente_pago. No se
-    anula una anulación ni un abono dos veces; no se anula en a_expulsar/expulsado. Prórroga (`prorroga.conceder`, motivo ≥10, tabla append-only)
-    amplía el plazo y reactiva una rechazada **por vencimiento** (no una rechazada a mano).
-  - Estados: pendiente_pago →(pago) activo; pendiente_pago → rechazado; activo ⇄ a_expulsar; a_expulsar → expulsado
-    (solo `expulsion.confirmar` = SuperAdmin). Una sola inscripción vigente por alumno y año (índice parcial).
-  - `POST /inscripciones/vencer` rechaza pendientes vencidas (manual hasta que exista el worker diario).
-  - Menor (edad < `edad_mayoria`, configurable) necesita acudiente al crear, editar, desvincular e inscribir.
-  - Visibilidad: Admin/SA todo; Entrenador solo su `rama` (sin rama no ve ni registra nada; no puede crear ni
-    mover alumnos a otra rama; inscribe solo con fecha de hoy); Miembro solo él mismo o sus hijos
-    (vía `acudientes.usuario_id`). Errores de negocio: `services/errores.py` → HTTP en `main.py`.
-  - Parámetros nuevos en `configuracion`: `valor_inscripcion`, `edad_mayoria`, `documento_max_mb`.
-- HECHO (Fase 2, 2026-10-29): migración 0005 (sesiones, asistencias, justificaciones, multas). **115 pruebas**.
-  - Sesiones por rama (`POST /sesiones` o `/sesiones/programar` por días de la semana, máx. ~6 meses; no en el
-    pasado). Esperados = alumnos activos de la rama con inscripción vigente desde antes de la sesión.
-  - Marcación: grupo (`asistencia.marcar_grupo`, Entrenador solo su rama; presente/ausente; no sesiones futuras)
-    o propia (Miembro, solo el día y entre `minutos_marcar_antes` antes del inicio y el fin; no pisa lo del staff).
-  - Cierre (`POST /sesiones/cerrar`, `asistencia.corregir`; lo llamará el worker): tras `hora_cierre_asistencia`,
-    quien no marcó ni justificó → ausente + multa (`multa_inasistencia`, copiada; 0 = no multar). Justificación
-    pendiente deja la decisión a la revisión. `with_for_update(skip_locked)` evita cierres duplicados.
-  - Justificación: Miembro hasta `dias_para_justificar` tras la sesión; staff sin plazo. Revisión
-    (`justificaciones.revisar`, Admin/SA): aprobar → justificado y anula multa pendiente; rechazar tras el cierre →
-    ausente + multa. El motivo (posibles datos de salud) NO va a la auditoría.
-  - Corrección tras el cierre (`asistencia.corregir`, con motivo) ajusta la multa. Cancelar sesión anula sus multas
-    pendientes. Multas: pago con `pagos.registrar` (Admin/SA; el Entrenador no cobra), anular pendiente con
-    `multas.anular` + motivo; una pagada no se anula (devolución manual, fuera de alcance).
-  - Alertas `GET /sesiones/alertas`: racha de ausencias (justificada rompe la racha) ≥ `inasistencias_consecutivas_aviso`.
-  - Reloj: todo el código usa `fechas.ahora()`/`fechas.hoy()` (las pruebas lo simulan con monkeypatch).
-- HECHO (worker, 2026-10-29): servicio `worker` en docker-compose (`python -m app.worker`, `app/worker.py`). Corre
-  tareas idempotentes por intervalo: cierre de asistencia cada 300 s y vencimiento de inscripciones cada 3600 s
-  (`WORKER_*_SEGUNDOS`). `pg_try_advisory_xact_lock` evita dos workers en la misma tarea; un fallo no lo tumba;
-  latido en /tmp/worker_latido para el healthcheck. No recarga solo: `docker compose restart worker` tras cambios.
-  Toda tarea nueva debe ser idempotente y registrarse en `worker.tareas()`. **119 pruebas**.
-- HECHO (Fase 3A rifas, 2026-10-29): migración 0006 (rifas, talonarios, puestos, pagos_puesto, actas_sorteo). **133 pruebas**.
-  - Crear rifa (`rifas.gestionar`): máx. `rifas_por_anio` no canceladas; copia `puestos_por_talonario` y
-    `precio_puesto`; asigna talonario a cada alumno con inscripción vigente del año (puestos indice*N … +N-1).
-    `POST /rifas/{id}/talonarios` asigna a los inscritos después.
-  - Pagos por puesto o por talonario completo (se reparte en orden) con `pagos.registrar`; `pagos_puesto` append-only,
-    anulación con motivo (`pagos.anular`, SA). Comprador (nombre/teléfono) con `rifas.gestionar`.
-  - Sorteo (`sorteo.jugar`, desde `fecha_sorteo`): solo puestos de talonarios pagados al 100 %, `secrets.choice`,
-    fila bloqueada (`refresh(with_for_update)`) antes de revisar el estado. Acta append-only con la lista de
-    participantes y su SHA-256 (`services/rifas.huella`).
-  - `GET /alumnos/{id}/estado-cuenta`: saldo de inscripción + multas pendientes + talonarios con saldo → `al_dia`
-    (paz y salvo).
-- HECHO (Fase 3B torneos, 2026-10-29): migración 0007 (torneos, equipos_torneo, pagos_equipo). **148 pruebas**.
-  - Todo con `eventos.gestionar` (Admin/SA): guarda contactos de delegados externos. Pagos con `pagos.registrar`,
-    anulación con `pagos.anular` (SA); `pagos_equipo` append-only. Se quitó el permiso `eventos.inscribir`.
-  - Inscripción hasta `fecha_limite_inscripcion`; club único por torneo (sin importar mayúsculas, salvo retirado).
-    Cupo lleno → `en_espera`; al retirarse uno que ocupaba cupo entra el primero en espera. Torneo bloqueado
-    (`refresh(with_for_update)`) al mover el cupo. Abonos → `confirmado` al completar; valor 0 → confirmado directo.
-  - Inscripción pública de clubes: queda para la fase del sitio público.
-- HECHO (notificaciones, 2026-10-29): migración 0008 (`notificaciones`). **160 pruebas**.
-  - `services/notificaciones.avisar`: una fila por destinatario con bandeja/correo/WhatsApp; `clave` única +
-    `ON CONFLICT DO NOTHING ... RETURNING` = idempotente. Sin canal posible → no se crea.
-  - Destinatarios: acudientes + el alumno si es mayor (correo propio o el de su cuenta). Staff = SA/Admin +
-    entrenadores de la rama (solo bandeja/correo).
-  - Por evento: multa generada, justificación revisada, inscripción vencida. Programados (worker, cada hora):
-    recordatorios de pago (`recordatorios_dias_antes`, el umbral más cercano, clave con fecha límite) y alertas de
-    inasistencia (una por racha). WhatsApp solo para recordatorio/vencida/multa.
-  - Correo: `core/correo.py` (SMTP o modo registro, `EMAIL_MODO`); el worker envía cada 60 s en lotes de 50,
-    reintentos con espera 2^n min, 5 intentos → fallido. `POST /notificaciones/correo-prueba` (SA) para probar Gmail.
-  - Rutas: `/notificaciones/mias` (cualquiera, solo las propias), `/whatsapp` y `/correos` (`notificaciones.gestionar`).
-- HECHO (mora, 2026-10-29): migración 0009 (`inscripciones.causa_expulsion` mora|manual). **168 pruebas**.
-  - `services/mora.py`: multa vence en la fecha de la sesión; talonario, en la fecha del sorteo. Mora cuando la
-    deuda vencida más antigua + `meses_mora_expulsion` (con `fechas.sumar_meses`) ≤ hoy.
-  - Worker (tarea `mora`, cada hora): activo→a_expulsar (o expulsado) con causa "mora"; a_expulsar por mora → activo
-    al pagar; lo marcado a mano nunca lo revierte. Aviso a la familia `dias_aviso_mora` antes, al entrar en mora y al
-    salir; aviso al staff cuando hay expulsión por confirmar. Usa la inscripción activa más reciente (cruza años).
-  - `GET /mora` (staff; Entrenador su rama) y `en_mora`/`entra_en_mora` en el estado de cuenta.
-- HECHO (frontend F1, 2026-10-29): servicio `frontend` (node:22, `http://localhost:4300`; el 4200 lo usa otro
-  proyecto en este PC), proxy `/api`→api. Login, marco (lateral/superior/pestañas móviles + "Más"), menú filtrado
-  por permisos desde `core/secciones.ts` (también genera las rutas), bandeja de avisos real, demás secciones
-  "en construcción". 9 pruebas de frontend (token en memoria, renovación única ante 401, sin token a otros
-  dominios, logout, menú por permisos, sin redirección abierta). CI: npm audit + build + tests.
-- HECHO (Resumen, 2026-10-29): `GET /api/v1/resumen` (staff; Entrenador su rama; `services/resumen.py`):
-  indicadores, alertas ordenadas por gravedad con `ruta` del frontend, sesiones de hoy, rifas del año, cartera y
-  próximo torneo (solo con `eventos.gestionar`). Pantalla Resumen: tablero del staff como el prototipo; las
-  familias ven a sus hijos (estado de cuenta) y próximos entrenamientos. 173 pruebas backend, 14 frontend.
-  Pipe `pesos` en `compartido/`.
-  Mensajes de resultado con `compartido/aviso.ts` (`<app-aviso>`): X para cerrar; los de éxito se cierran solos
-  a los 6 s, los errores se quedan hasta cerrarlos. Usarlo en todas las pantallas nuevas. Pantallas construidas se registran en `PANTALLAS` de `app.routes.ts`.
-- HECHO (Asistencia, 2026-10-29): pantalla `paginas/asistencia/`. Semana navegable (+ filtro de rama con
-  `alumnos.ver_todos`), tira de sesiones, planilla P/A con "Todos presentes" (solo abierta y no futura), "Corregir"
-  con motivo tras el cierre, cancelar y programar sesiones (una fecha → `POST /sesiones`; rango + días →
-  `/programar`), justificaciones por revisar (rechazo exige comentario) y racha de inasistencias. La familia ve
-  solo sus filas: "Marcar presente" (hoy) y "Justificar", e historial de sus justificaciones. Compartidos nuevos:
-  `compartido/fechas.ts`, `compartido/errores.ts` (`mensajeError`: detalle de la API, nunca trazas) y estilos
-  globales `.control`, `.mensaje`, `.boton.chico`.
-- HECHO (entrenamiento general, 2026-10-29): migración 0010 (sesiones sin `rama`, `automatica`,
-  `causa_cancelacion` festivo|torneo|horario|manual, única por fecha+hora; tabla `horario_entrenamiento`, sembrada
-  L/X 18–20 y S 16–18). `core/festivos.py` (Ley Emiliani + Pascua). `services/programacion.py`: `generar` crea
-  desde **mañana** hasta `dias_programacion_anticipada` (60) días; festivo → creada cancelada; torneo programado →
-  cancela y, si el torneo se cancela, reactiva (lo llaman torneos.crear/cancelar y el worker cada hora, tarea
-  `programar_sesiones`); solo toca las automáticas. `PUT /sesiones/horario` (`sesiones.gestionar`, ya NO lo tiene
-  el Entrenador): ajusta/borra/cancela (si tiene registros) las futuras y regenera. `POST /sesiones` = sesión extra.
-  Esperados = ambas ramas; la planilla se limita con `filtro_visibles` (Entrenador marca solo su rama).
-  Frontend: formularios en **popups** (`compartido/dialogo.ts`, `<dialog>` modal; el error de la API se muestra
-  dentro del popup) — las marcas P/A siguen en la lista por rapidez.
-  `POST /sesiones/{id}/reactivar` (`sesiones.gestionar`): deshace una cancelación manual o por festivo, solo antes
-  del cierre de esa sesión (si no, el cierre multaría a todos); las de torneo/horario no (las maneja la
-  programación). Botón "Deshacer cancelación" / "Entrenar este festivo". Avisos: **campana desplegable**
-  (`layout/campana/`), ya no hay página `/notificaciones`. 181 pruebas backend, 28 frontend.
-- HECHO (Alumnos, 2026-10-30): pantalla `paginas/alumnos/` como el prototipo: lista (búsqueda con espera de 300 ms,
-  filtros de rama solo con `alumnos.ver_todos`, "Inactivos"; punto de color por inscripción) y ficha (`?id=` en la
-  URL): datos, acudientes, estado de cuenta, historial de asistencia con multas y documentos (subir/descargar con
-  token/eliminar). Popups: nuevo/editar alumno, agregar acudiente (se busca por documento completo y se reutiliza;
-  si no existe se crea, y un reintento no lo duplica), quitar acudiente, subir/eliminar documento. "Ver completo"
-  del documento solo Admin/SA (auditado). La familia ve solo lo suyo, sin botones de edición. En celular: lista o ficha.
-  Backend: `GET /alumnos` acepta `activo` y busca también por documento **completo** (índice ciego en cada tipo;
-  nunca parcial) y trae `inscripcion_estado` del año; `GET /alumnos/{id}/asistencia` (historial + multa, mismo
-  alcance que la ficha). Compartidos: `compartido/estados.ts`, `.boton.peligro` global. 184 pruebas backend, 34 frontend.
-- HECHO (revisión de calidad, 2026-10-30): **ESLint** (`frontend/eslint.config.js`: typescript-eslint strict +
-  angular-eslint con accesibilidad de plantillas; `npm run lint`) y **ruff** (`backend/ruff.toml`: E/W/F/I/B/UP/S/
-  SIM/C4/DTZ/RUF, línea 120; las migraciones no se reordenan) en limpio y en el CI. Fixtures compartidas (`reloj`,
-  `h_admin`, `h_root`, `familia`) en `tests/conftest.py` y acciones (`crear_sesion`, `alumno_inscrito`, `crear_rifa`…)
-  en `tests/fabrica.py`: **nunca importar de otro `test_*.py`**. `raise ... from` en los except.
-  Editor: `node_modules` del PC (`npm ci` en `frontend/`) y `backend/.venv` solo para que VS Code resuelva tipos;
-  Docker usa los suyos. Resumen: `alumnos_sin_inscripcion` ("registrados sin inscribir"). Alumnos: inscribir al
-  crear o desde la ficha ("Inscribir <año>") con sin pago / abono parcial / pago completo (`inscripciones.crear` y
-  `.abonar`); si la inscripción falla tras crear, se avisa sin reintentar el alta. 184 pruebas backend, 37 frontend.
-- HECHO (Inscripciones, 2026-10-30): pantalla `paginas/inscripciones/`: año navegable, filtro de rama (ver_todos),
-  indicadores (activas, por cobrar, vencen en 7 días, en revisión), filtros por estado con conteo (por defecto
-  pendientes, la más urgente primero), fila con fechas, días restantes, barra de pagado y acciones rápidas (abono con
-  el saldo prellenado, prórroga). Detalle en popup: cifras, abonos (anular con motivo: `pagos.anular`), prórrogas y
-  cambios de estado según `TRANSICIONES` (confirmar expulsión solo con `expulsion.confirmar`). "Nueva inscripción"
-  busca alumnos (deshabilita a quien ya tiene una vigente). `inscripciones/inscribir.ts` (`inscribirConPago`,
-  `problemaPago`, `resumenPago`) lo comparten Alumnos e Inscripciones. KPIs (`.kpis/.kpi`) ahora son estilos
-  globales. La familia ve las de sus hijos sin acciones. 184 pruebas backend, 44 frontend.
-- HECHO (Alumnos + Inscripciones unificados, 2026-10-30): alumno (persona, dura años) e inscripción (matrícula
-  anual con pago) siguen separados en datos, pero la experiencia es una: `POST /inscripciones/alumno-nuevo`
-  (`inscripciones.crear` + `alumnos.editar`, y `.abonar` si trae pago) crea ficha + inscripción de hoy + primer
-  pago (`ninguno|parcial|completo`) en **una transacción** (si algo falla no queda nada). Menú: solo "Alumnos",
-  con pestañas `PestanasAlumnos` (Fichas `/alumnos` · Inscripciones y pagos `/alumnos/inscripciones`;
-  `/inscripciones` redirige; `Seccion.enMenu: false`). "Inscribir alumno nuevo" (inscripción obligatoria); la ficha
-  muestra la tarjeta "Inscripción <año>" (pagado, saldo, límite, "Registrar abono", enlace `?id=` al detalle) y
-  "Renovar inscripción" si no tiene vigente; en la pestaña de inscripciones "Renovar alumno existente". Pestañas
-  móviles: Resumen, Asistencia, Alumnos, Multas. Estilos de formularios de popups (`.formulario`, `.rejilla`,
-  `.campo`, `.casilla`, `.acciones`…) ahora globales. La explicación de la regla va en un modal (botón "?" junto al título). 189 pruebas backend, 46 frontend.
-- HECHO (ayuda + Multas y mora, 2026-10-30): botón "?" en el encabezado de **todas** las vistas
-  (`compartido/ayuda.ts`; el texto de cada una en `core/ayudas.ts`, por ruta; cada paso puede limitarse por
-  permisos). Pantalla `paginas/multas/`: por cobrar agrupadas por alumno (quien más debe primero, "Cobrar todo" o
-  una), pagadas y anuladas (historial), anular con motivo (`multas.anular`), panel "Riesgo de mora" (`GET /mora`,
-  en mora primero, "entra en mora en N d") e indicadores. Backend: `POST /multas/pagos` cobra varias en una
-  transacción (todas o ninguna, filas bloqueadas en orden), `MultaOut.rama`, y `obtener_visible` bloquea la multa
-  (`with_for_update`). Estilos globales nuevos: `.filtros/.filtro`, `.enlace-rojo`. 190 pruebas backend, 53 frontend.
-- HECHO (Rifas, 2026-10-30): pantalla `paginas/rifas/`: año navegable, indicadores, tarjetas por rifa (premio,
-  paz y salvo, recaudo, sorteo "en N d"; acciones: jugar sorteo desde la fecha con `sorteo.jugar`, ver acta, asignar
-  talonarios a nuevos inscritos, cancelar con motivo) y matriz "Paz y salvo por alumno" (alumno × rifa, ✓ o saldo,
-  deuda total, filtros con deuda/rama). Talonario en popup: 20 puestos, "Registrar pago" (se reparte en orden);
-  popup por puesto: comprador (`rifas.gestionar`), pago (`pagos.registrar`), historial y anular (`pagos.anular`).
-  Sorteo: puestos en la urna y acta (ganador, comprador, participantes, huella SHA-256). Sin cambios en backend.
-  190 pruebas backend, 60 frontend.
-- HECHO (código del alumno + vista Sorteo, 2026-10-30): migración 0011 (`alumnos.codigo` único con check
-  `^[FM][0-9]{3,5}$`, relleno por rama en orden de creación; `talonarios.codigo`). `alumnos.siguiente_codigo`
-  con `pg_advisory_xact_lock(7311)` (sin choques entre altas simultáneas). Búsqueda por código. API: `codigo` en
-  AlumnoOut/TalonarioOut, `boleta` (1…20) en PuestoOut, `codigo`/`boleta`/`rama` en ActaOut. Frontend: pestañas
-  genéricas `compartido/pestanas.ts` (Alumnos y Rifas), pestaña **Sorteo** (`/rifas/sorteo`, `?rifa=`): KPIs,
-  pantalla grande código · boleta que gira (solo visual: el ganador lo elige el servidor; respeta
-  `prefers-reduced-motion`), confirmación antes de jugar, tarjeta del ganador con acta y "Avisar por WhatsApp"
-  (wa.me al teléfono del comprador, `numeroWhatsApp`), talonarios por código con filtros, avance por rama e
-  historial de sorteos del año. 192 pruebas backend, 65 frontend. (El aviso al comprador lo reemplazó la 0012.)
-- HECHO (rifas sin compradores, 2026-10-30): migración 0012 (`pagos_talonario` reemplaza `puestos`/`pagos_puesto`
-  con los mismos ids; actas con `orden`, `talonario_id`, `codigo`, `boleta` y participantes "F001-01"; estado
-  `eliminada` e índice único parcial `uq_rifas_anio_numero`; checks de anulación sin motivo). Probada con datos en
-  una base aparte (`tests/test_migraciones.py`; `alembic/env.py` acepta `config.attributes["connection"]`).
-  API: `DELETE /rifas/{id}`, `GET /rifas/{id}/actas`, `POST …/talonarios/{id}/pagos/{pago}/anular`; se quitaron
-  los endpoints de puestos. `MotivoOpcional` en `schemas/comunes.py`. Frontend: talonario con pagos (sin puestos),
-  eliminar rifa (papelera en la tarjeta), sorteo con "Jugar otra vez", lista de jugadas, historial y aviso por
-  WhatsApp al acudiente principal (o al alumno). Estilo global `.boton-icono`. 193 pruebas backend, 66 frontend.
-- HECHO (eliminar, usuarios y campos sin valor por defecto, 2026-10-30): migración 0013 (`solo_agregar()` admite
-  DELETE solo con `SET LOCAL dragones.purga = 'on'`, nunca en `auditoria`; `usuarios.credenciales_version`, que va
-  en el token como `cv`: cambiar contraseña o rol invalida los tokens al instante). `DELETE /alumnos/{id}`
-  (`alumnos.eliminar`, solo SA): purga todo lo del alumno (acudientes se conservan; archivos tras el commit;
-  auditoría solo con el código). `DELETE /sesiones/{id}`: solo sesiones extra y sin multas pagadas. Usuarios:
-  `UsuarioListaOut.vinculado_a`, crear Miembro con `vincular_alumno_id` (mayor de edad) o `vincular_acudiente_id`
-  en la misma transacción, `password` en el PATCH. Pantalla `paginas/usuarios/` (filtros por rol, nueva cuenta con
-  contraseña generada y búsqueda del alumno, editar, cambiar contraseña; nadie se quita su propio rol). **Regla de
-  formularios: ningún campo trae valor por defecto**, solo placeholder; selects con «Selecciona…»; fecha de pago
-  vacía = hoy (`.nota-campo`); montos con el saldo como placeholder y el atajo «Usar el saldo completo»
-  (`.enlace-saldo`); el nombre de la rifa vacío usa la sugerencia. WhatsApp del sorteo: «la boleta número 07».
-  Las boletas ganadoras solo se excluyen dentro de la misma rifa. 199 pruebas backend, 75 frontend.
-- HECHO (entrenador general, 2026-10-30): migración 0014 (sin `usuarios.rama`; se borra `alumnos.ver_rama`). El
-  Entrenador tiene `alumnos.ver_todos`; el documento completo pasa a `alumnos.ver_documento` (Admin/SA). Se quitaron
-  `_verificar_rama_permitida` y la rama en usuarios (API, esquemas, pantalla). Los avisos al staff van a todos los
-  entrenadores. Las notas anteriores sobre "Entrenador solo su rama" quedan sin efecto. 194 pruebas backend, 75 frontend.
-- HECHO (Torneos, 2026-10-30): migración 0015 (estado `eliminado`). `PATCH /torneos/{id}` (nombre, rama, fechas,
-  lugar, cupo, valor: el valor nuevo aplica a los que se inscriban después; subir el cupo promueve a los que esperan;
-  no se baja por debajo de los que ocupan cupo; regenera la programación) y `DELETE /torneos/{id}` (oculto en todo,
-  pagos se conservan; con pagos solo SA; vuelven los entrenamientos). Pantalla `paginas/torneos/`: próximos/pasados/
-  cancelados, indicadores, tarjetas con fecha, cierre de inscripciones y cupos; popup de clubes (inscribir, WhatsApp
-  del delegado, pagos con «Usar el saldo», retirar con promoción de la lista de espera, anular solo SA).
-  `compartido/whatsapp.ts` (`numeroWhatsApp`). 196 pruebas backend, 80 frontend.
-- HECHO (Configuración y Avisos, 2026-10-30): `paginas/configuracion/` (parámetros agrupados y legibles; editar en
-  popup que empieza vacío con el valor actual como placeholder; solo con `config.editar`; «Probar correo»).
-  `paginas/avisos/` (`notificaciones.gestionar`): cola de WhatsApp (abrir enlace wa.me —solo si coincide con
-  `https://wa.me/<número>?text=`—, luego «Sí, enviado» o «Descartar»; el mensaje se pinta como texto) y estado de
-  correos (pendiente/enviado/fallido con intentos y error). **Frontend del panel completo.** 
-  Configuración rehecha como el prototipo (2 columnas: parámetros con caja de valor/unidad que abre el popup,
-  «Políticas automáticas» con interruptor `role=switch` de `expulsion_automatica`, «Recordatorios» derivados de la
-  configuración, matriz «Roles y permisos» de solo lectura desde `GET /configuracion/roles` (`config.ver`; los
-  permisos se cambian con migración). Sin «Zona crítica» hasta que existan cierre de año y respaldo.
-- HECHO (aviso de inasistencia, 2026-10-30): migración 0016 (`justificaciones.motivo` opcional). La familia (o el
-  staff) **avisa que el alumno no asistirá, sin explicar el motivo**: casilla **J** junto a P/A, sin popup. La familia
-  pulsa J (POST de justificación sin motivo); en la planilla del staff J marca `justificado` directo (`MarcaIn`).
-  Aviso antes del inicio del entrenamiento → `aprobada` automática, asistencia `justificado`, sin multa; aviso ya
-  empezado o después (dentro de `dias_para_justificar`) → `pendiente` y lo revisa el staff como antes. En
-  Configuración se quitaron las políticas fijas (solo queda el interruptor real de expulsión). 199 pruebas backend, 89 frontend.
-- HECHO (asistente de IA, 2026-10-31): migración 0017 (`uso_agente` + parámetro `agente_mensajes_por_dia`, 40;
-  0 = apagado). SDK `anthropic` 2.x; `ANTHROPIC_API_KEY` en `.env` (sin clave → 503 «no configurado»), modelo
-  `AGENTE_MODELO` (claude-opus-5-5) y `AGENTE_ESFUERZO` (medium). `services/agente.py`: bucle manual de herramientas
-  (máx. 6 rondas) con `beta.messages.create` + `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`),
-  caché del sistema+herramientas, negativa (`refusal`) manejada. **Solo consulta**: 11 herramientas que llaman a
-  las mismas rutas GET con el usuario que pregunta (respetan su alcance) y solo se ofrecen/ejecutan si tiene el
-  permiso; los resultados salen sin documento, teléfono, correo, dirección, EPS, motivos ni ids. No se guarda la
-  conversación (el navegador la tiene en memoria y reenvía hasta 20 mensajes de texto); `uso_agente` solo guarda
-  tokens y herramientas. `POST /agente/preguntar`, `GET /agente/estado` (`agente.usar`). Límite diario → 429; fallo
-  de la API → 502. Pantalla `paginas/asistente/` (chat, sugerencias por rol, «Consultó: …», respuestas como
-  texto plano). `mensajeError` muestra el detalle del 429. Pruebas con un cliente falso (`tests/test_agente.py`).
-  207 pruebas backend, 92 frontend.
-- HECHO (sitio público, 2026-10-31): migración 0018 (`perfil_club` fila única, `albumes`, `fotos`, `videos`,
-  `integrantes_equipo`; `equipos_torneo.origen` staff|sitio y `autoriza_datos_en`; parámetro `foto_max_mb`, 12).
-  Panel `/club` (`club.editar`, Admin/SA) y pantalla `paginas/perfil-club/` como el prototipo (galería por álbumes,
-  videos, Misión/Visión/Historia, datos y contacto, equipo; interruptor de publicar en sitio, álbum, video e
-  integrante). Fotos: Pillow las vuelve a codificar (orientación, **sin EXIF/GPS**, 1920 px + miniatura 480 px,
-  tope de 40 Mpx contra bombas), exigen confirmar autorización de los acudientes; vista previa del panel con token
-  (blob). Videos: solo YouTube, se guarda el id (11 caracteres) y el sitio muestra la portada con enlace (sin
-  iframes). Redes: solo el usuario; el sitio arma el enlace. Público sin sesión `/publico` (404 si no está
-  publicado): `GET /club`, `GET /fotos/{id}` (solo de álbumes publicados, caché 1 día), `POST /torneos/{id}/inscripcion`
-  (club externo: mismas reglas de cupo/plazo con `torneos.inscribir(actor=None)`, autorización Ley 1581 obligatoria,
-  campo trampa `sitio_web` para bots, `SITIO_ENVIOS_POR_HORA`=5 por IP → 429, aviso al staff). Sitio en `/sitio`
-  (`paginas/sitio/`, fuera del marco y sin login; enlace desde el login): portada, nosotros, horario, equipo,
-  galería con visor, videos, torneos abiertos con formulario de inscripción y contacto. **Solo informativo: sin
-  enlaces al ingreso** (la URL del panel la tiene el staff); escudo oficial `public/escudo.png` (82 px, no agrandar);
-  menú con `routerLink="/sitio" fragment=…` + `anchorScrolling` (un `href="#x"` iría a la raíz = panel). En Torneos, etiqueta
-  «desde el sitio». 221 pruebas backend, 98 frontend.
-- HECHO (sitio oficial conectado, 2026-10-31): el sitio público oficial es el proyecto aparte **DVC_CLAUDE** (Angular 22
-  prerenderizado, Netlify; git local propio). Lee `GET /api/v1/publico/club` en el navegador (equipo, galería,
-  torneos con inscripción) y si la API no responde deja su contenido fijo. URL de la API en su `site.config.json`
-  (`apiUrl`/`API_URL`); su CSP solo se abre hacia esa API. En la plataforma, `core/cors.py` (`CorsSitio`):
-  los orígenes de `SITIO_ORIGENES` solo pueden usar `/api/v1/publico/*` (GET/POST) y **sin credenciales**
-  (el CORS del panel sí las permite). **Se eliminó la página `/sitio` del panel** (y su enlace en el login): el botón
-  «Ver sitio» de Perfil del club abre `SITIO_URL` (`.env`; vacío = sin botón). El sitio toma del perfil WhatsApp
-  (botón), correo y redes (pie), misión/visión/historia (sección El club) y sede (Horarios); vacíos = diseño fijo.
-  Lema y ciudad ya no se editan en el panel (el sitio nuevo no los usa; las columnas siguen).
-  Migración 0020: «La formación va por rotaciones» (`perfil_club.formacion_intro` y `formacion`, 6 etapas
-  {titulo ≤60, texto ≤200}, zona = posición; null = etapas fijas del sitio, `ETAPAS_BASE` en `compartido/club.ts`)
-  editable en una tarjeta con la cancha en miniatura (arriba 4·3·2, abajo 5·6·1). Foto de los integrantes
-  (`integrantes_equipo.foto_clave`): recorte cuadrado de 600 px sin metadatos (`procesar_retrato`); panel
-  `POST/DELETE/GET /club/equipo/{id}/foto`, público `GET /publico/equipo/{id}/foto` (solo integrante publicado y
-  sitio publicado); la API solo expone `foto` = 8 caracteres de versión. El equipo técnico tiene su propia pantalla,
-  pestaña de Perfil del club (`PESTANAS_CLUB`: «Contenido del sitio» `/perfil-club` · «Equipo técnico»
-  `/perfil-club/equipo`, `paginas/equipo-tecnico/`, `GET /club/equipo`): tarjetas con foto, interruptor de
-  publicar, agregar/editar/quitar. Galería también en su pestaña (`/perfil-club/galeria`, `paginas/galeria/`): álbumes
-  como carpetas con portada (solo se pide la miniatura de la primera foto), `?album=id` abre uno (fotos, subir,
-  editar, publicar, eliminar) con **selección múltiple** («Seleccionar todas», `POST /club/fotos/eliminar`
-  {ids ≤500}, todo o nada) y videos. `GET /club/albumes` y `/club/videos`. Contenido del sitio queda con estado,
-  textos, formación y contacto. Migración 0021 (`albumes.portada_clave`): portada propia del álbum, **no cuenta como
-  foto** (1200×900, sin metadatos, exige autorización de acudientes); sin ella, la portada es la primera foto. Panel
-  `POST/DELETE/GET /club/albumes/{id}/portada`, público `GET /publico/albumes/{id}/portada`; `AlbumOut.portada` =
-  versión de 8 caracteres. `compartido/zona-archivos.ts`: campo de archivos con **arrastrar y soltar** (filtra por tipo,
-  `<input type=file>` real por dentro) usado en fotos, portada y foto del entrenador. 232 pruebas backend, 105 frontend.
-  Migración 0019 (`perfil_club.fundado_en`): `GET /publico/club` trae `cifras` (solo totales: deportistas con
-  inscripción vigente por rama, días del horario, torneos del año, años desde la fundación); el sitio las usa en la
-  portada y, sin plataforma, muestra solo datos ciertos. El club enseña por **niveles Iniciación y Avanzado**, cada uno
-  con rama femenina y masculina (solo en el sitio; la plataforma aún no modela niveles). 225 pruebas backend, 99 frontend.
-  `compartido/reducir-imagen.ts`: el panel reduce en el navegador las fotos de más de 2 MB (lado mayor 2560 px, JPEG
-  0,9, sin EXIF) antes de subirlas (las de cámara superaban `foto_max_mb`); si no puede leerla, sube el original. Si
-  una foto falla, el aviso dice el motivo de cada una. 232 pruebas backend, 109 frontend.
-- HECHO (habeas data, 2026-10-31): política de tratamiento de datos (Ley 1581) publicada en el sitio DVC_CLAUDE
-  (`public/politica-de-datos.html`, estática e imprimible, con formato de autorización; datos del club marcados
-  `[POR COMPLETAR]`). Migración 0022: `alumnos.autoriza_datos_en/_nombre/_registro` y `autoriza_imagen` (check: todo
-  o nada). **El alta exige `autorizacion` {nombre de quien autorizó, imagen}** (`AlumnoCrear`, también en
-  `/inscripciones/alumno-nuevo`); `PUT /alumnos/{id}/autorizacion` (`alumnos.editar`) la registra para los alumnos
-  anteriores. La auditoría guarda solo registrada/imagen (nunca el nombre). `AlumnoOut.autorizacion` (null = falta).
-  Panel: campos en el alta, tarjeta «Autorización de datos» en la ficha (roja si falta, «Registrar»/«Actualizar») y
-  alerta del Resumen «N alumnos sin autorización de datos». 238 pruebas backend, 110 frontend.
-- HECHO (eliminar usuarios, 2026-10-31): migración 0023 (`usuarios.eliminado_en`) y permiso `usuarios.eliminar`
-  (solo SA; lo siembra el catálogo). `DELETE /usuarios/{id}`: la fila **no se borra** (27 FKs: pagos, asistencias,
-  auditoría guardan quién registró): se conserva el nombre, el correo pasa a `eliminado-<id>@usuarios.invalid`
-  (queda libre), contraseña aleatoria, inactivo, `credenciales_version`+1 y sesiones revocadas; se desvincula del
-  alumno/acudiente. Fuera de la lista; PATCH/DELETE posteriores → 404. Nadie se elimina a sí mismo. Auditoría sin
-  correo. Panel: papelera por cuenta con confirmación. 241 pruebas backend, 112 frontend.
-- SIGUIENTE: endurecer para producción (Redis para el limitador de logins, HTTPS, copias de seguridad).
+El historial está en `CHANGELOG.md` y el porqué de cada decisión en `docs/decisiones/`; aquí solo lo que hay que
+saber para seguir trabajando.
+
+- **Hecho (v0.4.0):** backend con todas las reglas del club, panel completo, sitio público (proyecto aparte), asistente
+  de IA (apagado sin `ANTHROPIC_API_KEY`), habeas data (autorización por alumno y registro de solicitudes con plazos
+  en días hábiles, `services/habeas.py`), reportes de ingresos y CSV (`services/reportes.py`), nivel del alumno
+  (Iniciación/Avanzado), panel instalable (PWA: el service worker no guarda datos de la API) y preparación para
+  producción. Migraciones hasta la **0026**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
+- **Panel (frontend):** secciones en `core/secciones.ts`, pantallas en `paginas/<seccion>/` registradas en `PANTALLAS`
+  de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`. Todas las
+  pantallas usan `compartido/operacion.ts` (`Operacion`: ocupado, mensaje, errorDialogo, abrir, ejecutar, exito,
+  error; el error de un popup queda en el popup). Popups `compartido/dialogo.ts`, mensajes `<app-aviso>`, archivos
+  `<app-zona-archivos>` (arrastrar y soltar) y `compartido/reducir-imagen.ts`. Acceso a datos en `*.api.ts` por
+  pantalla (`AlumnosApi`, `AsistenciaApi`; seguir el patrón en las demás al tocarlas).
+- **Contrato API → tipos:** los modelos del frontend son `Esquema<'XxxOut'>` (`core/api/tipos.ts`), generados.
+  Tras cambiar rutas o esquemas, **desde Bash** (PowerShell 5 altera la codificación al redirigir):
+  `docker compose exec -T api python -m app.scripts.openapi > frontend/openapi/openapi.json` y en `frontend/`
+  `npm run api:tipos`. `tests/test_contrato.py` y el CI lo verifican. Los valores válidos son `Literal` en
+  `schemas/comunes.py` (`tests/test_dominio.py` los compara con los CHECK de la base).
+- **Backend:** rutas delgadas; la lógica va en `services/` (`club_panel.py` = panel del sitio). Errores de negocio
+  con `services/errores.py`, nunca `HTTPException` en servicios.
+- **Sitio público:** proyecto `DVC_CLAUDE` (git local sin remoto; commits con autor Julian Posada). Lee
+  `/api/v1/publico/*` (CorsSitio, sin credenciales). Su política de datos (`public/politica-de-datos.html`) tiene
+  campos `[POR COMPLETAR]` que llenará Julian.
+- **Datos personales:** autorización de datos obligatoria al dar de alta un alumno (0022); eliminar un usuario lo
+  anonimiza sin borrar la fila (0023).
+- **Producción:** `docker-compose.prod.yml` + `deploy/Caddyfile` (HTTPS, CSP estricta; por eso el build no inyecta
+  CSS crítico en línea) + `deploy/respaldo/` (copias diarias cifradas con age y rclone; restauración probada).
+  Limitador de intentos en Postgres (`intentos`, 0024) y latido del worker (`latidos`) → `/api/v1/salud/worker`.
+  Claves rotables: `DATA_ENCRYPTION_KEY` admite varias (`app.scripts.rotar_clave`) y `SECRET_KEY_ANTERIOR`.
+  Observabilidad en `core/observabilidad.py` (X-Request-ID, logs JSON en producción, `SENTRY_DSN` opcional sin datos
+  personales). Guías: `docs/despliegue.md` y `docs/operacion.md`. Aún no desplegado (VPS recomendado: Hetzner).
+- **Dependencias:** Python en `requirements*.in`, fijadas con hashes con `pip-compile` (comando en
+  `CONTRIBUTING.md`); npm con versiones exactas. Tras cambiar `package.json`, el contenedor del frontend tiene su
+  propio `node_modules`: `docker compose exec frontend npm install`.
+- **Pruebas:** nunca dos suites a la vez (comparten la base `dragones_test` y se vacían las tablas entre pruebas).
+  Fixtures en `tests/conftest.py`, acciones en `tests/fabrica.py`; nunca importar de otro `test_*.py`.
+- **Pendiente (decidir con Julian):** desplegar; horario por nivel (hoy el nivel es un dato del alumno y un filtro);
+  completar la política de datos del sitio.
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);
@@ -368,7 +102,7 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Tablas de evidencia (auditoría, prórrogas, abonos) append-only con trigger `solo_agregar()`; correcciones con
   movimientos nuevos, nunca UPDATE/DELETE.
 - Límites anti-abuso (`core/limites.py`): `MAX_CUERPO_MB` (413) y `LOGIN_FALLOS_POR_IP` por ventana (429), además
-  del bloqueo por cuenta. El limitador vive en memoria: pasarlo a Redis cuando llegue el worker.
+  del bloqueo por cuenta. El limitador vive en PostgreSQL (compartido entre procesos; guarda el SHA-256 de la IP).
 - Archivos: validar contenido real (firma), tamaño, nombre saneado, servir como `attachment` + `no-store`.
 - Cada regla nueva lleva su prueba, incluidas las de permisos (qué rol NO puede).
 
@@ -379,8 +113,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - Cada ruta declara su permiso con `Depends(requiere("..."))`. Nunca confiar en el frontend para autorizar.
 - Cambios de esquema = nueva migración Alembic (no editar la 0001 ya aplicada).
 - Secretos solo en `.env` (no se sube a git).
-- Repositorio git local (rama `main`, desde 2026-10-29). Un commit al cerrar cada fase o cambio relevante;
-  antes de cada commit verificar que no se cuelen secretos (`.env`, claves).
+- Repositorio git (rama `main`). Mensajes con Conventional Commits en español (`feat:`, `fix:`, `refactor:`…) y
+  versiones con etiqueta anotada + `CHANGELOG.md` (ver `CONTRIBUTING.md`). Antes de cada commit verificar que no se
+  cuelen secretos (`.env`, claves).
 - Remoto **público** (portafolio): https://github.com/JPosada24/dragones_dashboard. Todo lo que se commitea es
   público: nunca datos reales del club. Barreras: hook `.githooks/pre-commit` (activar con
   `git config core.hooksPath .githooks`), job gitleaks en `.github/workflows/ci.yml` (+ `.gitleaks.toml`, solo
@@ -398,8 +133,8 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 ```
 copy .env.example .env          # una vez; luego editar valores
 docker compose up --build
-docker compose run --rm --user root api sh -c "pip install -q -r requirements-dev.txt && pytest"
-docker compose exec frontend npx ng test --watch=false      # pruebas del frontend
+docker compose run --rm --user root api sh -c "pip install -q --require-hashes -r requirements-dev.txt && pytest --cov=app"
+docker compose exec frontend npx ng test --watch=false --coverage   # pruebas del frontend
 cd frontend; npm run lint                                    # ESLint (requiere npm ci en el PC)
 docker compose run --rm --user root api sh -c "pip install -q ruff && ruff check ."
 ```

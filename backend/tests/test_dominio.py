@@ -22,6 +22,7 @@ def _check(modelo: type, nombre: str) -> tuple[str, ...]:
 
 @pytest.mark.parametrize(("literal", "valores"), [
     (comunes.Rama, dominio.RAMAS),
+    (comunes.Nivel, dominio.NIVELES),
     (comunes.TipoDocumento, dominio.TIPOS_DOCUMENTO),
     (comunes.EstadoInscripcion, dominio.ESTADOS_INSCRIPCION),
     (comunes.EstadoAsistencia, dominio.ESTADOS_ASISTENCIA),

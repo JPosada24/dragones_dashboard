@@ -6,14 +6,17 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.cors import CorsSitio
 from app.core.limites import LimiteCuerpo
+from app.core.observabilidad import IdPeticion, configurar_logs, iniciar_sentry
 from app.services.errores import ErrorNegocio
 
 
 def crear_app() -> FastAPI:
     s = get_settings()
+    configurar_logs()
+    iniciar_sentry()
     app = FastAPI(
         title="Dragones API",
-        version="0.1.0",
+        version="0.4.0",
         # La documentación interactiva solo existe en desarrollo.
         docs_url=None if s.es_produccion else "/api/docs",
         redoc_url=None,
@@ -33,6 +36,8 @@ def crear_app() -> FastAPI:
 
     # Tope de tamaño antes que nada: una petición gigante no llega a leerse entera.
     app.add_middleware(LimiteCuerpo, max_bytes=s.max_cuerpo_mb * 1024 * 1024)
+    # El más externo: hasta el 413 del tope de tamaño lleva su X-Request-ID.
+    app.add_middleware(IdPeticion)
 
     @app.middleware("http")
     async def cabeceras_de_seguridad(request: Request, call_next):

@@ -74,6 +74,25 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Aviso', texto: '«Avisar por WhatsApp» abre el mensaje listo para el acudiente principal (o el alumno, si es mayor), para enviarlo desde el número del club.' },
     ],
   },
+  habeas: {
+    titulo: 'Solicitudes de datos personales',
+    intro: 'Cuando una familia pide conocer, corregir o borrar sus datos, se registra aquí: la ley fija el plazo para responder.',
+    pasos: [
+      { titulo: 'Consulta', texto: 'Conocer qué datos tiene el club. Plazo: 10 días hábiles desde que se recibe.' },
+      { titulo: 'Reclamo', texto: 'Corregir, actualizar, borrar o revocar la autorización. Plazo: 15 días hábiles.' },
+      { titulo: 'Ampliar', texto: 'Una sola vez (5 o 8 días hábiles más), informando el motivo antes del vencimiento.' },
+      { titulo: 'Avisos', texto: 'El Resumen avisa cuando a una solicitud le quedan 3 días hábiles o menos, o ya venció.' },
+    ],
+  },
+  reportes: {
+    titulo: 'Cómo leer los reportes',
+    intro: 'Suma todo el dinero que entró al club: inscripciones, multas pagadas, rifas y torneos.',
+    pasos: [
+      { titulo: 'Neto por mes', texto: 'Cada abono cuenta en su fecha. Una anulación resta en el mes en que se hizo, así el total de cada mes es lo que de verdad entró.' },
+      { titulo: 'Rifas y torneos eliminados', texto: 'Su dinero sigue contando: los pagos se conservan aunque la rifa o el torneo ya no se vean.' },
+      { titulo: 'Exportar', texto: 'Descarga cada movimiento del rango en un CSV que abre Excel. Queda registrado en la auditoría.', permisos: ['reportes.exportar'] },
+    ],
+  },
   multas: {
     titulo: 'Cómo funcionan las multas y la mora',
     pasos: [

@@ -25,7 +25,7 @@ const inscripcion = (extra: Record<string, unknown> = {}) => ({
 
 const alumno = (id: string, extra: Partial<Alumno> = {}): Alumno => ({
   id, codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', tipo_documento: 'TI', documento: '****4321', fecha_nacimiento: '2013-05-04',
-  edad: 13, es_menor: true, rama: 'femenina', telefono: null, email: null, direccion: null, eps: 'Sura',
+  edad: 13, es_menor: true, rama: 'femenina', nivel: 'iniciacion', telefono: null, email: null, direccion: null, eps: 'Sura',
   usuario_id: null, activo: true, inscripcion_estado: 'activo',
   autorizacion: { nombre: 'Marta Gómez', imagen: true, registrada_en: '2026-01-10T15:00:00Z' },
   acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '3001234567', parentesco: 'madre', principal: true }],
@@ -178,6 +178,7 @@ describe('AlumnosPage', () => {
     escribir('dialog [formcontrolname="fecha_nacimiento"]', '2013-05-04');
     escribir('dialog [formcontrolname="tipo_documento"]', 'TI'); // los selects empiezan en «Selecciona…»
     escribir('dialog [formcontrolname="rama"]', 'femenina');
+    escribir('dialog [formcontrolname="nivel"]', 'iniciacion');
 
     // Acudiente: se busca por documento; no existe, así que se piden sus datos.
     const tipoAcudiente = dialogo().querySelectorAll<HTMLSelectElement>('[formcontrolname="tipo_documento"]')[1]!;
@@ -244,6 +245,7 @@ describe('AlumnosPage', () => {
     escribir('dialog [formcontrolname="fecha_nacimiento"]', '2000-01-01');
     escribir('dialog [formcontrolname="tipo_documento"]', 'CC');
     escribir('dialog [formcontrolname="rama"]', 'femenina');
+    escribir('dialog [formcontrolname="nivel"]', 'iniciacion');
     (dialogo().querySelector('input[type="radio"][value="parcial"]') as HTMLInputElement).click();
     await estable();
     escribir('dialog [formcontrolname="monto"]', '40000');

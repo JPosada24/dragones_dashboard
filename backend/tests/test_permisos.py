@@ -206,3 +206,16 @@ def test_nadie_se_elimina_a_si_mismo(client, crear_usuario, auth_header):
     root = crear_usuario("root@club.com", "SUPERADMIN")
     r = client.delete(f"/api/v1/usuarios/{root.id}", headers=auth_header("root@club.com"))
     assert r.status_code == 422 and "propia" in r.json()["detail"]
+
+
+def test_el_catalogo_borra_los_permisos_que_ya_no_existen(db):
+    from sqlalchemy import select
+
+    from app.models.acceso import Permiso
+    from app.services.catalogos import sembrar_catalogos
+
+    db.add(Permiso(codigo="anio.cerrar", descripcion="Permiso retirado"))
+    db.commit()
+    sembrar_catalogos(db)
+    assert db.scalar(select(Permiso).where(Permiso.codigo == "anio.cerrar")) is None
+    assert db.scalar(select(Permiso).where(Permiso.codigo == "reportes.ver")) is not None

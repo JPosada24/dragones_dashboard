@@ -543,7 +543,8 @@
               "vence_inscripcion",
               "inasistencias",
               "riesgo_mora",
-              "autorizacion"
+              "autorizacion",
+              "habeas"
             ],
             "title": "Tipo",
             "type": "string"
@@ -647,6 +648,21 @@
               }
             ],
             "title": "Fecha Nacimiento"
+          },
+          "nivel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "iniciacion",
+                  "avanzado"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nivel"
           },
           "nombres": {
             "anyOf": [
@@ -784,6 +800,15 @@
           "fecha_nacimiento": {
             "format": "date",
             "title": "Fecha Nacimiento",
+            "type": "string"
+          },
+          "nivel": {
+            "default": "iniciacion",
+            "enum": [
+              "iniciacion",
+              "avanzado"
+            ],
+            "title": "Nivel",
             "type": "string"
           },
           "nombres": {
@@ -969,6 +994,14 @@
             ],
             "title": "Inscripcion Estado"
           },
+          "nivel": {
+            "enum": [
+              "iniciacion",
+              "avanzado"
+            ],
+            "title": "Nivel",
+            "type": "string"
+          },
           "nombres": {
             "title": "Nombres",
             "type": "string"
@@ -1028,6 +1061,7 @@
           "edad",
           "es_menor",
           "rama",
+          "nivel",
           "telefono",
           "email",
           "direccion",
@@ -2415,6 +2449,70 @@
           "alertas"
         ],
         "title": "IndicadoresOut",
+        "type": "object"
+      },
+      "IngresoMesOut": {
+        "properties": {
+          "inscripciones": {
+            "title": "Inscripciones",
+            "type": "integer"
+          },
+          "mes": {
+            "title": "Mes",
+            "type": "integer"
+          },
+          "multas": {
+            "title": "Multas",
+            "type": "integer"
+          },
+          "rifas": {
+            "title": "Rifas",
+            "type": "integer"
+          },
+          "torneos": {
+            "title": "Torneos",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mes",
+          "inscripciones",
+          "multas",
+          "rifas",
+          "torneos",
+          "total"
+        ],
+        "title": "IngresoMesOut",
+        "type": "object"
+      },
+      "IngresosOut": {
+        "properties": {
+          "anio": {
+            "title": "Anio",
+            "type": "integer"
+          },
+          "meses": {
+            "items": {
+              "$ref": "#/components/schemas/IngresoMesOut"
+            },
+            "title": "Meses",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anio",
+          "meses",
+          "total"
+        ],
+        "title": "IngresosOut",
         "type": "object"
       },
       "InscripcionCrear": {
@@ -4099,6 +4197,38 @@
         "title": "ProrrogaOut",
         "type": "object"
       },
+      "ProrrogaSolicitudIn": {
+        "additionalProperties": false,
+        "properties": {
+          "motivo": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Motivo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "motivo"
+        ],
+        "title": "ProrrogaSolicitudIn",
+        "type": "object"
+      },
+      "RespuestaIn": {
+        "additionalProperties": false,
+        "properties": {
+          "respuesta": {
+            "maxLength": 4000,
+            "minLength": 10,
+            "title": "Respuesta",
+            "type": "string"
+          }
+        },
+        "required": [
+          "respuesta"
+        ],
+        "title": "RespuestaIn",
+        "type": "object"
+      },
       "RespuestaOut": {
         "properties": {
           "herramientas": {
@@ -4791,6 +4921,163 @@
           "deudas"
         ],
         "title": "SituacionOut",
+        "type": "object"
+      },
+      "SolicitudIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contacto": {
+            "maxLength": 120,
+            "minLength": 5,
+            "title": "Contacto",
+            "type": "string"
+          },
+          "descripcion": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Descripcion",
+            "type": "string"
+          },
+          "recibida_el": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recibida El"
+          },
+          "tipo": {
+            "enum": [
+              "consulta",
+              "reclamo"
+            ],
+            "title": "Tipo",
+            "type": "string"
+          },
+          "titular": {
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Titular",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "titular",
+          "contacto",
+          "descripcion"
+        ],
+        "title": "SolicitudIn",
+        "type": "object"
+      },
+      "SolicitudOut": {
+        "properties": {
+          "contacto": {
+            "title": "Contacto",
+            "type": "string"
+          },
+          "descripcion": {
+            "title": "Descripcion",
+            "type": "string"
+          },
+          "dias_habiles_restantes": {
+            "title": "Dias Habiles Restantes",
+            "type": "integer"
+          },
+          "estado": {
+            "enum": [
+              "en_tramite",
+              "respondida"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "motivo_prorroga": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo Prorroga"
+          },
+          "prorrogada": {
+            "title": "Prorrogada",
+            "type": "boolean"
+          },
+          "recibida_el": {
+            "format": "date",
+            "title": "Recibida El",
+            "type": "string"
+          },
+          "respondida_en": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Respondida En"
+          },
+          "respuesta": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Respuesta"
+          },
+          "tipo": {
+            "enum": [
+              "consulta",
+              "reclamo"
+            ],
+            "title": "Tipo",
+            "type": "string"
+          },
+          "titular": {
+            "title": "Titular",
+            "type": "string"
+          },
+          "vence_el": {
+            "format": "date",
+            "title": "Vence El",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "titular",
+          "contacto",
+          "descripcion",
+          "recibida_el",
+          "vence_el",
+          "dias_habiles_restantes",
+          "prorrogada",
+          "motivo_prorroga",
+          "estado",
+          "respuesta",
+          "respondida_en"
+        ],
+        "title": "SolicitudOut",
         "type": "object"
       },
       "TalonarioOut": {
@@ -5753,7 +6040,7 @@
   },
   "info": {
     "title": "Dragones API",
-    "version": "0.1.0"
+    "version": "0.4.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -6124,6 +6411,26 @@
                 }
               ],
               "title": "Rama"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nivel",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "iniciacion",
+                    "avanzado"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nivel"
             }
           },
           {
@@ -8321,6 +8628,225 @@
         ]
       }
     },
+    "/api/v1/habeas": {
+      "get": {
+        "operationId": "listar_api_v1_habeas_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "estado",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(en_tramite|respondida)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SolicitudOut"
+                  },
+                  "title": "Response Listar Api V1 Habeas Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Listar",
+        "tags": [
+          "habeas"
+        ]
+      },
+      "post": {
+        "operationId": "registrar_api_v1_habeas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Registrar",
+        "tags": [
+          "habeas"
+        ]
+      }
+    },
+    "/api/v1/habeas/{solicitud_id}/prorrogar": {
+      "post": {
+        "operationId": "prorrogar_api_v1_habeas__solicitud_id__prorrogar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "solicitud_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Solicitud Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProrrogaSolicitudIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Prorrogar",
+        "tags": [
+          "habeas"
+        ]
+      }
+    },
+    "/api/v1/habeas/{solicitud_id}/responder": {
+      "post": {
+        "operationId": "responder_api_v1_habeas__solicitud_id__responder_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "solicitud_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Solicitud Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespuestaIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Responder",
+        "tags": [
+          "habeas"
+        ]
+      }
+    },
     "/api/v1/inscripciones": {
       "get": {
         "operationId": "listar_api_v1_inscripciones_get",
@@ -9898,6 +10424,120 @@
         ]
       }
     },
+    "/api/v1/reportes/ingresos": {
+      "get": {
+        "description": "Neto por mes y concepto (las anulaciones restan en el mes en que se hicieron).",
+        "operationId": "ingresos_api_v1_reportes_ingresos_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "anio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 2000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anio"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngresosOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ingresos",
+        "tags": [
+          "reportes"
+        ]
+      }
+    },
+    "/api/v1/reportes/movimientos.csv": {
+      "get": {
+        "description": "Todos los movimientos de dinero del rango, para la contabilidad (CSV separado por «;»). Queda auditado.",
+        "operationId": "movimientos_csv_api_v1_reportes_movimientos_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "desde",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Desde",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hasta",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Hasta",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Movimientos Csv",
+        "tags": [
+          "reportes"
+        ]
+      }
+    },
     "/api/v1/resumen": {
       "get": {
         "description": "Tablero del staff (el Entrenador ve solo su rama). Las familias usan el estado de cuenta de cada alumno.",
@@ -10542,6 +11182,39 @@
           }
         },
         "summary": "Salud",
+        "tags": [
+          "sistema"
+        ]
+      }
+    },
+    "/api/v1/salud/worker": {
+      "get": {
+        "description": "503 si el worker no corre: sin él no se cierra la asistencia, no vencen inscripciones ni salen correos.",
+        "operationId": "salud_worker_api_v1_salud_worker_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "title": "Response Salud Worker Api V1 Salud Worker Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Salud Worker",
         "tags": [
           "sistema"
         ]

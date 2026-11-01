@@ -32,6 +32,11 @@ def sembrar_catalogos(db: Session) -> None:
     for codigo, rol in roles.items():
         if codigo in ROLES_PERMISOS:
             rol.permisos = [permisos[c] for c in sorted(ROLES_PERMISOS[codigo])]
+    db.flush()
+    # El catálogo es la fuente de verdad: un permiso que ya no existe se borra (ningún rol lo conserva).
+    for codigo, permiso in permisos.items():
+        if codigo not in PERMISOS:
+            db.delete(permiso)
 
     existentes = set(db.scalars(select(Configuracion.clave)))
     for clave, (valor, descripcion) in DEFAULTS.items():

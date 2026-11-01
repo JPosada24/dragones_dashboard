@@ -25,6 +25,8 @@
             <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'femenina'" (click)="cambiarRama('femenina')">Femenina</button>
             <button type="button" class="filtro" [attr.aria-pressed]="filtroRama() === 'masculina'" (click)="cambiarRama('masculina')">Masculina</button>
           }
+          <button type="button" class="filtro" [attr.aria-pressed]="filtroNivel() === 'iniciacion'" (click)="cambiarNivel('iniciacion')">Iniciación</button>
+          <button type="button" class="filtro" [attr.aria-pressed]="filtroNivel() === 'avanzado'" (click)="cambiarNivel('avanzado')">Avanzado</button>
           <button type="button" class="filtro" [attr.aria-pressed]="verInactivos()" (click)="alternarInactivos()">Inactivos</button>
         </div>
       } @else {
@@ -43,7 +45,7 @@
               <span class="avatar" aria-hidden="true">{{ iniciales(a) }}</span>
               <span class="item-textos">
                 <span class="item-nombre">{{ a.nombres }} {{ a.apellidos }}</span>
-                <span class="item-nota mono"><b class="codigo">{{ a.codigo }}</b> · {{ a.rama }} · {{ a.edad }} años</span>
+                <span class="item-nota mono"><b class="codigo">{{ a.codigo }}</b> · {{ a.rama }} · {{ nombreNivel[a.nivel] }} · {{ a.edad }} años</span>
               </span>
               <span class="punto" [attr.data-tono]="tono(a)" role="img"
                     [attr.aria-label]="a.activo ? (a.inscripcion_estado ? estadoInscripcion[a.inscripcion_estado] : 'Sin inscripción este año') : 'Inactivo'"></span>
@@ -81,7 +83,7 @@
             <div class="nombre-bloque">
               <h2 class="nombre">{{ a.nombres }} {{ a.apellidos }}</h2>
               <div class="meta">
-                <span class="chip-rama"><span class="mono">{{ a.codigo }}</span> · {{ a.rama }}</span>
+                <span class="chip-rama"><span class="mono">{{ a.codigo }}</span> · {{ a.rama }} · {{ nombreNivel[a.nivel] }}</span>
                 <span>{{ a.edad }} años{{ a.es_menor ? ' · menor de edad' : '' }}</span>
                 <span class="mono apagado">
                   {{ a.tipo_documento }} {{ documentoCompleto() ?? a.documento }}
@@ -348,6 +350,12 @@
             <option value="" disabled>Selecciona…</option>
             <option value="femenina">Femenina</option>
             <option value="masculina">Masculina</option>
+          </select></label>
+        <label class="campo"><span class="etiqueta">Nivel</span>
+          <select class="control" formControlName="nivel">
+            <option value="" disabled>Selecciona…</option>
+            <option value="iniciacion">Iniciación</option>
+            <option value="avanzado">Avanzado</option>
           </select></label>
       
         <label class="campo"><span class="etiqueta">Teléfono (opcional)</span>

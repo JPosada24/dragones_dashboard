@@ -643,6 +643,58 @@ export interface paths {
         patch: operations["actualizar_api_v1_configuracion__clave__patch"];
         trace?: never;
     };
+    "/api/v1/habeas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar */
+        get: operations["listar_api_v1_habeas_get"];
+        put?: never;
+        /** Registrar */
+        post: operations["registrar_api_v1_habeas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/habeas/{solicitud_id}/prorrogar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prorrogar */
+        post: operations["prorrogar_api_v1_habeas__solicitud_id__prorrogar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/habeas/{solicitud_id}/responder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Responder */
+        post: operations["responder_api_v1_habeas__solicitud_id__responder_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inscripciones": {
         parameters: {
             query?: never;
@@ -1127,6 +1179,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reportes/ingresos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ingresos
+         * @description Neto por mes y concepto (las anulaciones restan en el mes en que se hicieron).
+         */
+        get: operations["ingresos_api_v1_reportes_ingresos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reportes/movimientos.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Movimientos Csv
+         * @description Todos los movimientos de dinero del rango, para la contabilidad (CSV separado por «;»). Queda auditado.
+         */
+        get: operations["movimientos_csv_api_v1_reportes_movimientos_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/resumen": {
         parameters: {
             query?: never;
@@ -1307,6 +1399,26 @@ export interface paths {
         };
         /** Salud */
         get: operations["salud_api_v1_salud_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salud/worker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Salud Worker
+         * @description 503 si el worker no corre: sin él no se cierra la asistencia, no vencen inscripciones ni salen correos.
+         */
+        get: operations["salud_worker_api_v1_salud_worker_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1877,7 +1989,7 @@ export interface components {
              * Tipo
              * @enum {string}
              */
-            tipo: "expulsion" | "justificaciones" | "vence_inscripcion" | "inasistencias" | "riesgo_mora" | "autorizacion";
+            tipo: "expulsion" | "justificaciones" | "vence_inscripcion" | "inasistencias" | "riesgo_mora" | "autorizacion" | "habeas";
             /** Titulo */
             titulo: string;
         };
@@ -1897,6 +2009,8 @@ export interface components {
             eps?: string | null;
             /** Fecha Nacimiento */
             fecha_nacimiento?: string | null;
+            /** Nivel */
+            nivel?: ("iniciacion" | "avanzado") | null;
             /** Nombres */
             nombres?: string | null;
             /** Rama */
@@ -1928,6 +2042,12 @@ export interface components {
              * Format: date
              */
             fecha_nacimiento: string;
+            /**
+             * Nivel
+             * @default iniciacion
+             * @enum {string}
+             */
+            nivel: "iniciacion" | "avanzado";
             /** Nombres */
             nombres: string;
             /**
@@ -1988,6 +2108,11 @@ export interface components {
             id: string;
             /** Inscripcion Estado */
             inscripcion_estado: ("pendiente_pago" | "activo" | "a_expulsar" | "expulsado" | "rechazado") | null;
+            /**
+             * Nivel
+             * @enum {string}
+             */
+            nivel: "iniciacion" | "avanzado";
             /** Nombres */
             nombres: string;
             /**
@@ -2517,6 +2642,30 @@ export interface components {
             multas_pendientes: number;
             /** Multas Saldo */
             multas_saldo: number;
+        };
+        /** IngresoMesOut */
+        IngresoMesOut: {
+            /** Inscripciones */
+            inscripciones: number;
+            /** Mes */
+            mes: number;
+            /** Multas */
+            multas: number;
+            /** Rifas */
+            rifas: number;
+            /** Torneos */
+            torneos: number;
+            /** Total */
+            total: number;
+        };
+        /** IngresosOut */
+        IngresosOut: {
+            /** Anio */
+            anio: number;
+            /** Meses */
+            meses: components["schemas"]["IngresoMesOut"][];
+            /** Total */
+            total: number;
         };
         /** InscripcionCrear */
         InscripcionCrear: {
@@ -3115,6 +3264,16 @@ export interface components {
             /** Motivo */
             motivo: string;
         };
+        /** ProrrogaSolicitudIn */
+        ProrrogaSolicitudIn: {
+            /** Motivo */
+            motivo: string;
+        };
+        /** RespuestaIn */
+        RespuestaIn: {
+            /** Respuesta */
+            respuesta: string;
+        };
         /** RespuestaOut */
         RespuestaOut: {
             /** Herramientas */
@@ -3377,6 +3536,66 @@ export interface components {
              * Format: date
              */
             vencida_desde: string;
+        };
+        /** SolicitudIn */
+        SolicitudIn: {
+            /** Contacto */
+            contacto: string;
+            /** Descripcion */
+            descripcion: string;
+            /** Recibida El */
+            recibida_el?: string | null;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "consulta" | "reclamo";
+            /** Titular */
+            titular: string;
+        };
+        /** SolicitudOut */
+        SolicitudOut: {
+            /** Contacto */
+            contacto: string;
+            /** Descripcion */
+            descripcion: string;
+            /** Dias Habiles Restantes */
+            dias_habiles_restantes: number;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "en_tramite" | "respondida";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Motivo Prorroga */
+            motivo_prorroga: string | null;
+            /** Prorrogada */
+            prorrogada: boolean;
+            /**
+             * Recibida El
+             * Format: date
+             */
+            recibida_el: string;
+            /** Respondida En */
+            respondida_en: string | null;
+            /** Respuesta */
+            respuesta: string | null;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "consulta" | "reclamo";
+            /** Titular */
+            titular: string;
+            /**
+             * Vence El
+             * Format: date
+             */
+            vence_el: string;
         };
         /** TalonarioOut */
         TalonarioOut: {
@@ -3950,6 +4169,7 @@ export interface operations {
         parameters: {
             query?: {
                 rama?: ("masculina" | "femenina") | null;
+                nivel?: ("iniciacion" | "avanzado") | null;
                 buscar?: string | null;
                 activo?: boolean | null;
                 skip?: number;
@@ -5352,6 +5572,140 @@ export interface operations {
             };
         };
     };
+    listar_api_v1_habeas_get: {
+        parameters: {
+            query?: {
+                estado?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SolicitudOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registrar_api_v1_habeas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SolicitudIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SolicitudOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prorrogar_api_v1_habeas__solicitud_id__prorrogar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                solicitud_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProrrogaSolicitudIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SolicitudOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    responder_api_v1_habeas__solicitud_id__responder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                solicitud_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespuestaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SolicitudOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listar_api_v1_inscripciones_get: {
         parameters: {
             query?: {
@@ -6222,6 +6576,69 @@ export interface operations {
             };
         };
     };
+    ingresos_api_v1_reportes_ingresos_get: {
+        parameters: {
+            query?: {
+                anio?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngresosOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    movimientos_csv_api_v1_reportes_movimientos_csv_get: {
+        parameters: {
+            query: {
+                desde: string;
+                hasta: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ver_api_v1_resumen_get: {
         parameters: {
             query?: never;
@@ -6615,6 +7032,28 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    salud_worker_api_v1_salud_worker_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string | number;
                     };
                 };
             };

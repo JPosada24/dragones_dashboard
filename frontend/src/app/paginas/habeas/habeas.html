@@ -1,0 +1,112 @@
+@if (op.mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="op.mensaje.set(null)" />
+}
+
+<div class="barra">
+  <div class="filtros" role="group" aria-label="Estado">
+    <button type="button" class="filtro" [attr.aria-pressed]="ver() === 'en_tramite'" (click)="ver.set('en_tramite')">
+      En trámite <span class="mono">{{ conteo().tramite }}</span>
+    </button>
+    <button type="button" class="filtro" [attr.aria-pressed]="ver() === 'respondida'" (click)="ver.set('respondida')">
+      Respondidas <span class="mono">{{ conteo().respondidas }}</span>
+    </button>
+  </div>
+  <button type="button" class="boton" (click)="abrirNueva()">
+    <span class="icono" aria-hidden="true">add</span> Registrar solicitud
+  </button>
+</div>
+
+@if (solicitudes() === null) {
+  <p class="panel vacio">Cargando…</p>
+} @else {
+  <ul class="solicitudes">
+    @for (s of lista(); track s.id) {
+      <li class="panel solicitud">
+        <div class="cabeza">
+          <span class="chip" [class.reclamo]="s.tipo === 'reclamo'">{{ s.tipo === 'consulta' ? 'Consulta' : 'Reclamo' }}</span>
+          <h2>{{ s.titular }}</h2>
+          @if (s.estado === 'en_tramite') {
+            <span class="plazo" [attr.data-tono]="tono(s)">
+              {{ s.dias_habiles_restantes < 0 ? 'Vencida' : s.dias_habiles_restantes + ' días hábiles' }}
+            </span>
+          } @else {
+            <span class="plazo" data-tono="ok">Respondida {{ s.respondida_en | date: 'd MMM y' }}</span>
+          }
+        </div>
+        <p class="nota">{{ s.contacto }} · recibida el {{ s.recibida_el | date: 'd MMM y' }} · vence el {{ s.vence_el | date: 'd MMM y' }}
+          @if (s.prorrogada) { (ampliado) }</p>
+        <p class="texto">{{ s.descripcion }}</p>
+        @if (s.respuesta) { <p class="texto respuesta"><b>Respuesta:</b> {{ s.respuesta }}</p> }
+        @if (s.estado === 'en_tramite') {
+          <div class="acciones-fila">
+            @if (!s.prorrogada && s.dias_habiles_restantes >= 0) {
+              <button type="button" class="boton secundario chico" (click)="abrirProrroga(s)">Ampliar plazo</button>
+            }
+            <button type="button" class="boton chico" (click)="abrirRespuesta(s)">Registrar respuesta</button>
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="panel vacio">{{ ver() === 'en_tramite' ? 'No hay solicitudes en trámite.' : 'Aún no hay solicitudes respondidas.' }}</li>
+    }
+  </ul>
+}
+
+@if (creando()) {
+  <app-dialogo titulo="Registrar solicitud" ancho="ancho"
+               descripcion="Consulta: 10 días hábiles para responder. Reclamo (corregir, borrar, revocar): 15. Sin contar fines de semana ni festivos."
+               (cerrar)="creando.set(false)">
+    <form class="formulario" [formGroup]="formNueva" (ngSubmit)="registrar()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Tipo</span>
+          <select class="control" formControlName="tipo">
+            <option value="" disabled>Selecciona…</option>
+            <option value="consulta">Consulta (conocer sus datos)</option>
+            <option value="reclamo">Reclamo (corregir, borrar, revocar)</option>
+          </select></label>
+        <label class="campo"><span class="etiqueta">Recibida el <span class="nota-campo">vacía = hoy</span></span>
+          <input class="control" type="date" formControlName="recibida_el" [max]="hoy" /></label>
+        <label class="campo"><span class="etiqueta">Quién la hace</span>
+          <input class="control" formControlName="titular" maxlength="120" placeholder="Ej.: Marta Gómez (madre de Laura)" /></label>
+        <label class="campo"><span class="etiqueta">Correo o teléfono para responder</span>
+          <input class="control" formControlName="contacto" maxlength="120" /></label>
+      </div>
+      <label class="campo"><span class="etiqueta">Qué pide</span>
+        <textarea class="control" formControlName="descripcion" rows="4" maxlength="2000"></textarea></label>
+      @if (op.errorDialogo()) { <p class="mensaje error" role="alert">{{ op.errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="creando.set(false)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="op.ocupado()">Registrar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (respondiendo(); as s) {
+  <app-dialogo titulo="Registrar respuesta" [descripcion]="s.titular + ' · ' + s.contacto" (cerrar)="respondiendo.set(null)">
+    <form class="formulario" [formGroup]="formRespuesta" (ngSubmit)="responder()">
+      <label class="campo"><span class="etiqueta">Qué se le respondió (y por qué medio)</span>
+        <textarea class="control" formControlName="respuesta" rows="5" maxlength="4000"></textarea></label>
+      @if (op.errorDialogo()) { <p class="mensaje error" role="alert">{{ op.errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="respondiendo.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="op.ocupado()">Guardar respuesta</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (prorrogando(); as s) {
+  <app-dialogo titulo="Ampliar el plazo" (cerrar)="prorrogando.set(null)"
+               [descripcion]="'Una sola vez: ' + (s.tipo === 'consulta' ? '5' : '8') + ' días hábiles más. Hay que informarle el motivo al titular antes del vencimiento.'">
+    <form class="formulario" [formGroup]="formProrroga" (ngSubmit)="prorrogar()">
+      <label class="campo"><span class="etiqueta">Motivo</span>
+        <textarea class="control" formControlName="motivo" rows="3" maxlength="500"></textarea></label>
+      @if (op.errorDialogo()) { <p class="mensaje error" role="alert">{{ op.errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="prorrogando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="op.ocupado()">Ampliar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}

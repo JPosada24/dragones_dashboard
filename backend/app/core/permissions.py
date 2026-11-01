@@ -30,8 +30,9 @@ PERMISOS: dict[str, str] = {
     "notificaciones.gestionar": "Ver y enviar los avisos por WhatsApp y revisar el estado de los correos",
     "club.editar": "Editar el perfil público del club",
     "agente.usar": "Usar el asistente de IA",
-    "anio.cerrar": "Cerrar el año deportivo",
-    "respaldo.exportar": "Exportar respaldos",
+    "reportes.ver": "Ver los reportes de ingresos del club",
+    "habeas.gestionar": "Registrar y responder solicitudes de datos personales (Ley 1581)",
+    "reportes.exportar": "Descargar los movimientos de dinero en CSV (queda en la auditoría)",
 }
 
 ROLES: dict[str, tuple[str, str]] = {
@@ -49,7 +50,7 @@ ROLES_PERMISOS: dict[str, set[str]] = {
         "inscripciones.crear", "inscripciones.gestionar", "inscripciones.abonar", "prorroga.conceder",
         "sesiones.gestionar", "asistencia.marcar_grupo", "asistencia.corregir", "justificaciones.revisar",
         "pagos.registrar", "multas.anular", "rifas.gestionar", "sorteo.jugar",
-        "eventos.gestionar", "notificaciones.gestionar", "club.editar", "agente.usar",
+        "eventos.gestionar", "notificaciones.gestionar", "club.editar", "agente.usar", "reportes.ver",
     },
     # El Entrenador es general (ambas ramas) y hace todo el proceso de inscripción (alumno, acudiente, documentos,
     # inscripción). No cobra multas ni rifas, no ve el documento completo ni gestiona horarios ni prórrogas.

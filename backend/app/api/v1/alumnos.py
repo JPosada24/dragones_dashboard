@@ -22,7 +22,7 @@ from app.schemas.alumnos import (
     VinculoIn,
 )
 from app.schemas.asistencia import HistorialOut
-from app.schemas.comunes import Rama
+from app.schemas.comunes import Nivel, Rama
 from app.schemas.rifas import DeudaRifaOut, EstadoCuentaOut
 from app.services import alumnos as servicio
 from app.services import asistencia, configuracion, documentos, estado_cuenta
@@ -47,6 +47,7 @@ def alumno_a_out(alumno: Alumno, edad_mayoria: int, inscripcion_estado: str | No
         edad=anios,
         es_menor=anios < edad_mayoria,
         rama=alumno.rama,
+        nivel=alumno.nivel,
         telefono=alumno.telefono,
         email=alumno.email,
         direccion=alumno.direccion,
@@ -80,6 +81,7 @@ def _out(db: Session, alumno: Alumno) -> AlumnoOut:
 @router.get("", response_model=list[AlumnoOut])
 def listar(
     rama: Rama | None = None,
+    nivel: Nivel | None = None,
     buscar: str | None = Query(None, min_length=2, max_length=80),
     activo: bool | None = None,
     skip: int = Query(0, ge=0),
@@ -89,7 +91,9 @@ def listar(
 ) -> list[AlumnoOut]:
     """Busca por nombre o apellido (parcial), por código (F012) o por número de documento (completo, exacto)."""
     edad_mayoria = configuracion.obtener(db, "edad_mayoria")
-    filas = servicio.listar(db, usuario, rama=rama, buscar=buscar, activo=activo, skip=skip, limit=limit)
+    filas = servicio.listar(
+        db, usuario, rama=rama, nivel=nivel, buscar=buscar, activo=activo, skip=skip, limit=limit,
+    )
     estados = servicio.estados_inscripcion(db, [a.id for a in filas], hoy().year)
     return [alumno_a_out(a, edad_mayoria, estados.get(a.id)) for a in filas]
 

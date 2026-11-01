@@ -1,6 +1,7 @@
 """Valores permitidos del dominio. La base de datos los refuerza con restricciones CHECK."""
 
 RAMAS = ("masculina", "femenina")
+NIVELES = ("iniciacion", "avanzado")
 TIPOS_DOCUMENTO = ("RC", "TI", "CC", "CE", "PA", "PPT")
 TIPOS_ARCHIVO = ("identidad", "eps", "consentimiento", "certificado_medico", "foto", "otro")
 

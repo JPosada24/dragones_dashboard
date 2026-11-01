@@ -1,0 +1,117 @@
+:host {
+  display: grid;
+  gap: 16px;
+}
+
+h2 {
+  margin: 0;
+  font: 600 13.5px var(--f-titulo);
+  color: var(--texto-blanco);
+}
+
+.nota {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--texto-3);
+}
+
+.vacio {
+  margin: 0;
+  padding: 18px;
+  color: var(--texto-3);
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.anio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.anio-texto {
+  min-width: 48px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto-blanco);
+}
+
+.tabla-panel {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+
+  th,
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--borde-suave);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  thead th {
+    font: 600 10.5px var(--f-texto);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-3);
+  }
+
+  tbody th {
+    font-weight: 600;
+    color: var(--texto);
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  .total {
+    font-weight: 600;
+    color: var(--texto-blanco);
+  }
+}
+
+.vacio-fila td,
+.vacio-fila th {
+  color: var(--texto-3);
+}
+
+.barra-col {
+  width: 28%;
+  min-width: 120px;
+}
+
+.barra-mes {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--degradado);
+}
+
+.exportar {
+  display: grid;
+  gap: 10px;
+  padding: 17px 18px;
+}
+
+.fila-exportar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+
+  .campo {
+    min-width: 160px;
+  }
+}

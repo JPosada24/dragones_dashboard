@@ -18,7 +18,9 @@ class IndicadoresOut(BaseModel):
 
 
 class AlertaResumenOut(BaseModel):
-    tipo: Literal["expulsion", "justificaciones", "vence_inscripcion", "inasistencias", "riesgo_mora", "autorizacion"]
+    tipo: Literal[
+        "expulsion", "justificaciones", "vence_inscripcion", "inasistencias", "riesgo_mora", "autorizacion", "habeas",
+    ]
     titulo: str
     detalle: str
     cuando: str

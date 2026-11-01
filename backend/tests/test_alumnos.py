@@ -289,3 +289,18 @@ def test_autorizacion_a_medias_la_rechaza_la_base(db, client, h_admin):
         db.execute(text("UPDATE alumnos SET autoriza_imagen = NULL WHERE id = :id"), {"id": alumno["id"]})
         db.flush()
     db.rollback()
+
+
+# ---------- Nivel (iniciación / avanzado) ----------
+def test_nivel_por_defecto_cambio_y_filtro(client, h_admin):
+    inicial = crear_alumno(client, h_admin)
+    avanzada = crear_alumno(client, h_admin, documento="1000000077", nivel="avanzado")
+    assert inicial["nivel"] == "iniciacion" and avanzada["nivel"] == "avanzado"
+    r = client.patch(f"{A}/{inicial['id']}", json={"nivel": "avanzado"}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["nivel"] == "avanzado"
+    assert client.patch(f"{A}/{inicial['id']}", json={"nivel": None}, headers=h_admin).status_code == 422
+    assert client.patch(f"{A}/{inicial['id']}", json={"nivel": "experto"}, headers=h_admin).status_code == 422
+    client.patch(f"{A}/{inicial['id']}", json={"nivel": "iniciacion"}, headers=h_admin)
+    ids = [a["id"] for a in client.get(A, params={"nivel": "avanzado"}, headers=h_admin).json()]
+    assert ids == [avanzada["id"]]
+

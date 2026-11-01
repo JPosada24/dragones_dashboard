@@ -6,6 +6,7 @@ from pydantic import AfterValidator, Field
 # Valores válidos del dominio. Deben coincidir con las restricciones CHECK de la base (models/dominio.py y los
 # modelos); tests/test_dominio.py lo verifica. Al estar tipados, el OpenAPI (y los tipos del frontend) los conocen.
 Rama = Literal["masculina", "femenina"]
+Nivel = Literal["iniciacion", "avanzado"]
 TipoDocumento = Literal["RC", "TI", "CC", "CE", "PA", "PPT"]
 RolCodigo = Literal["SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO"]
 EstadoInscripcion = Literal["pendiente_pago", "activo", "a_expulsar", "expulsado", "rechazado"]

@@ -99,7 +99,8 @@ h2 {
   padding: 13px 18px;
   border-bottom: 1px solid var(--borde-suave);
 
-  &[data-tipo='expulsion'] {
+  &[data-tipo='expulsion'],
+  &[data-tipo='habeas'] {
     --tono: var(--rojo);
   }
 

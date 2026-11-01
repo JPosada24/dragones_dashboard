@@ -2,9 +2,10 @@ import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import localeEsCo from '@angular/common/locales/es-CO';
 import {
-  ApplicationConfig, LOCALE_ID, inject, provideAppInitializer, provideBrowserGlobalErrorListeners,
+  ApplicationConfig, LOCALE_ID, inject, isDevMode, provideAppInitializer, provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -20,5 +21,10 @@ export const appConfig: ApplicationConfig = {
     // Antes de la primera pantalla: si la cookie de refresh sigue viva, la sesión continúa.
     provideAppInitializer(() => inject(AuthService).restaurarSesion()),
     { provide: LOCALE_ID, useValue: 'es-CO' },
+    // Panel instalable en el celular. Solo guarda la aplicación (JS, CSS, íconos); nunca respuestas de la API.
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };
