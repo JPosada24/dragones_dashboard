@@ -91,8 +91,10 @@ saber para seguir trabajando.
   propio `node_modules`: `docker compose exec frontend npm install`.
 - **Pruebas:** nunca dos suites a la vez (comparten la base `dragones_test` y se vacían las tablas entre pruebas).
   Fixtures en `tests/conftest.py`, acciones en `tests/fabrica.py`; nunca importar de otro `test_*.py`.
-- **Pendiente (decidir con Julian):** desplegar; horario por nivel (hoy el nivel es un dato del alumno y un filtro);
-  completar la política de datos del sitio.
+- **Decidido:** el nivel (Iniciación/Avanzado) es solo un dato del alumno y un filtro. **No** se separan
+  entrenamientos, asistencia ni multas por nivel: ambos niveles entrenan el mismo día y el entrenador marca esa
+  sesión. La política de datos del sitio (`[POR COMPLETAR]`) la completa Julian.
+- **Pendiente:** desplegar (guía en `docs/despliegue.md`).
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);
