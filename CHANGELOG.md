@@ -2,6 +2,12 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones: [SemVer](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+- `deploy/oracle/conseguir-vm.ps1`: reintenta crear la VM gratuita de Oracle Cloud hasta que haya cupo (crea la red
+  si falta y abre 80/443); sección «Oracle Cloud gratis» en `docs/despliegue.md`.
+
 ## [0.4.0] - 2026-11-01
 
 ### Añadido

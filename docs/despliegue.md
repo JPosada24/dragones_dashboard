@@ -47,6 +47,45 @@ Ten a mano, guardado en tu gestor de contraseñas (Bitwarden, 1Password…):
    exit   # y vuelve a entrar:  ssh julian@IP_DEL_SERVIDOR
    ```
 
+### Oracle Cloud gratis (Always Free)
+
+Oracle regala una VM ARM de **2 OCPU y 12 GB** (de sobra para la plataforma), pero casi nunca hay cupo al crearla
+desde la consola ("Out of host capacity"). `deploy/oracle/conseguir-vm.ps1` lo reintenta solo hasta conseguirla.
+
+1. **CLI de Oracle** (PowerShell, una vez; acepta las opciones por defecto y abre otra terminal al terminar):
+   ```powershell
+   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.ps1'))"
+   oci --version
+   ```
+2. **API key**: en la consola, ícono de perfil (arriba a la derecha) → *My profile* → *API keys* → *Add API key* →
+   *Generate API key pair* → **Download private key** → *Add*. Guarda la llave descargada como
+   `C:\Users\<tú>\.oci\oci_api_key.pem` y copia el texto que muestra Oracle (*Configuration file preview*) en
+   `C:\Users\<tú>\.oci\config`, cambiando `key_file` por esa ruta. Prueba: `oci os ns get`. La `.pem` es una
+   contraseña: no la compartas ni la subas a git.
+3. **Correr el script** desde la carpeta del proyecto (usa `~\.ssh\id_ed25519.pub`; otra llave con `-ClavePublica`):
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File deploy\oracle\conseguir-vm.ps1
+   ```
+   Pide la VM cada 60 s rotando las zonas de tu región; deja el PC encendido y sin suspender (puede tardar horas o
+   días). Busca solo la imagen de Ubuntu 24.04 ARM y la subred (si no hay, crea la red) y abre los puertos 80 y 443
+   en Oracle. Al lograrlo suena y muestra la IP. Si tras un día no entra, prueba `-Ocpus 1 -MemoriaGb 6` (también
+   gratis y suele haber más cupo). Volver a correrlo no crea otra VM.
+4. **Diferencias con la guía general** en el paso siguiente:
+   - El usuario es `ubuntu` (`ssh ubuntu@IP`), ya con `sudo` y sin acceso por contraseña ni como root: salta el
+     punto 3 (o créate tu usuario con `sudo`).
+   - **No uses `ufw`**: las imágenes de Oracle traen su propio cortafuegos (iptables) que bloquea todo menos SSH.
+     En lugar del punto 4 abre la web así:
+     ```bash
+     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+     sudo netfilter-persistent save
+     sudo apt update && sudo apt -y upgrade && sudo apt -y install unattended-upgrades fail2ban
+     ```
+   - Oracle puede **recuperar VMs gratuitas inactivas** (uso de CPU, red y memoria muy bajo durante 7 días). Pasar
+     la cuenta a *Pay As You Go* lo evita y no cobra mientras no salgas de lo gratuito; activa una alerta de
+     presupuesto en *Billing → Budgets* (por ejemplo USD 1) para enterarte si algo empieza a costar.
+
 ## 2. El dominio
 
 En el panel DNS (recomendado: Cloudflare, gratis) crea un registro **A** `panel` → `IP_DEL_SERVIDOR`.
