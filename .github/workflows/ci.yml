@@ -30,7 +30,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://dragones:solo_para_ci@localhost:5432/dragones
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -51,7 +51,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -72,7 +72,7 @@ jobs:
     name: Imagen Docker de la API (Trivy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Scripts de respaldo sin errores comunes (shellcheck)
         run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 deploy/respaldo/respaldar.sh deploy/respaldo/restaurar.sh
       - name: Configuración de producción válida
@@ -89,7 +89,7 @@ jobs:
     name: Búsqueda de secretos (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # revisa todo el historial, no solo el último commit
       - name: gitleaks
