@@ -2,7 +2,9 @@
 
 Uso:  python -m app.worker
 
-Tareas: cierre diario de asistencia, vencimiento de inscripciones, mora, avisos programados y envío de correos.
+Tareas: cierre diario de asistencia, vencimiento de inscripciones, mora, programación de entrenamientos, avisos
+programados, envío de correos y purga de intentos viejos del limitador. En cada ciclo deja su latido en la base
+(`latidos`), que /api/v1/salud/worker revisa para el monitor de disponibilidad.
 
 Cada tarea es idempotente (repetirla no duplica nada), así que el worker solo la ejecuta cada cierto
 intervalo: si estuvo apagado, al volver se pone al día. Un "advisory lock" de PostgreSQL impide que dos
@@ -22,6 +24,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core import fechas
 from app.core.config import get_settings
 from app.core.correo import get_correo
+from app.core.limites import purgar_intentos
+from app.core.observabilidad import configurar_logs, iniciar_sentry
 from app.db.session import SessionLocal
 from app.services import asistencia, inscripciones, mora, notificaciones, programacion
 
@@ -89,6 +93,7 @@ def tareas() -> list[Tarea]:
         Tarea("programar_sesiones", 7306, s.worker_programacion_segundos, _programar_sesiones),
         Tarea("avisos_programados", 7303, s.worker_notificaciones_segundos, _avisos_programados),
         Tarea("enviar_correos", 7304, s.worker_correos_segundos, _enviar_correos),
+        Tarea("purgar_intentos", 7307, 86400, purgar_intentos),
     ]
 
 
@@ -104,6 +109,16 @@ def ejecutar(tarea: Tarea, fabrica: sessionmaker = SessionLocal) -> str | None:
         resultado = tarea.funcion(db)
         db.commit()
         return resultado
+
+
+def registrar_latido(fabrica: sessionmaker = SessionLocal) -> None:
+    """Deja constancia de que el worker sigue vivo (la API la expone en /salud/worker)."""
+    with fabrica() as db:
+        db.execute(
+            text("INSERT INTO latidos (servicio, en) VALUES ('worker', now())"
+                 " ON CONFLICT (servicio) DO UPDATE SET en = excluded.en")
+        )
+        db.commit()
 
 
 def ciclo(lista: list[Tarea], ahora: float) -> None:
@@ -124,7 +139,8 @@ def ciclo(lista: list[Tarea], ahora: float) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    configurar_logs()
+    iniciar_sentry()
     parar = threading.Event()
     for senal in (signal.SIGTERM, signal.SIGINT):
         signal.signal(senal, lambda *_: parar.set())  # docker stop: termina el ciclo actual y sale limpio
@@ -134,6 +150,10 @@ def main() -> None:
     while not parar.is_set():
         ciclo(lista, time.monotonic())
         LATIDO.write_text(str(int(time.time())))
+        try:
+            registrar_latido()
+        except Exception:
+            log.exception("No se pudo registrar el latido en la base")
         parar.wait(PAUSA_SEGUNDOS)
     log.info("Worker detenido.")
 

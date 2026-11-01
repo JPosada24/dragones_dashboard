@@ -29,3 +29,8 @@ Thumbs.db
 
 # Prototipo de diseño (trae datos de ejemplo con nombres; solo de referencia local)
 Dashboard Dragones (standalone).html
+
+# Cobertura de pruebas (backend)
+.coverage
+htmlcov/
+coverage.xml

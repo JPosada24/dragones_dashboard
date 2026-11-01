@@ -36,10 +36,13 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements*.txt
-      - run: pip install -r requirements-dev.txt
+      - run: pip install --require-hashes -r requirements-dev.txt
       - name: Estilo y errores comunes (ruff)
         run: ruff check .
-      - run: pytest
+      - name: Dependencias de producción sin vulnerabilidades conocidas (pip-audit)
+        run: pip-audit --strict --require-hashes --disable-pip -r requirements.txt
+      - name: Pruebas con cobertura mínima
+        run: pytest --cov=app --cov-report=term-missing:skip-covered --cov-fail-under=90
 
   frontend:
     name: Frontend (auditoría, lint, compilación y pruebas)
@@ -62,7 +65,25 @@ jobs:
       - name: Buenas prácticas de Angular y TypeScript (ESLint)
         run: npm run lint
       - run: npx ng build
-      - run: npx ng test --watch=false
+      - name: Pruebas con cobertura mínima (umbrales en angular.json)
+        run: npx ng test --watch=false --coverage
+
+  imagen:
+    name: Imagen Docker de la API (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scripts de respaldo sin errores comunes (shellcheck)
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 deploy/respaldo/respaldar.sh deploy/respaldo/restaurar.sh
+      - name: Configuración de producción válida
+        run: >-
+          cp .env.example .env && PANEL_DOMINIO=panel.ejemplo.com ACME_EMAIL=ci@ejemplo.com RESPALDO_AGE_PUBLICA=age1ci
+          docker compose -f docker-compose.prod.yml --env-file .env.example config --quiet
+      - run: docker build -t dragones-api:ci backend
+      - name: Sin vulnerabilidades altas o críticas con arreglo disponible
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.56.2
+          image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress dragones-api:ci
 
   secretos:
     name: Búsqueda de secretos (gitleaks)

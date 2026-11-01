@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     entorno: str = "desarrollo"  # desarrollo | pruebas | produccion
     database_url: str
     secret_key: str = Field(min_length=32)
+    # Rotación de la clave de los tokens: la anterior solo se acepta para verificar (máx. 15 min de vida del token).
+    secret_key_anterior: str = ""
 
     access_token_minutos: int = 15
     refresh_token_dias: int = 7
@@ -73,16 +75,24 @@ class Settings(BaseSettings):
     data_encryption_key: str
     documentos_dir: str = "/data/documentos"
 
+    # Reporte de errores (Sentry o GlitchTip). Vacío = desactivado. Nunca se envían datos personales.
+    sentry_dsn: str = ""
+
     @field_validator("data_encryption_key")
     @classmethod
     def _validar_clave_cifrado(cls, v: str) -> str:
-        try:
-            Fernet(v.encode())
-        except (ValueError, TypeError):
-            raise ValueError(
-                "DATA_ENCRYPTION_KEY inválida. Genera una con: "
-                'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
-            ) from None
+        """Una o varias claves Fernet separadas por comas (la primera cifra; todas descifran: rotación)."""
+        claves = [c.strip() for c in v.split(",") if c.strip()]
+        if not claves:
+            raise ValueError("DATA_ENCRYPTION_KEY está vacía")
+        for clave in claves:
+            try:
+                Fernet(clave.encode())
+            except (ValueError, TypeError):
+                raise ValueError(
+                    "DATA_ENCRYPTION_KEY inválida (una o varias claves Fernet separadas por comas). Genera una con: "
+                    'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+                ) from None
         return v
 
     @property

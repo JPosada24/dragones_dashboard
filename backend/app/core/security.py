@@ -67,12 +67,20 @@ def crear_access_token(usuario_id: uuid.UUID, rol_codigo: str, version: int = 0)
 
 def decodificar_access_token(token: str) -> dict:
     """Valida firma y expiración. Lanza jwt.PyJWTError si algo falla."""
-    payload = jwt.decode(
-        token,
-        get_settings().secret_key,
-        algorithms=[ALGORITMO],  # algoritmo fijo: evita ataques de "alg: none"
-        options={"require": ["exp", "iat", "sub"]},
-    )
+    s = get_settings()
+    claves = [s.secret_key] + ([s.secret_key_anterior] if s.secret_key_anterior else [])
+    for i, clave in enumerate(claves):
+        try:
+            payload = jwt.decode(
+                token,
+                clave,
+                algorithms=[ALGORITMO],  # algoritmo fijo: evita ataques de "alg: none"
+                options={"require": ["exp", "iat", "sub"]},
+            )
+            break
+        except jwt.InvalidSignatureError:
+            if i == len(claves) - 1:
+                raise  # ninguna clave firmó este token
     if payload.get("tipo") != "access":
         raise jwt.InvalidTokenError("Tipo de token inválido")
     return payload

@@ -1,0 +1,10 @@
+# Cobertura de pruebas (pytest --cov=app). El mínimo exigido está en el CI (--cov-fail-under).
+[run]
+branch = true
+omit =
+    app/scripts/*
+
+[report]
+exclude_also =
+    if TYPE_CHECKING:
+    if __name__ == .__main__.:

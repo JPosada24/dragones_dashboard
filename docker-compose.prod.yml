@@ -1,0 +1,128 @@
+# Entorno de PRODUCCIÓN (servidor). Guía paso a paso: docs/despliegue.md
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# Diferencias con desarrollo: sin código montado ni recarga, Angular compilado y servido por Caddy con HTTPS,
+# la base y la API sin puertos públicos (solo Caddy expone 80/443), límites de memoria, logs con rotación y
+# copias de seguridad diarias cifradas.
+x-logs: &logs
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+x-backend: &backend
+  build: ./backend
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    ENTORNO: produccion
+    COOKIE_SECURE: "true"
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  networks: [interna]
+  <<: *logs
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy: { resources: { limits: { memory: 512m } } }
+    networks: [interna]
+    <<: *logs
+
+  api:
+    <<: *backend
+    depends_on:
+      db: { condition: service_healthy }
+    volumes:
+      - documentos:/data/documentos
+    # Migraciones y catálogos al arrancar; 2 procesos (el limitador de intentos es compartido: vive en Postgres).
+    # --proxy-headers: la IP real llega de Caddy, que no confía en un X-Forwarded-For que mande el cliente.
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m app.scripts.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+               --proxy-headers --forwarded-allow-ips='*' --no-server-header"
+    deploy: { resources: { limits: { memory: 768m } } }
+
+  worker:
+    <<: *backend
+    depends_on:
+      api: { condition: service_healthy }  # la API aplica las migraciones antes de quedar sana
+    command: python -m app.worker
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,time; sys.exit(0 if time.time() - int(open('/tmp/worker_latido').read()) < 120 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy: { resources: { limits: { memory: 384m } } }
+
+  # Caddy: HTTPS automático, el panel compilado y /api hacia la API. Único servicio con puertos públicos.
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      PANEL_DOMINIO: ${PANEL_DOMINIO:?falta PANEL_DOMINIO en .env}
+      ACME_EMAIL: ${ACME_EMAIL:?falta ACME_EMAIL en .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data      # certificados: si se pierden, Caddy los vuelve a pedir
+      - caddy_config:/config
+    deploy: { resources: { limits: { memory: 256m } } }
+    networks: [interna]
+    <<: *logs
+
+  # Copias de seguridad diarias cifradas (ver deploy/respaldo/respaldar.sh y docs/operacion.md).
+  respaldo:
+    build: ./deploy/respaldo
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      RESPALDO_AGE_PUBLICA: ${RESPALDO_AGE_PUBLICA:?falta RESPALDO_AGE_PUBLICA en .env}
+      RESPALDO_HORA: ${RESPALDO_HORA:-03:30}
+      RESPALDO_DESTINO: ${RESPALDO_DESTINO:-}
+      RESPALDO_PING_URL: ${RESPALDO_PING_URL:-}
+      # Remoto de rclone por variables (sin archivo de configuración). Ver docs/operacion.md.
+      RCLONE_CONFIG_REMOTO_TYPE: ${RCLONE_TIPO:-}
+      RCLONE_CONFIG_REMOTO_PROVIDER: ${RCLONE_PROVEEDOR:-}
+      RCLONE_CONFIG_REMOTO_ACCESS_KEY_ID: ${RCLONE_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_REMOTO_SECRET_ACCESS_KEY: ${RCLONE_SECRET_ACCESS_KEY:-}
+      RCLONE_CONFIG_REMOTO_ENDPOINT: ${RCLONE_ENDPOINT:-}
+    volumes:
+      - respaldos:/respaldos
+      - documentos:/data/documentos
+    deploy: { resources: { limits: { memory: 256m } } }
+    networks: [interna]
+    <<: *logs
+
+volumes:
+  pgdata:
+  documentos:
+  respaldos:
+  caddy_datos:
+  caddy_config:
+
+networks:
+  interna:

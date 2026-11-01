@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Integer, String, Uuid, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Index, Integer, String, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -58,3 +58,24 @@ class UsoAgente(Base):
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
+
+
+class Intento(Base):
+    """Un intento contado por el limitador (login fallido, envío del sitio público). `clave` = SHA-256 de la IP."""
+
+    __tablename__ = "intentos"
+    __table_args__ = (Index("ix_intentos_ambito_clave_creado", "ambito", "clave", "creado_en"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    ambito: Mapped[str] = mapped_column(String(16))
+    clave: Mapped[str] = mapped_column(String(64))
+    creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Latido(Base):
+    """Último ciclo de un proceso de fondo (hoy, el worker)."""
+
+    __tablename__ = "latidos"
+
+    servicio: Mapped[str] = mapped_column(String(30), primary_key=True)
+    en: Mapped[datetime] = mapped_column(DateTime(timezone=True))
