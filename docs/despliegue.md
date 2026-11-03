@@ -85,6 +85,18 @@ desde la consola ("Out of host capacity"). `deploy/oracle/conseguir-vm.ps1` lo r
    - Oracle puede **recuperar VMs gratuitas inactivas** (uso de CPU, red y memoria muy bajo durante 7 días). Pasar
      la cuenta a *Pay As You Go* lo evita y no cobra mientras no salgas de lo gratuito; activa una alerta de
      presupuesto en *Billing → Budgets* (por ejemplo USD 1) para enterarte si algo empieza a costar.
+5. **Hacer el reintento sin tener el PC encendido** (repo público ⇒ minutos de Actions gratis): el mismo intento
+     automático corre en GitHub Actions, `.github/workflows/conseguir-vm.yml` (el programa es
+     `deploy/oracle/conseguir-vm.py`, traducción del `.ps1` a Python). Configuración única:
+     - Crea los secretos en *Settings → Secrets and variables → Actions*: `OCI_CLI_USER`, `OCI_CLI_TENANCY`,
+       `OCI_CLI_FINGERPRINT`, `OCI_CLI_REGION` (copia los valores de tu `~\.oci\config`) y `SSH_PUB_KEY`
+       (el contenido de tu `~\.ssh\id_ed25519.pub`).
+     - Para `OCI_CLI_KEY_CONTENT`, pega el texto completo de `~\.oci\oci_api_key.pem` (con sus líneas
+       `BEGIN/END PRIVATE KEY`): es una contraseña, nunca la subas al repo ni la compartas.
+     - Corre el workflow a mano una vez (*Actions → Conseguir VM Oracle → Run workflow*) sobre `'main'` para
+       validar los secretos: si el run sale verde sin "PARO:", queda reintentando solo cada 5 minutos.
+     - Cuando consiga la VM, abre un **issue con la IP** en el repositorio (aviso por Telegram si defines los
+       dos secretos `TELEGRAM_*`) y sigue en el punto 1.4 de esta guía con `ssh ubuntu@IP`.
 
 ## 2. El dominio
 

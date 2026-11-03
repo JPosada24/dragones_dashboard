@@ -1,0 +1,98 @@
+name: Conseguir VM Oracle (reintenta hasta que haya cupo)
+
+# La VM ARM gratuita de Oracle casi nunca tiene cupo al primer intento ("Out of host capacity").
+# Este workflow reintenta cada 5 minutos rotando por las zonas, con la misma lógica de
+# deploy/oracle/conseguir-vm.ps1 (el equivalente para correr desde el PC) portada a
+# deploy/oracle/conseguir-vm.py. Configuración de secretos: settings → Secrets → Actions.
+#
+# Repo público ⇒ minutos de Actions gratis e ilimitados. Nota: GitHub desactiva los schedules
+# tras 60 días sin commits en el repo; subiendo cualquier cambio se reactiva, o se enciende a
+# mano desde Actions → este workflow → "Enable workflow".
+#
+# Secreto obligatorios: OCI_CLI_USER, OCI_CLI_TENANCY, OCI_CLI_FINGERPRINT, OCI_CLI_KEY_CONTENT,
+# OCI_CLI_REGION y SSH_PUB_KEY. Opcionales: TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID (aviso inmediato).
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      ocpus:
+        description: OCPU de la VM (1 suele entrar más rápido; el máximo gratis es 4)
+        required: true
+        default: "1"
+      memory-gb:
+        description: Memoria en GB (hasta 6 por OCPU; el máximo gratis es 24)
+        required: true
+        default: "6"
+      disk-gb:
+        description: Disco en GB (el máximo gratuito total es 200)
+        required: true
+        default: "50"
+
+# Si una ejecución se solapa con otra, queda en cola: no se mata el intento en curso.
+concurrency:
+  group: conseguir-vm-oracle
+  cancel-in-progress: false
+
+# Mínimo privilegio: solo hace falta crear un issue cuando la VM ya encendió.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  intentar:
+    name: Intento de creación (rota por zonas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar el SDK de OCI
+        run: pip install --quiet --disable-pip-version-check -r deploy/oracle/requirements.txt
+
+      - name: Intentar crear la VM
+        id: vm
+        # En ejecuciones programadas input.* viene vacío y cae al valor de reserva: una VM chica
+        # (1 OCPU/6 GB/50 GB), la que más rápido consigue cupo y de sobra para el panel entero.
+        run: >-
+          python deploy/oracle/conseguir-vm.py
+          --ocpus ${{ inputs['ocpus'] || '1' }}
+          --memory-gb ${{ inputs['memory-gb'] || '6' }}
+          --disk-gb ${{ inputs['disk-gb'] || '50' }}
+          --wait-seconds 15
+          --attempts 3
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          SSH_PUB_KEY: ${{ secrets.SSH_PUB_KEY }}
+          # Opcionales: con ambos definidos llega un Telegram cuando encienda.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Issue de éxito (se desduplica con la etiqueta)
+        if: steps.vm.outputs.vm_listed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VM_IP: ${{ steps.vm.outputs.ip }}
+        run: |
+          gh label create vm-oracle --color 0e8a16 --description "VM Oracle gratis creada" --force
+          creados=$(gh issue list --label vm-oracle --state all --json number --jq 'length')
+          if [ "$creados" -eq 0 ]; then
+            gh issue create \
+              --label vm-oracle \
+              --title "¡VM Oracle creada! IP: $VM_IP" \
+              --body "cc @JPosada24 — la VM gratuita está RUNNING con tu llave SSH registrada.
+          - IP pública: \`$VM_IP\`
+          - Acceso: \`ssh ubuntu@$VM_IP\`
+          - Sigue con **docs/despliegue.md, paso 1.3** en adelante (usuario propio, puertos, Docker).
+          Este issue nació solo cuando GitHub Actions consiguió el cupo."
+          fi
