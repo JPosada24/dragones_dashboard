@@ -1,0 +1,43 @@
+# Análisis estático de seguridad de GitHub (CodeQL): una revisión independiente del código en cada cambio y cada
+# semana (las reglas nuevas de GitHub encuentran fallos en código que no cambió). Los hallazgos aparecen en
+# Security → Code scanning del repositorio. Gratis en repositorios públicos.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"  # lunes, 06:17 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  analizar:
+    name: Analizar (${{ matrix.lenguaje }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write  # publicar los hallazgos en Code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: [python, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.lenguaje }}
+          build-mode: none  # lenguajes interpretados: no hace falta compilar
+          queries: security-extended
+          config: |
+            paths-ignore:
+              - frontend/src/app/core/api/esquema.ts
+              - "**/*.spec.ts"
+              - backend/tests
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.lenguaje }}"
