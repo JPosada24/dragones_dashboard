@@ -67,7 +67,10 @@ copia() {
 
 ejecutar() {
   avisar "/start"
-  if copia; then
+  # Ojo: dentro de "if copia" o "copia || …" bash IGNORA set -e (también en subshells) y un paso fallido no
+  # detendría la copia: se anunciaría una copia que no existe. Por eso la copia corre en un proceso aparte (este
+  # mismo script), que arranca con su propio set -e.
+  if "$0" --interna-copia; then
     avisar ""
     log "Respaldo terminado."
   else
@@ -84,6 +87,11 @@ segundos_hasta() {  # segundos hasta la próxima HH:MM (hoy o mañana)
   (( objetivo <= ahora )) && objetivo="$(date -d "tomorrow $1" +%s)"
   echo $(( objetivo - ahora ))
 }
+
+if [[ "${1:-}" == "--interna-copia" ]]; then  # solo la usa ejecutar()
+  copia
+  exit 0
+fi
 
 if [[ "${1:-}" == "--ahora" ]]; then
   ejecutar

@@ -8,6 +8,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 - `deploy/oracle/conseguir-vm.ps1`: reintenta crear la VM gratuita de Oracle Cloud hasta que haya cupo (crea la red
   si falta y abre 80/443); sección «Oracle Cloud gratis» en `docs/despliegue.md`.
 
+### Corregido
+- Copias de seguridad: un paso fallido se anunciaba como «Copia lista» (bash ignora `set -e` dentro de
+  `if función`); ahora la copia corre en un proceso aparte y el fallo se reporta (y se avisa a `RESPALDO_PING_URL`).
+  Además, el volumen `/respaldos` pertenece al usuario del contenedor y se instaló `findutils` (rotación).
+
 ## [0.4.0] - 2026-11-01
 
 ### Añadido
