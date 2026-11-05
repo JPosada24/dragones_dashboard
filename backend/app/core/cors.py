@@ -36,6 +36,8 @@ class CorsSitio:
         async def enviar(mensaje: Message) -> None:
             if mensaje["type"] == "http.response.start":
                 cabeceras = MutableHeaders(scope=mensaje)
+                # El CORS del panel (por dentro) agrega Allow-Credentials a toda respuesta con Origin: aquí se quita.
+                del cabeceras["Access-Control-Allow-Credentials"]
                 cabeceras["Access-Control-Allow-Origin"] = origen
                 cabeceras.append("Vary", "Origin")
             await send(mensaje)

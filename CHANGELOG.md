@@ -9,6 +9,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
   si falta y abre 80/443); sección «Oracle Cloud gratis» en `docs/despliegue.md`.
 
 ### Corregido
+- CORS del sitio público: `/api/v1/publico` ya no responde `Access-Control-Allow-Credentials: true` al dominio del
+  sitio (lo agregaba el CORS del panel). No era explotable (esas rutas no usan sesión), pero contradecía el diseño.
 - Copias de seguridad: un paso fallido se anunciaba como «Copia lista» (bash ignora `set -e` dentro de
   `if función`); ahora la copia corre en un proceso aparte y el fallo se reporta (y se avisa a `RESPALDO_PING_URL`).
   Además, el volumen `/respaldos` pertenece al usuario del contenedor y se instaló `findutils` (rotación).
