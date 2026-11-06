@@ -2,8 +2,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import type { Pose } from '../core/tutorial.service';
 
+let siguienteId = 0;
+
 /**
- * Brasa, el dragón del club (ilustración propia, vectorial). Tres poses: saluda, señala y remata el balón.
+ * Brasa, el dragón del club: busto en 3/4 al estilo de las mascotas deportivas (ilustración vectorial propia).
+ * Tres poses: saluda (garra con el balón), señala (garra apuntando) y remata (balón en llamas y rugido).
  * Es decorativo: el texto de la burbuja dice lo mismo, así que el lector de pantalla lo ignora.
  */
 @Component({
@@ -11,104 +14,109 @@ import type { Pose } from '../core/tutorial.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.data-pose]': 'pose()' },
   template: `
-    <svg viewBox="0 0 160 160" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient [attr.id]="'piel-' + id" x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0" class="c-naranja-claro" />
+          <stop offset="0.55" class="c-naranja" />
+          <stop offset="1" class="c-naranja-oscuro" />
+        </linearGradient>
+        <linearGradient [attr.id]="'cuerno-' + id" x1="1" y1="1" x2="0" y2="0">
+          <stop offset="0" class="c-oro" />
+          <stop offset="1" class="c-hueso" />
+        </linearGradient>
+        <linearGradient [attr.id]="'pecho-' + id" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" class="c-oro" />
+          <stop offset="1" class="c-naranja" />
+        </linearGradient>
+        <radialGradient [attr.id]="'ojo-' + id" cx="0.4" cy="0.45" r="0.7">
+          <stop offset="0" class="c-blanco" />
+          <stop offset="0.35" class="c-oro" />
+          <stop offset="1" class="c-naranja" />
+        </radialGradient>
+        <radialGradient [attr.id]="'balon-' + id" cx="0.35" cy="0.3" r="0.8">
+          <stop offset="0" class="c-blanco" />
+          <stop offset="1" class="c-gris" />
+        </radialGradient>
+      </defs>
+
       <g class="dragon">
-        <!-- Cola con punta de lanza -->
-        <path class="trazo-borde" d="M56 128 C 34 138, 18 126, 20 108 C 21 98, 14 92, 9 95" />
-        <path class="trazo-cuerpo" d="M56 128 C 34 138, 18 126, 20 108 C 21 98, 14 92, 9 95" />
-        <path class="pua" d="M10 96 L0 84 L15 86 L13 99 Z" />
+        <!-- Cuernos largos hacia atrás -->
+        <path [attr.fill]="url('cuerno')" class="borde" d="M68 40 C 52 14, 32 2, 4 -4 C 28 14, 40 30, 50 54 Z" />
+        <path [attr.fill]="url('cuerno')" class="borde" d="M46 64 C 28 50, 12 48, -6 56 C 14 58, 26 66, 40 80 Z" />
+        <path class="estria" d="M50 30 l-6 5 M40 22 l-5 5 M30 15 l-5 4 M30 56 l-3 6 M20 54 l-2 6" />
 
-        <!-- Alas -->
-        <path class="ala" d="M62 94 L30 50 L38 72 L20 66 L36 86 L18 88 L44 102 Z" />
-        <path class="ala" d="M96 92 L130 48 L124 70 L142 64 L128 84 L146 86 L118 100 Z" />
-        <path class="hueso" d="M62 94 L30 50 M58 96 L20 66 M54 99 L18 88 M96 92 L130 48 M100 94 L142 64 M106 97 L146 86" />
+        <!-- Cuello en S con púas en la nuca y placas en el pecho -->
+        <path class="borde puas" d="M44 112 L20 116 L40 100 Z M38 138 L14 146 L36 124 Z M34 166 L10 176 L34 152 Z" />
+        <path [attr.fill]="url('piel')" class="borde" d="M54 100 C 40 128, 34 162, 30 200 L 118 200 C 112 170, 104 142, 98 116 Z" />
+        <path [attr.fill]="url('pecho')" class="borde" d="M80 116 C 90 142, 98 170, 100 200 L 118 200 C 112 170, 104 142, 98 116 Z" />
+        <path class="placa" d="M86 132 L 102 130 M91 150 L 107 148 M95 168 L 111 167 M98 186 L 114 185" />
+        <path class="escama" d="M46 150 q6 -5 12 0 M52 172 q6 -5 12 0 M40 190 q6 -5 12 0 M60 132 q6 -5 12 0 M66 160 q6 -5 12 0" />
 
-        <!-- Patas -->
-        <ellipse class="cuerpo" cx="62" cy="140" rx="13" ry="8" />
-        <ellipse class="cuerpo" cx="97" cy="140" rx="13" ry="8" />
-        <path class="garra" d="M52 145 l3 5 l3 -5z M58 146 l3 5 l3 -5z M64 146 l3 5 l3 -5z M88 146 l3 5 l3 -5z M94 146 l3 5 l3 -5z M100 145 l3 5 l3 -5z" />
-
-        <!-- Cuerpo, púas del lomo y panza -->
-        <path class="pua" d="M51 94 L38 90 L48 82 Z M47 108 L34 108 L45 99 Z M48 122 L36 126 L44 114 Z" />
-        <ellipse class="cuerpo" cx="79" cy="112" rx="31" ry="30" />
-        <ellipse class="panza" cx="82" cy="117" rx="18" ry="21" />
-        <path class="placa" d="M67 106 Q82 101 97 106 M65 116 Q82 111 99 116 M67 126 Q82 122 97 126" />
-
-        <!-- Brazo de atrás: sostiene el balón (o queda abajo al rematar) -->
         @if (pose() === 'remata') {
           <g class="remate">
-            <path class="trazo-borde brazo" d="M64 100 Q 38 94 34 60" />
-            <path class="trazo-cuerpo brazo" d="M64 100 Q 38 94 34 60" />
-            <path class="garra" d="M29 60 l-1 -8 l5 5z M34 58 l1 -8 l4 7z" />
-            <g class="balon" transform="translate(24 38)">
-              <circle r="13" />
-              <path class="gajo" d="M-12.4 -4 Q0 3 12.6 -3.4 A13 13 0 0 0 -12.4 -4 Z" />
-              <path class="costura" d="M-12.4 -4 Q0 3 12.6 -3.4 M-5 -12 Q-1 1 5 12 M6 -11.5 Q13 -1 9.5 9" />
-            </g>
-            <path class="velocidad" d="M10 18 l-7 -6 M6 34 l-7 0 M9 50 l-7 5" />
+            <path [attr.fill]="url('piel')" class="borde" d="M128 200 L 150 130 Q 160 96 170 70 L 186 74 Q 180 104 170 136 L 160 200 Z" />
+            <path class="escama" d="M146 170 q6 -5 12 0 M154 140 q6 -5 12 0" />
           </g>
-        } @else {
-          <g class="balon" transform="translate(44 124)">
-            <circle r="13" />
-            <path class="gajo" d="M-12.4 -4 Q0 3 12.6 -3.4 A13 13 0 0 0 -12.4 -4 Z" />
-            <path class="costura" d="M-12.4 -4 Q0 3 12.6 -3.4 M-5 -12 Q-1 1 5 12 M6 -11.5 Q13 -1 9.5 9" />
-          </g>
-          <path class="trazo-borde brazo" d="M66 102 Q 50 106 52 122" />
-          <path class="trazo-cuerpo brazo" d="M66 102 Q 50 106 52 122" />
-          <path class="garra" d="M50 121 l-5 3 l5 2z M53 124 l-3 5 l5 0z" />
         }
 
         <!-- Cabeza -->
-        <path class="cuerno" d="M62 38 Q 50 20 34 14 Q 46 30 52 46 Z" />
-        <path class="cuerno" d="M80 30 Q 74 10 60 2 Q 80 8 94 30 Z" />
-        <path class="cuerpo" d="M48 62 C 46 40, 64 28, 84 28 C 104 28, 118 38, 122 52 C 134 54, 140 64, 136 74 C 132 84, 118 86, 104 84 C 88 88, 66 88, 56 80 C 50 75, 48 69, 48 62 Z" />
-        <path class="pua" d="M50 52 L40 46 L50 42 Z M49 66 L38 64 L48 58 Z" />
-        <ellipse class="ojo" cx="80" cy="57" rx="8" ry="8.5" />
-        <ellipse class="ojo" cx="102" cy="55" rx="7" ry="8" />
-        <ellipse class="pupila" cx="82" cy="58" rx="2" ry="6" />
-        <ellipse class="pupila" cx="104" cy="56" rx="1.8" ry="5.6" />
-        <circle class="brillo" cx="78.5" cy="53" r="1.6" />
-        <circle class="brillo" cx="100.5" cy="51" r="1.4" />
-        <!-- Cejas en V: cara de competidor -->
-        <path class="ceja" d="M68 44 L90 51 M95 50 L114 41" />
-        <ellipse class="pupila" cx="128" cy="63" rx="2.2" ry="1.6" />
-        <ellipse class="pupila" cx="134" cy="65" rx="2" ry="1.5" />
+        <path class="borde puas" d="M50 98 L24 108 L46 86 Z M44 84 L20 86 L42 72 Z" />
+        <g class="mandibula">
+          <path [attr.fill]="url('piel')" class="borde" d="M108 100 L 136 102 L 178 104 L 170 118 L 130 128 L 88 124 Z" />
+          <path class="diente" d="M138 104 l3 -8 l3 8 Z M151 105 l3 -8 l3 8 Z M163 105 l3 -9 l3 9 Z" />
+        </g>
+        <path class="boca" d="M106 98 L 188 80 L 180 106 L 108 104 Z" />
+        <path [attr.fill]="url('piel')" class="borde" d="M40 72 Q 46 44 70 34 L 112 30 Q 138 32 158 46 L 186 58 Q 196 64 192 76 L 180 84 L 140 90 L 116 98 L 88 112 Q 60 110 48 96 Q 38 84 40 72 Z" />
+        <path class="borde puas" d="M78 36 L 84 22 L 92 34 Z M96 32 L 104 18 L 110 32 Z" />
+        <!-- Luz sobre el hocico, sombra en la mejilla y línea de la mejilla -->
+        <path class="luz" d="M74 38 L 112 34 Q 136 36 156 50 L 182 62 L 154 56 Q 132 46 104 46 Z" />
+        <path class="sombra" d="M48 94 Q 62 108 88 110 L 112 98 L 88 96 Q 66 94 50 82 Z" />
+        <path class="estria" d="M60 88 Q 80 96 104 92 M70 64 q 10 -3 18 2" />
+        <path class="diente" d="M128 93 l3 10 l3 -10.5 Z M141 90.5 l3 10 l3 -10.5 Z M154 88 l3 11 l3 -11.5 Z M167 85.5 l3 9 l3 -9.5 Z" />
+        <path class="colmillo" d="M115 96 l5 17 l4 -18 Z" />
+        <!-- Ojo encendido bajo una ceja pesada -->
+        <path class="brillo-ojo" d="M94 62 L 120 48 L 144 56 L 120 70 Z" />
+        <path [attr.fill]="url('ojo')" class="borde-fino" d="M98 62 L 120 51 L 140 57 L 119 68 Z" />
+        <path class="pupila" d="M119 52.5 L 122.6 59.5 L 119 66.8 L 115.8 59.5 Z" />
+        <path class="ceja" d="M84 52 L 148 42 L 134 54 L 100 60 Z" />
+        <path class="fosa" d="M180 64 l8 4" />
 
-        @if (pose() === 'remata') {
-          <!-- Rugido con llamarada -->
-          <path class="boca-abierta" d="M100 74 Q 118 94 136 72 Q 118 80 100 74 Z" />
-          <path class="colmillo" d="M106 76 l3 6 l3 -5z M123 78 l3 -6 l3 5z" />
-          <path class="llama" d="M136 72 C 148 62, 152 70, 160 60 C 157 76, 150 84, 136 78 Z" />
-          <path class="llama-centro" d="M138 74 C 146 70, 149 73, 154 68 C 151 77, 146 79, 138 77 Z" />
-        } @else {
-          <path class="boca" d="M100 76 Q 116 82 132 74" />
-          <path class="colmillo" d="M107 78 l3 7 l3 -6z M121 78.5 l2.5 6 l3 -6.5z" />
-          <g class="humo">
-            <circle cx="142" cy="56" r="3" />
-            <circle cx="148" cy="49" r="2.2" />
-          </g>
-        }
-
-        <!-- Brazo de adelante: saluda, señala o remata -->
         @switch (pose()) {
-          @case ('saluda') {
-            <g class="brazo-saludo">
-              <path class="trazo-borde brazo" d="M96 104 Q 142 106 148 72" />
-              <path class="trazo-cuerpo brazo" d="M96 104 Q 142 106 148 72" />
-              <path class="garra" d="M143 72 l0 -8 l4 6z M148 70 l2 -8 l3 7z M152 73 l5 -6 l0 8z" />
+          @case ('remata') {
+            <!-- Balón en llamas tras el remate (el antebrazo va detrás de la cabeza) -->
+            <g class="remate">
+              <path class="llama" d="M158 30 C 152 14, 162 6, 166 -6 C 170 6, 176 8, 180 -2 C 184 8, 188 12, 188 0 C 198 14, 200 26, 194 36 Z" />
+              <path class="llama-centro" d="M164 30 C 162 20, 168 14, 170 6 C 174 14, 178 16, 182 10 C 188 20, 188 28, 186 34 Z" />
+              <g transform="translate(176 40) scale(0.769)">
+                <circle r="26" [attr.fill]="url('balon')" class="borde" />
+                <path class="gajo" d="M-25.4 -4 C -11 1, 8 -3, 24 -11 A26 26 0 0 0 -25.4 -4 Z" />
+                <path class="gajo" d="M7 -25 C 19 -12, 23 4, 18 18.6 A26 26 0 0 0 7 -25 Z" />
+                <path class="costura" d="M-25.4 -4 C -11 1, 8 -3, 24 -11 M-7 -25 C -12 -8, -6 9, 8 24.6 M7 -25 C 19 -12, 23 4, 18 18.6" />
+              </g>
             </g>
           }
-          @case ('senala') {
-            <path class="trazo-borde brazo" d="M96 104 Q 114 106 132 98" />
-            <path class="trazo-cuerpo brazo" d="M96 104 Q 114 106 132 98" />
-            <path class="garra" d="M132 94 l10 3 l-10 4z" />
+          @default {
+            <!-- La garra sostiene el balón (al señalar, una uña apunta) -->
+            <path [attr.fill]="url('piel')" class="borde" d="M108 200 C 110 186, 118 176, 130 172 L 146 192 C 140 194, 136 198, 136 200 Z" />
+            <ellipse [attr.fill]="url('piel')" class="borde" cx="134" cy="178" rx="17" ry="13" />
+            <g transform="translate(156 160) scale(1.000)">
+                <circle r="26" [attr.fill]="url('balon')" class="borde" />
+                <path class="gajo" d="M-25.4 -4 C -11 1, 8 -3, 24 -11 A26 26 0 0 0 -25.4 -4 Z" />
+                <path class="gajo" d="M7 -25 C 19 -12, 23 4, 18 18.6 A26 26 0 0 0 7 -25 Z" />
+                <path class="costura" d="M-25.4 -4 C -11 1, 8 -3, 24 -11 M-7 -25 C -12 -8, -6 9, 8 24.6 M7 -25 C 19 -12, 23 4, 18 18.6" />
+              </g>
+            <path class="garra" d="M140 168 Q 140 157 149 151 Q 146 160 146 169 Z M146 178 Q 150 167 160 163 Q 155 172 152 180 Z M150 188 Q 158 181 168 181 Q 161 187 156 192 Z" />
+            @if (pose() === 'senala') {
+              <path class="garra" d="M150 186 L 196 172 L 152 194 Z" />
+            }
           }
-          @case ('remata') {
-            <!-- Puño cerrado de celebración -->
-            <path class="trazo-borde brazo" d="M96 104 Q 116 110 112 124" />
-            <path class="trazo-cuerpo brazo" d="M96 104 Q 116 110 112 124" />
-            <circle class="cuerpo" cx="112" cy="126" r="5.5" />
-          }
+        }
+        @if (pose() !== 'remata') {
+          <g class="humo">
+            <circle cx="194" cy="58" r="3.5" />
+            <circle cx="199" cy="48" r="2.5" />
+          </g>
         }
       </g>
     </svg>
@@ -126,66 +134,58 @@ import type { Pose } from '../core/tutorial.service';
       overflow: visible;
     }
 
-    .cuerpo,
-    .pua,
-    .ala,
-    .cuerno,
-    .ojo,
-    .panza,
-    .balon circle,
-    .boca-abierta,
-    .colmillo,
-    .garra {
+    .c-naranja-claro { stop-color: var(--naranja); stop-opacity: 1; }
+    .c-naranja { stop-color: var(--naranja); }
+    .c-naranja-oscuro { stop-color: var(--rojo-oscuro); }
+    .c-oro { stop-color: var(--oro); }
+    .c-hueso { stop-color: var(--texto); }
+    .c-blanco { stop-color: var(--texto-blanco); }
+    .c-gris { stop-color: var(--texto-2); }
+
+    .borde,
+    .borde-fino {
       stroke: var(--fondo);
-      stroke-width: 2.5;
+      stroke-width: 3;
       stroke-linejoin: round;
     }
+    .borde-fino { stroke-width: 1.5; }
 
-    .cuerpo { fill: var(--naranja); }
-    .ala { fill: var(--naranja-oscuro); }
-    .hueso { fill: none; stroke: var(--fondo); stroke-width: 1.6; stroke-linecap: round; opacity: 0.55; }
-    .pua,
-    .cuerno { fill: var(--oro); }
-    .panza { fill: var(--oro); stroke-width: 0; }
-    .placa { fill: none; stroke: var(--naranja-oscuro); stroke-width: 2; stroke-linecap: round; }
-    .ojo { fill: var(--oro); stroke-width: 2; }
+    .puas { fill: var(--naranja-oscuro); }
+    .placa,
+    .escama,
+    .estria { fill: none; stroke: var(--fondo); stroke-linecap: round; }
+    .placa { stroke-width: 2.2; opacity: 0.55; }
+    .escama { stroke-width: 1.8; opacity: 0.35; }
+    .estria { stroke-width: 2; opacity: 0.45; }
+    .luz { fill: var(--oro); opacity: 0.35; }
+    .sombra { fill: var(--fondo); opacity: 0.3; }
+    .boca { fill: var(--fondo); stroke: var(--fondo); stroke-width: 3; stroke-linejoin: round; }
+    .diente,
+    .colmillo { fill: var(--texto); stroke: var(--fondo); stroke-width: 1.2; stroke-linejoin: round; }
+    .brillo-ojo { fill: var(--oro); opacity: 0.45; filter: blur(3px); }
     .pupila { fill: var(--fondo); }
-    .brillo { fill: var(--texto-blanco); }
-    .ceja { fill: none; stroke: var(--fondo); stroke-width: 5; stroke-linecap: round; }
-    .boca { fill: none; stroke: var(--fondo); stroke-width: 3; stroke-linecap: round; }
-    .boca-abierta { fill: var(--fondo); }
-    .colmillo,
-    .garra { fill: var(--texto-blanco); stroke-width: 1.4; }
-    .llama { fill: var(--naranja); }
-    .llama-centro { fill: var(--oro); }
-    .humo circle { fill: var(--texto-3); opacity: 0.45; }
-    .velocidad { fill: none; stroke: var(--oro); stroke-width: 3; stroke-linecap: round; }
-
-    .trazo-borde,
-    .trazo-cuerpo { fill: none; stroke-linecap: round; }
-    .trazo-borde { stroke: var(--fondo); stroke-width: 15; }
-    .trazo-cuerpo { stroke: var(--naranja); stroke-width: 9.5; }
-    .trazo-borde.brazo { stroke-width: 13; }
-    .trazo-cuerpo.brazo { stroke-width: 8; }
-
-    .balon circle { fill: var(--texto-blanco); }
+    .ceja { fill: var(--rojo-oscuro); stroke: var(--fondo); stroke-width: 2.5; stroke-linejoin: round; }
+    .fosa { fill: none; stroke: var(--fondo); stroke-width: 3; stroke-linecap: round; }
+    .garra { fill: var(--texto); stroke: var(--fondo); stroke-width: 2; stroke-linejoin: round; }
+    .costura { fill: none; stroke: var(--fondo); stroke-width: 2; stroke-linecap: round; }
     .gajo { fill: var(--oro); }
-    .costura { fill: none; stroke: var(--fondo); stroke-width: 1.6; stroke-linecap: round; }
+    .llama-centro { fill: var(--oro); }
+    .llama { fill: var(--naranja); stroke: var(--oro); stroke-width: 2; stroke-linejoin: round; }
+    .humo circle { fill: var(--texto-3); opacity: 0.5; }
 
-    /* Movimiento suave: flota, saluda, el humo sube y el balón vibra al rematar */
-    .dragon { animation: flotar 2.8s ease-in-out infinite; }
-    .brazo-saludo { transform-box: view-box; transform-origin: 96px 104px; animation: saludar 1.1s ease-in-out infinite; }
-    .humo { animation: humear 2.4s ease-out infinite; }
-    .remate { transform-box: view-box; transform-origin: 64px 100px; animation: rematar 0.9s ease-in-out infinite alternate; }
+    /* Movimiento sobrio: respira, humo que sube y, al rematar, el balón vibra */
+    .dragon { transform-box: view-box; transform-origin: 90px 200px; animation: respirar 3.2s ease-in-out infinite; }
+    .humo { animation: humear 2.6s ease-out infinite; }
+    .mandibula { transform-box: view-box; transform-origin: 108px 102px; }
+    :host([data-pose='remata']) .mandibula { transform: rotate(9deg); }
+    .remate { transform-box: view-box; transform-origin: 150px 200px; animation: rematar 0.8s ease-in-out infinite alternate; }
 
-    @keyframes flotar { 50% { transform: translateY(-3px); } }
-    @keyframes saludar { 50% { transform: rotate(-12deg); } }
-    @keyframes humear { from { opacity: 0.7; transform: translateY(0); } to { opacity: 0; transform: translateY(-8px); } }
-    @keyframes rematar { to { transform: rotate(6deg); } }
+    @keyframes respirar { 50% { transform: scale(1.012) translateY(-1px); } }
+    @keyframes humear { from { opacity: 0.7; transform: translate(0, 0); } to { opacity: 0; transform: translate(4px, -10px); } }
+    @keyframes rematar { to { transform: rotate(-3deg); } }
 
     @media (prefers-reduced-motion: reduce) {
       .dragon,
-      .brazo-saludo,
       .humo,
       .remate { animation: none; }
     }
@@ -193,4 +193,10 @@ import type { Pose } from '../core/tutorial.service';
 })
 export class Dragon {
   readonly pose = input<Pose>('saluda');
+  /** Ids únicos de los degradados (por si hubiera más de un dragón en la página). */
+  protected readonly id = `dragon-${siguienteId++}`;
+
+  protected url(nombre: string): string {
+    return `url(#${nombre}-${this.id})`;
+  }
 }
