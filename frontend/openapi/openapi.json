@@ -4113,6 +4113,75 @@
         "title": "PermisoOut",
         "type": "object"
       },
+      "PermisosIn": {
+        "additionalProperties": false,
+        "description": "Los permisos con los que debe quedar la persona (lo que no esté y su rol lo traiga, se le quita).",
+        "properties": {
+          "permisos": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Permisos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "permisos"
+        ],
+        "title": "PermisosIn",
+        "type": "object"
+      },
+      "PermisosUsuarioOut": {
+        "properties": {
+          "concedidos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Concedidos",
+            "type": "array"
+          },
+          "de_rol": {
+            "items": {
+              "type": "string"
+            },
+            "title": "De Rol",
+            "type": "array"
+          },
+          "efectivos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Efectivos",
+            "type": "array"
+          },
+          "personalizable": {
+            "title": "Personalizable",
+            "type": "boolean"
+          },
+          "quitados": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quitados",
+            "type": "array"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rol",
+          "personalizable",
+          "de_rol",
+          "concedidos",
+          "quitados",
+          "efectivos"
+        ],
+        "title": "PermisosUsuarioOut",
+        "type": "object"
+      },
       "PreguntaIn": {
         "additionalProperties": false,
         "description": "Pregunta al asistente. El historial lo guarda el navegador (solo texto) y se reenvía en cada pregunta.",
@@ -4600,13 +4669,20 @@
         "type": "object"
       },
       "RolesOut": {
-        "description": "Matriz de roles y permisos tal como está en la base de datos (solo lectura).",
+        "description": "Matriz de roles y permisos tal como está en la base de datos.",
         "properties": {
           "permisos": {
             "items": {
               "$ref": "#/components/schemas/PermisoOut"
             },
             "title": "Permisos",
+            "type": "array"
+          },
+          "personalizables": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Personalizables",
             "type": "array"
           },
           "roles": {
@@ -4619,7 +4695,8 @@
         },
         "required": [
           "permisos",
-          "roles"
+          "roles",
+          "personalizables"
         ],
         "title": "RolesOut",
         "type": "object"
@@ -5735,6 +5812,11 @@
             },
             "title": "Permisos",
             "type": "array"
+          },
+          "permisos_personalizados": {
+            "default": false,
+            "title": "Permisos Personalizados",
+            "type": "boolean"
           },
           "rol": {
             "enum": [
@@ -8544,33 +8626,6 @@
         ]
       }
     },
-    "/api/v1/configuracion/roles": {
-      "get": {
-        "description": "Quién puede hacer qué. Solo lectura: los permisos de cada rol se cambian con una migración.",
-        "operationId": "roles_api_v1_configuracion_roles_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RolesOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Roles",
-        "tags": [
-          "configuracion"
-        ]
-      }
-    },
     "/api/v1/configuracion/{clave}": {
       "patch": {
         "operationId": "actualizar_api_v1_configuracion__clave__patch",
@@ -10671,7 +10726,7 @@
     },
     "/api/v1/rifas/{rifa_id}": {
       "delete": {
-        "description": "Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo el SuperAdmin puede.",
+        "description": "Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo quien puede anular pagos.",
         "operationId": "eliminar_api_v1_rifas__rifa_id__delete",
         "parameters": [
           {
@@ -12085,7 +12140,7 @@
     },
     "/api/v1/torneos/{torneo_id}": {
       "delete": {
-        "description": "Quita el torneo de todas las vistas. Si ya recibió pagos, solo el SuperAdmin puede.",
+        "description": "Quita el torneo de todas las vistas. Si ya recibió pagos, solo quien puede anular pagos.",
         "operationId": "eliminar_api_v1_torneos__torneo_id__delete",
         "parameters": [
           {
@@ -12716,6 +12771,33 @@
         ]
       }
     },
+    "/api/v1/usuarios/roles": {
+      "get": {
+        "description": "Quién puede hacer qué según su rol, y qué permisos se pueden ajustar por persona.",
+        "operationId": "roles_api_v1_usuarios_roles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Roles",
+        "tags": [
+          "usuarios"
+        ]
+      }
+    },
     "/api/v1/usuarios/{usuario_id}": {
       "delete": {
         "operationId": "eliminar_api_v1_usuarios__usuario_id__delete",
@@ -12808,6 +12890,111 @@
           }
         ],
         "summary": "Actualizar",
+        "tags": [
+          "usuarios"
+        ]
+      }
+    },
+    "/api/v1/usuarios/{usuario_id}/permisos": {
+      "get": {
+        "operationId": "permisos_api_v1_usuarios__usuario_id__permisos_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "usuario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Usuario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermisosUsuarioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Permisos",
+        "tags": [
+          "usuarios"
+        ]
+      },
+      "put": {
+        "description": "Deja a la persona con esos permisos: lo que su rol no trae se le da y lo que trae y no está se le quita.",
+        "operationId": "ajustar_permisos_api_v1_usuarios__usuario_id__permisos_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "usuario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Usuario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermisosIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermisosUsuarioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ajustar Permisos",
         "tags": [
           "usuarios"
         ]

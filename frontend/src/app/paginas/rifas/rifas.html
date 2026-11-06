@@ -214,7 +214,7 @@
     <div class="formulario">
       <p>La rifa desaparece de todas las pantallas y deja de contar como deuda. Esto no se puede deshacer desde la aplicación.</p>
       @if (r.recaudado > 0) {
-        <p class="nota-chica">Tiene {{ r.recaudado | pesos }} en pagos: ese registro se conserva en la auditoría (solo el SuperAdmin puede eliminarla).</p>
+        <p class="nota-chica">Tiene {{ r.recaudado | pesos }} en pagos: ese registro se conserva en la auditoría (solo quien puede anular pagos la elimina).</p>
       }
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">

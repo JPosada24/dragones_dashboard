@@ -137,6 +137,12 @@ def h_admin(crear_usuario, auth_header, reloj):
 
 
 @pytest.fixture
+def h_entrenador(crear_usuario, auth_header, reloj):
+    crear_usuario("entrenador@club.com", "ENTRENADOR")
+    return auth_header("entrenador@club.com")
+
+
+@pytest.fixture
 def familia(client, h_admin, crear_usuario, auth_header):
     """Un acudiente con cuenta (Miembro) y su hija inscrita en la rama femenina."""
     padre = crear_usuario("padre@club.com", "MIEMBRO")

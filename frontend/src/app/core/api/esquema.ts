@@ -606,26 +606,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/configuracion/roles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Roles
-         * @description Quién puede hacer qué. Solo lectura: los permisos de cada rol se cambian con una migración.
-         */
-        get: operations["roles_api_v1_configuracion_roles_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/configuracion/{clave}": {
         parameters: {
             query?: never;
@@ -1270,7 +1250,7 @@ export interface paths {
         post?: never;
         /**
          * Eliminar
-         * @description Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo el SuperAdmin puede.
+         * @description Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo quien puede anular pagos.
          */
         delete: operations["eliminar_api_v1_rifas__rifa_id__delete"];
         options?: never;
@@ -1664,7 +1644,7 @@ export interface paths {
         post?: never;
         /**
          * Eliminar
-         * @description Quita el torneo de todas las vistas. Si ya recibió pagos, solo el SuperAdmin puede.
+         * @description Quita el torneo de todas las vistas. Si ya recibió pagos, solo quien puede anular pagos.
          */
         delete: operations["eliminar_api_v1_torneos__torneo_id__delete"];
         options?: never;
@@ -1777,6 +1757,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/usuarios/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roles
+         * @description Quién puede hacer qué según su rol, y qué permisos se pueden ajustar por persona.
+         */
+        get: operations["roles_api_v1_usuarios_roles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/usuarios/{usuario_id}": {
         parameters: {
             query?: never;
@@ -1793,6 +1793,27 @@ export interface paths {
         head?: never;
         /** Actualizar */
         patch: operations["actualizar_api_v1_usuarios__usuario_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/usuarios/{usuario_id}/permisos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Permisos */
+        get: operations["permisos_api_v1_usuarios__usuario_id__permisos_get"];
+        /**
+         * Ajustar Permisos
+         * @description Deja a la persona con esos permisos: lo que su rol no trae se le da y lo que trae y no está se le quita.
+         */
+        put: operations["ajustar_permisos_api_v1_usuarios__usuario_id__permisos_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -3220,6 +3241,29 @@ export interface components {
             descripcion: string;
         };
         /**
+         * PermisosIn
+         * @description Los permisos con los que debe quedar la persona (lo que no esté y su rol lo traiga, se le quita).
+         */
+        PermisosIn: {
+            /** Permisos */
+            permisos: string[];
+        };
+        /** PermisosUsuarioOut */
+        PermisosUsuarioOut: {
+            /** Concedidos */
+            concedidos: string[];
+            /** De Rol */
+            de_rol: string[];
+            /** Efectivos */
+            efectivos: string[];
+            /** Personalizable */
+            personalizable: boolean;
+            /** Quitados */
+            quitados: string[];
+            /** Rol */
+            rol: string;
+        };
+        /**
          * PreguntaIn
          * @description Pregunta al asistente. El historial lo guarda el navegador (solo texto) y se reenvía en cada pregunta.
          */
@@ -3407,11 +3451,13 @@ export interface components {
         };
         /**
          * RolesOut
-         * @description Matriz de roles y permisos tal como está en la base de datos (solo lectura).
+         * @description Matriz de roles y permisos tal como está en la base de datos.
          */
         RolesOut: {
             /** Permisos */
             permisos: components["schemas"]["PermisoOut"][];
+            /** Personalizables */
+            personalizables: string[];
             /** Roles */
             roles: components["schemas"]["RolOut"][];
         };
@@ -3851,6 +3897,11 @@ export interface components {
             nombre: string;
             /** Permisos */
             permisos: string[];
+            /**
+             * Permisos Personalizados
+             * @default false
+             */
+            permisos_personalizados: boolean;
             /**
              * Rol
              * @enum {string}
@@ -5513,26 +5564,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfigOut"][];
-                };
-            };
-        };
-    };
-    roles_api_v1_configuracion_roles_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RolesOut"];
                 };
             };
         };
@@ -7949,6 +7980,26 @@ export interface operations {
             };
         };
     };
+    roles_api_v1_usuarios_roles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RolesOut"];
+                };
+            };
+        };
+    };
     eliminar_api_v1_usuarios__usuario_id__delete: {
         parameters: {
             query?: never;
@@ -8000,6 +8051,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsuarioOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    permisos_api_v1_usuarios__usuario_id__permisos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                usuario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermisosUsuarioOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ajustar_permisos_api_v1_usuarios__usuario_id__permisos_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                usuario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermisosIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermisosUsuarioOut"];
                 };
             };
             /** @description Validation Error */

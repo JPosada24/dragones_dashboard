@@ -296,7 +296,7 @@ def preguntar(
 ) -> Respuesta:
     limite = limite_diario(db)
     if limite <= 0:
-        raise AgenteNoConfigurado("El asistente está apagado. El SuperAdmin puede activarlo en Configuración.")
+        raise AgenteNoConfigurado("El asistente está apagado. Se activa en Configuración.")
     usados = usados_hoy(db, usuario)
     if usados >= limite:
         raise LimiteDiario(f"Llegaste al límite de {limite} preguntas al asistente por hoy. Vuelve mañana.")

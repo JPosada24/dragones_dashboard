@@ -34,11 +34,6 @@ interface Grupo {
   parametros: Definicion[];
 }
 
-interface RolesOut {
-  permisos: { codigo: string; descripcion: string }[];
-  roles: { codigo: string; nombre: string; descripcion: string | null; permisos: string[] }[];
-}
-
 const MULTAS: Grupo = {
   titulo: 'Multas y plazos', nota: 'Aplica a lo que se cree desde el cambio; lo ya creado conserva su valor', parametros: [
     { clave: 'multa_inasistencia', titulo: 'Valor de la multa por inasistencia', nota: 'Se cobra al cierre del día si no marcó ni justificó (0 = no se multa)', tipo: 'pesos', unidad: 'COP' },
@@ -84,23 +79,6 @@ const EXPULSION: Definicion = {
   clave: 'expulsion_automatica', titulo: 'Expulsión automática por mora', nota: '', tipo: 'booleano',
 };
 
-/** Permisos que se muestran en la matriz resumida (el resto con "Ver todos"). */
-const PERMISOS_CLAVE: [string, string][] = [
-  ['asistencia.marcar_grupo', 'Marcar asistencia'],
-  ['inscripciones.crear', 'Inscribir alumnos'],
-  ['inscripciones.abonar', 'Abonos de inscripción'],
-  ['pagos.registrar', 'Cobrar multas y rifas'],
-  ['pagos.anular', 'Anular pagos'],
-  ['prorroga.conceder', 'Conceder prórrogas'],
-  ['rifas.gestionar', 'Crear y gestionar rifas'],
-  ['eventos.gestionar', 'Crear y gestionar torneos'],
-  ['alumnos.eliminar', 'Eliminar alumnos'],
-  ['usuarios.gestionar', 'Crear usuarios'],
-  ['config.editar', 'Cambiar parámetros críticos'],
-];
-
-const NOMBRE_CORTO: Record<string, string> = { SUPERADMIN: 'Super', ADMIN: 'Admin', ENTRENADOR: 'Entren.', MIEMBRO: 'Miembro' };
-
 @Component({
   selector: 'app-configuracion',
   imports: [NgTemplateOutlet, ReactiveFormsModule, Aviso, Dialogo],
@@ -116,11 +94,8 @@ export class ConfiguracionPage implements OnInit {
 
   protected readonly puedeEditar = computed(() => this.auth.tiene('config.editar'));
   protected readonly recordatoriosDef = RECORDATORIOS;
-  protected readonly nombreCorto = NOMBRE_CORTO;
 
   protected readonly valores = signal<Record<string, Valor> | null>(null);
-  protected readonly matriz = signal<RolesOut | null>(null);
-  protected readonly todosLosPermisos = signal(false);
   protected readonly errorCarga = signal(false);
   protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
   protected readonly errorDialogo = signal<string | null>(null);
@@ -161,26 +136,10 @@ export class ConfiguracionPage implements OnInit {
     return filas;
   });
 
-  /** Matriz de permisos: resumida o completa. */
-  protected readonly filasPermisos = computed(() => {
-    const m = this.matriz();
-    if (!m) return [];
-    const lista: [string, string][] = this.todosLosPermisos()
-      ? m.permisos.map((p) => [p.codigo, p.descripcion])
-      : PERMISOS_CLAVE.filter(([c]) => m.permisos.some((p) => p.codigo === c));
-    return lista.map(([codigo, etiqueta]) => ({
-      codigo, etiqueta, celdas: m.roles.map((r) => ({ rol: r.nombre, si: r.permisos.includes(codigo) })),
-    }));
-  });
-
   ngOnInit(): void {
     this.http.get<Parametro[]>(`${API}/configuracion`).subscribe({
       next: (lista) => this.valores.set(Object.fromEntries(lista.map((p) => [p.clave, p.valor]))),
       error: () => this.errorCarga.set(true),
-    });
-    this.http.get<RolesOut>(`${API}/configuracion/roles`).subscribe({
-      next: (m) => this.matriz.set(m),
-      error: () => this.matriz.set(null),
     });
   }
 
@@ -278,7 +237,7 @@ export class ConfiguracionPage implements OnInit {
       this.cambiandoPolitica.set(false);
       this.mensaje.set(error
         ? { error: true, texto: error }
-        : { error: false, texto: nuevo ? 'Expulsión automática activada: la mora expulsa sin confirmación.' : 'Expulsión automática apagada: el SuperAdmin confirma cada expulsión.' });
+        : { error: false, texto: nuevo ? 'Expulsión automática activada: la mora expulsa sin confirmación.' : 'Expulsión automática apagada: cada expulsión se confirma a mano.' });
     });
   }
 

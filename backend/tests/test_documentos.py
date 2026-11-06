@@ -104,7 +104,9 @@ def test_eliminar_documento_borra_el_archivo_y_queda_auditado(client, h_admin, c
 
 
 # ---------- Eliminar alumno (purga) ----------
-def test_superadmin_elimina_un_alumno_con_toda_su_informacion(client, h_admin, crear_usuario, auth_header, db):
+def test_superadmin_elimina_un_alumno_con_toda_su_informacion(
+    client, h_admin, h_entrenador, crear_usuario, auth_header, db
+):
     from sqlalchemy import text
 
     crear_usuario("root@club.com", "SUPERADMIN")
@@ -118,8 +120,8 @@ def test_superadmin_elimina_un_alumno_con_toda_su_informacion(client, h_admin, c
     archivo = _archivo_en_disco(db, doc["id"])
     assert archivo.exists()
 
-    # Solo el SuperAdmin.
-    assert client.delete(f"{A}/{alumno['id']}", headers=h_admin).status_code == 403
+    # Sin alumnos.eliminar (el Entrenador) no se puede.
+    assert client.delete(f"{A}/{alumno['id']}", headers=h_entrenador).status_code == 403
     assert client.delete(f"{A}/{alumno['id']}", headers=h_root).status_code == 204
 
     assert client.get(f"{A}/{alumno['id']}", headers=h_root).status_code == 404

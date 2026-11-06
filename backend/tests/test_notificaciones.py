@@ -164,8 +164,8 @@ def test_enlace_whatsapp_respeta_numeros_internacionales():
 
 
 # ---------- Correo de prueba ----------
-def test_correo_de_prueba_solo_para_el_superadmin(client, h_admin, h_root):
-    assert client.post(f"{N}/correo-prueba", headers=h_admin).status_code == 403
+def test_correo_de_prueba_solo_con_config_editar(client, h_entrenador, h_root):
+    assert client.post(f"{N}/correo-prueba", headers=h_entrenador).status_code == 403
     r = client.post(f"{N}/correo-prueba", headers=h_root)
     assert r.json()["enviado"] is True and r.json()["modo"] == "registro"
     assert correo_registro().enviados[0][0] == "root@club.com"

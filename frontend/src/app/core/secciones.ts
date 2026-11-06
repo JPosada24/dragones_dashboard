@@ -96,7 +96,7 @@ export const SECCIONES: Seccion[] = [
   {
     ruta: 'configuracion', etiqueta: 'Configuración', icono: 'settings', grupo: 'Sistema', permisos: ['config.ver'],
     titulo: 'Configuración', subtitulo: 'Parámetros del club',
-    descripcion: 'Multa, plazos, valores, mora y demás parámetros (solo el SuperAdmin los cambia).',
+    descripcion: 'Multa, plazos, valores, mora y demás parámetros del club.',
   },
   {
     ruta: 'habeas', etiqueta: 'Datos personales', icono: 'shield_person', grupo: 'Sistema', permisos: ['habeas.gestionar'],

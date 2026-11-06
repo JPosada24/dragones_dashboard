@@ -6,23 +6,50 @@ import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
+import { Esquema } from '../../core/api/tipos';
 import { AuthService } from '../../core/auth/auth.service';
 import { API, NOMBRE_ROL, Rol, Usuario } from '../../core/modelos';
 import { Alumno } from '../alumnos/alumnos.modelos';
 
-/** Una cuenta con la persona a la que pertenece (si es Miembro). */
-interface UsuarioLista extends Usuario {
-  vinculado_a: string | null;
-}
+/** Una cuenta con la persona a la que pertenece (si es Miembro) y si tiene permisos personalizados. */
+type UsuarioLista = Esquema<'UsuarioListaOut'>;
+type RolesOut = Esquema<'RolesOut'>;
+type PermisosUsuario = Esquema<'PermisosUsuarioOut'>;
 
 type Vinculo = 'acudiente' | 'alumno';
 
 const ROLES: { valor: Rol; texto: string; descripcion: string }[] = [
   { valor: 'SUPERADMIN', texto: 'SuperAdmin', descripcion: 'Acceso total (el dueño del club).' },
-  { valor: 'ADMIN', texto: 'Admin', descripcion: 'Alumnos, cobros, inscripciones, rifas y torneos.' },
+  { valor: 'ADMIN', texto: 'Admin', descripcion: 'Todo el club (alumnos, cobros, rifas, torneos, parámetros) menos las cuentas de usuario.' },
   { valor: 'ENTRENADOR', texto: 'Entrenador', descripcion: 'Ambas ramas: alumnos, asistencia e inscripciones; no cobra multas ni rifas.' },
   { valor: 'MIEMBRO', texto: 'Miembro', descripcion: 'Acudiente o alumno mayor de edad: solo consulta lo suyo.' },
 ];
+
+/** Área de cada permiso (lo que va antes del punto) para agruparlos al ajustarlos. */
+const AREAS: Record<string, string> = {
+  alumnos: 'Alumnos', inscripciones: 'Inscripciones', prorroga: 'Inscripciones', expulsion: 'Inscripciones',
+  sesiones: 'Asistencia', asistencia: 'Asistencia', justificaciones: 'Asistencia',
+  pagos: 'Cobros', multas: 'Cobros', rifas: 'Rifas', sorteo: 'Rifas', eventos: 'Torneos',
+  reportes: 'Reportes', notificaciones: 'Avisos', club: 'Sitio público', config: 'Configuración',
+  auditoria: 'Configuración', habeas: 'Datos personales', agente: 'Asistente de IA',
+};
+
+/** Permisos que se muestran en la matriz resumida (el resto con "Ver todos"). */
+const PERMISOS_CLAVE: [string, string][] = [
+  ['asistencia.marcar_grupo', 'Marcar asistencia'],
+  ['inscripciones.crear', 'Inscribir alumnos'],
+  ['inscripciones.abonar', 'Abonos de inscripción'],
+  ['pagos.registrar', 'Cobrar multas y rifas'],
+  ['pagos.anular', 'Anular pagos'],
+  ['prorroga.conceder', 'Conceder prórrogas'],
+  ['rifas.gestionar', 'Crear y gestionar rifas'],
+  ['eventos.gestionar', 'Crear y gestionar torneos'],
+  ['alumnos.eliminar', 'Eliminar alumnos'],
+  ['config.editar', 'Cambiar parámetros críticos'],
+  ['usuarios.gestionar', 'Cuentas y permisos'],
+];
+
+const NOMBRE_CORTO: Record<string, string> = { SUPERADMIN: 'Super', ADMIN: 'Admin', ENTRENADOR: 'Entren.', MIEMBRO: 'Miembro' };
 
 /** Política del servidor: 12+ caracteres, con mayúscula, minúscula y número. */
 const POLITICA = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,128}$/;
@@ -61,6 +88,17 @@ export class UsuariosPage implements OnInit {
   protected readonly nombreRol = NOMBRE_ROL;
   protected readonly yo = computed(() => this.auth.usuario()?.id ?? null);
   protected readonly puedeEliminar = computed(() => this.auth.tiene('usuarios.eliminar'));
+  protected readonly nombreCorto = NOMBRE_CORTO;
+
+  /** Cuentas o la matriz de roles y permisos. */
+  protected readonly vista = signal<'cuentas' | 'roles'>('cuentas');
+  protected readonly matriz = signal<RolesOut | null>(null);
+  protected readonly todosLosPermisos = signal(false);
+
+  // ---------- Permisos de una persona ----------
+  protected readonly ajustando = signal<UsuarioLista | null>(null);
+  protected readonly permisosPersona = signal<PermisosUsuario | null>(null);
+  protected readonly marcados = signal<ReadonlySet<string>>(new Set());
 
   protected readonly usuarios = signal<UsuarioLista[] | null>(null);
   protected readonly buscar = signal('');
@@ -106,6 +144,41 @@ export class UsuariosPage implements OnInit {
     );
   });
 
+  /** Matriz de permisos: resumida o completa. */
+  protected readonly filasPermisos = computed(() => {
+    const m = this.matriz();
+    if (!m) return [];
+    const lista: [string, string][] = this.todosLosPermisos()
+      ? m.permisos.map((p) => [p.codigo, p.descripcion])
+      : PERMISOS_CLAVE.filter(([c]) => m.permisos.some((p) => p.codigo === c));
+    return lista.map(([codigo, etiqueta]) => ({
+      codigo, etiqueta, celdas: m.roles.map((r) => ({ rol: r.nombre, si: r.permisos.includes(codigo) })),
+    }));
+  });
+
+  /** Lo que se puede dar o quitar a una persona, agrupado por área. */
+  protected readonly gruposPermisos = computed(() => {
+    const m = this.matriz();
+    if (!m) return [];
+    const ajustables = new Set(m.personalizables);
+    const grupos = new Map<string, { codigo: string; descripcion: string }[]>();
+    for (const p of m.permisos) {
+      if (!ajustables.has(p.codigo)) continue;
+      const area = AREAS[p.codigo.split('.')[0] ?? ''] ?? 'Otros';
+      grupos.set(area, [...(grupos.get(area) ?? []), p]);
+    }
+    return [...grupos].map(([titulo, permisos]) => ({ titulo, permisos }));
+  });
+
+  /** Cuántos permisos quedarían distintos a los de su rol. */
+  protected readonly cambios = computed(() => {
+    const p = this.permisosPersona();
+    const m = this.matriz();
+    if (!p || !m) return 0;
+    const delRol = new Set(p.de_rol);
+    return m.personalizables.filter((c) => delRol.has(c) !== this.marcados().has(c)).length;
+  });
+
   protected readonly conteo = computed(() => {
     const c: Record<string, number> = {};
     for (const u of this.usuarios() ?? []) c[u.rol] = (c[u.rol] ?? 0) + 1;
@@ -118,6 +191,7 @@ export class UsuariosPage implements OnInit {
 
   ngOnInit(): void {
     this.cargar();
+    this.http.get<RolesOut>(`${API}/usuarios/roles`).subscribe({ next: (m) => this.matriz.set(m) });
   }
 
   protected cargar(): void {
@@ -247,11 +321,67 @@ export class UsuariosPage implements OnInit {
     });
   }
 
+  // ---------- Permisos de una persona (Admin o Entrenador) ----------
+  protected esAjustable(u: UsuarioLista): boolean {
+    return (u.rol === 'ADMIN' || u.rol === 'ENTRENADOR') && u.id !== this.yo();
+  }
+
+  protected abrirPermisos(u: UsuarioLista): void {
+    this.permisosPersona.set(null);
+    this.op.abrir(() => this.ajustando.set(u));
+    this.http.get<PermisosUsuario>(`${API}/usuarios/${encodeURIComponent(u.id)}/permisos`).subscribe({
+      next: (p) => {
+        this.permisosPersona.set(p);
+        this.marcados.set(new Set(p.efectivos));
+      },
+      error: (e: unknown) => this.errorDialogo.set(mensajeError(e)),
+    });
+  }
+
+  protected alternar(codigo: string): void {
+    this.marcados.update((s) => {
+      const nuevo = new Set(s);
+      if (!nuevo.delete(codigo)) nuevo.add(codigo);
+      return nuevo;
+    });
+  }
+
+  /** 'agregado' si su rol no lo trae y está marcado; 'quitado' si lo trae y no está. */
+  protected diferencia(codigo: string): 'agregado' | 'quitado' | null {
+    const p = this.permisosPersona();
+    if (!p) return null;
+    const delRol = p.de_rol.includes(codigo);
+    const marcado = this.marcados().has(codigo);
+    if (marcado && !delRol) return 'agregado';
+    if (!marcado && delRol) return 'quitado';
+    return null;
+  }
+
+  protected volverAlRol(): void {
+    const p = this.permisosPersona();
+    if (p) this.marcados.set(new Set(p.de_rol));
+  }
+
+  protected guardarPermisos(): void {
+    const u = this.ajustando();
+    const m = this.matriz();
+    if (!u || !m) return;
+    const ajustables = new Set(m.personalizables);
+    const permisos = [...this.marcados()].filter((c) => ajustables.has(c)).sort();
+    this.op.ejecutar(
+      this.http.put<PermisosUsuario>(`${API}/usuarios/${encodeURIComponent(u.id)}/permisos`, { permisos }),
+      (p) => {
+        this.ajustando.set(null);
+        this.cargar();
+        const n = p.concedidos.length + p.quitados.length;
+        this.op.exito(n ? `Permisos de ${u.nombre} guardados (${n} distinto${n === 1 ? '' : 's'} a su rol).`
+          : `${u.nombre} quedó con los permisos de su rol.`);
+      },
+    );
+  }
+
   protected copiar(texto: string): void {
     void navigator.clipboard?.writeText(texto).then(() => this.op.exito('Copiado al portapapeles.'));
   }
-
-  // ---------- Utilidades ----------
-
 
 }

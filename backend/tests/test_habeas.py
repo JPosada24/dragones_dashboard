@@ -44,9 +44,10 @@ def test_un_reclamo_tiene_15_dias_habiles(client, h_root):
     assert r.json()["vence_el"] == str(sumar_habiles(date(2026, 11, 2), 15))
 
 
-def test_solo_el_superadmin_gestiona_solicitudes(client, h_admin):
-    assert client.get(H, headers=h_admin).status_code == 403
-    assert client.post(H, json=CONSULTA, headers=h_admin).status_code == 403
+def test_sin_permiso_no_se_gestionan_solicitudes(client, h_admin, h_entrenador):
+    assert client.get(H, headers=h_entrenador).status_code == 403
+    assert client.post(H, json=CONSULTA, headers=h_entrenador).status_code == 403
+    assert client.get(H, headers=h_admin).status_code == 200  # el Admin tiene todo menos usuarios
 
 
 def test_alerta_en_el_resumen_cuando_esta_por_vencer(client, h_root, reloj):

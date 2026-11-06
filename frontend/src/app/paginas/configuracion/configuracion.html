@@ -56,7 +56,7 @@
             <span class="politica-textos">
               <span class="politica-titulo">Expulsión automática por mora</span>
               <span class="parametro-nota">
-                {{ expulsionAutomatica() ? 'La mora pasa directo a expulsado' : 'La mora queda «A expulsar» y el SuperAdmin confirma' }}
+                {{ expulsionAutomatica() ? 'La mora pasa directo a expulsado' : 'La mora queda «A expulsar» y se confirma a mano' }}
               </span>
             </span>
           </button>
@@ -96,40 +96,6 @@
         </div>
       </section>
 
-      @if (matriz(); as m) {
-        <section class="panel tarjeta" aria-label="Roles y permisos">
-          <header class="cabecera fila">
-            <div>
-              <h2>Roles y permisos</h2>
-              <p class="sub">Definidos en el sistema y verificados siempre en el servidor</p>
-            </div>
-            <button type="button" class="enlace" [attr.aria-pressed]="todosLosPermisos()" (click)="todosLosPermisos.set(!todosLosPermisos())">
-              {{ todosLosPermisos() ? 'Ver resumen' : 'Ver todos (' + m.permisos.length + ')' }}
-            </button>
-          </header>
-          <table class="matriz">
-            <thead>
-              <tr>
-                <th scope="col">Permiso</th>
-                @for (r of m.roles; track r.codigo) {
-                  <th scope="col" [attr.title]="r.descripcion">{{ nombreCorto[r.codigo] ?? r.nombre }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (f of filasPermisos(); track f.codigo) {
-                <tr>
-                  <th scope="row">{{ f.etiqueta }}</th>
-                  @for (c of f.celdas; track c.rol) {
-                    <td><span class="celda" [class.si]="c.si" [attr.aria-label]="c.rol + (c.si ? ': sí' : ': no')">{{ c.si ? '✓' : '—' }}</span></td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
-        </section>
-      }
-
       <section class="panel tarjeta" [attr.aria-label]="otros().titulo">
         <header class="cabecera"><h2>{{ otros().titulo }}</h2></header>
         @for (p of otros().parametros; track p.clave) {
@@ -138,7 +104,7 @@
       </section>
 
       @if (!puedeEditar()) {
-        <p class="sub solo-consulta"><span class="icono" aria-hidden="true">lock</span> Solo el SuperAdmin puede cambiar estos parámetros.</p>
+        <p class="sub solo-consulta"><span class="icono" aria-hidden="true">lock</span> No tienes permiso para cambiar estos parámetros.</p>
       }
     </div>
   </div>

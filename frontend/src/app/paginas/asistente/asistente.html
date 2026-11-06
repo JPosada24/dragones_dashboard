@@ -10,7 +10,7 @@
       <p class="sub">
         @if (estado() === null) { Cargando… }
         @else if (!estado()!.configurado) { No está configurado todavía. }
-        @else if (estado()!.limite_diario <= 0) { Está apagado. El SuperAdmin puede activarlo en Configuración. }
+        @else if (estado()!.limite_diario <= 0) { Está apagado. Se activa en Configuración. }
         @else { Solo consulta · {{ restantes() }} {{ restantes() === 1 ? 'pregunta' : 'preguntas' }} disponibles hoy }
       </p>
     </div>

@@ -129,7 +129,7 @@ describe('RifasPage', () => {
     expect(texto()).toContain('Pago anulado');
   });
 
-  it('cancelar no pide motivo y eliminar avisa si solo el SuperAdmin puede', async () => {
+  it('cancelar no pide motivo y eliminar avisa si hace falta poder anular pagos', async () => {
     await cargar(ADMIN, [rifa('1')]);
     boton('Cancelar', el().querySelector('.tarjeta')!)!.click();
     await estable();
@@ -142,10 +142,10 @@ describe('RifasPage', () => {
 
     el().querySelector<HTMLButtonElement>('[aria-label="Eliminar Rifa 1"]')!.click();
     await estable();
-    expect(ultimo().textContent).toContain('solo el SuperAdmin'); // ya tiene pagos
+    expect(ultimo().textContent).toContain('solo quien puede anular pagos'); // ya tiene pagos
     boton('Eliminar rifa', ultimo())!.click();
     backend.expectOne((x) => x.method === 'DELETE' && x.url === `${API}/rifas/1`)
-      .flush({ detail: 'Esta rifa ya tiene pagos o sorteos: solo el SuperAdmin puede eliminarla.' }, { status: 403, statusText: 'Forbidden' });
+      .flush({ detail: 'Esta rifa ya tiene pagos o sorteos: solo quien puede anular pagos la elimina.' }, { status: 403, statusText: 'Forbidden' });
     await estable();
     expect(ultimo().querySelector('[role="alert"]')?.textContent).toBeTruthy();
   });

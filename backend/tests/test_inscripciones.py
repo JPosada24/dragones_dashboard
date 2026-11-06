@@ -6,7 +6,7 @@ from sqlalchemy.exc import DBAPIError
 
 from app.core.fechas import hoy
 from app.models.sistema import Auditoria
-from tests.fabrica import I, crear_acudiente, crear_alumno, crear_menor, datos_alumno, inscribir
+from tests.fabrica import I, ajustar_permisos, crear_acudiente, crear_alumno, crear_menor, datos_alumno, inscribir
 
 
 @pytest.fixture
@@ -130,14 +130,13 @@ def test_superadmin_anula_un_abono_y_la_inscripcion_vuelve_a_pendiente(client, h
     assert _pagar(client, h_admin, i["id"], monto=50000).json()["estado"] == "activo"
 
 
-def test_anulacion_exige_superadmin_no_exige_motivo_y_no_se_repite(
+def test_anulacion_exige_permiso_no_exige_motivo_y_no_se_repite(
     client, h_admin, h_root, alumno, crear_usuario, auth_header
 ):
     i = inscribir(client, h_admin, alumno["id"]).json()
     abono = _pagar(client, h_admin, i["id"], monto=40000).json()["pagos"][0]
     crear_usuario("coach@club.com", "ENTRENADOR")
-    assert _anular(client, h_admin, i["id"], abono["id"]).status_code == 403
-    assert _anular(client, auth_header("coach@club.com"), i["id"], abono["id"]).status_code == 403
+    assert _anular(client, auth_header("coach@club.com"), i["id"], abono["id"]).status_code == 403  # sin pagos.anular
 
     anulacion = _anular(client, h_root, i["id"], abono["id"], motivo=None).json()["pagos"][1]
     assert anulacion["monto"] == -40000 and anulacion["motivo"] is None  # el motivo es opcional
@@ -281,8 +280,9 @@ def test_ciclo_de_estados_y_quien_confirma_la_expulsion(client, h_admin, h_root,
     assert _estado(client, h_admin, i["id"], "activo").json()["estado"] == "activo"  # se puso al día
     _estado(client, h_admin, i["id"], "a_expulsar")
 
-    r = _estado(client, h_admin, i["id"], "expulsado")  # el Admin no confirma expulsiones
-    assert r.status_code == 403 and "SuperAdmin" in r.json()["detail"]
+    ajustar_permisos(client, h_root, h_admin, quitar={"expulsion.confirmar"})
+    r = _estado(client, h_admin, i["id"], "expulsado")  # sin expulsion.confirmar no se confirma
+    assert r.status_code == 403 and "permiso" in r.json()["detail"]
     assert _estado(client, h_root, i["id"], "expulsado").json()["estado"] == "expulsado"
 
     assert _estado(client, h_root, i["id"], "activo").status_code == 422  # expulsado es final

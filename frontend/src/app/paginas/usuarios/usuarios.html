@@ -2,6 +2,52 @@
   <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
 }
 
+<div class="filtros vistas" role="group" aria-label="Vista">
+  <button type="button" class="filtro" [attr.aria-pressed]="vista() === 'cuentas'" (click)="vista.set('cuentas')">
+    <span class="icono" aria-hidden="true">group</span> Cuentas
+  </button>
+  <button type="button" class="filtro" [attr.aria-pressed]="vista() === 'roles'" (click)="vista.set('roles')">
+    <span class="icono" aria-hidden="true">admin_panel_settings</span> Roles y permisos
+  </button>
+</div>
+
+@if (vista() === 'roles') {
+  @if (matriz(); as m) {
+    <section class="panel" aria-label="Roles y permisos">
+      <header class="cabecera-matriz">
+        <div>
+          <h2>Roles y permisos</h2>
+          <p class="nota-chica">Lo que trae cada rol. A un Admin o Entrenador puedes darle o quitarle permisos desde «Cuentas» con el botón <span class="icono" aria-hidden="true">tune</span>.</p>
+        </div>
+        <button type="button" class="enlace" [attr.aria-pressed]="todosLosPermisos()" (click)="todosLosPermisos.set(!todosLosPermisos())">
+          {{ todosLosPermisos() ? 'Ver resumen' : 'Ver todos (' + m.permisos.length + ')' }}
+        </button>
+      </header>
+      <table class="matriz">
+        <thead>
+          <tr>
+            <th scope="col">Permiso</th>
+            @for (r of m.roles; track r.codigo) {
+              <th scope="col" [attr.title]="r.descripcion">{{ nombreCorto[r.codigo] ?? r.nombre }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of filasPermisos(); track f.codigo) {
+            <tr>
+              <th scope="row">{{ f.etiqueta }}</th>
+              @for (c of f.celdas; track c.rol) {
+                <td><span class="celda" [class.si]="c.si" [attr.aria-label]="c.rol + (c.si ? ': sí' : ': no')">{{ c.si ? '✓' : '—' }}</span></td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  } @else {
+    <p class="panel vacio">Cargando…</p>
+  }
+} @else {
 <section class="controles" aria-label="Filtros">
   <div class="busqueda">
     <label class="solo-lectores" for="buscar-usuario">Buscar cuenta</label>
@@ -39,12 +85,19 @@
           <span class="chip-rol" [attr.data-rol]="u.rol">
             {{ nombreRol[u.rol] }}
           </span>
+          @if (u.permisos_personalizados) {
+            <span class="chip-ajuste" title="Tiene permisos dados o quitados además de los de su rol">personalizado</span>
+          }
           <span class="estado" [class.apagado]="!u.activo">{{ u.activo ? 'Activa' : 'Desactivada' }}</span>
           <span class="acciones-fila">
             <button type="button" class="boton-icono" (click)="abrirClave(u)" [attr.aria-label]="'Cambiar la contraseña de ' + u.nombre"
                     title="Cambiar contraseña"><span class="icono" aria-hidden="true">key</span></button>
             <button type="button" class="boton-icono" (click)="abrirEditar(u)" [attr.aria-label]="'Editar la cuenta de ' + u.nombre"
                     title="Editar"><span class="icono" aria-hidden="true">edit</span></button>
+            @if (esAjustable(u)) {
+              <button type="button" class="boton-icono" (click)="abrirPermisos(u)" [attr.aria-label]="'Permisos de ' + u.nombre"
+                      title="Permisos"><span class="icono" aria-hidden="true">tune</span></button>
+            }
             @if (puedeEliminar() && u.id !== yo()) {
               <button type="button" class="boton-icono peligro" (click)="abrirEliminar(u)"
                       [attr.aria-label]="'Eliminar la cuenta de ' + u.nombre" title="Eliminar">
@@ -57,6 +110,7 @@
       }
     </ul>
   </section>
+}
 }
 
 <!-- ---------- Nueva cuenta ---------- -->
@@ -145,6 +199,9 @@
           <select class="control" formControlName="rol">
             @for (r of roles; track r.valor) { <option [value]="r.valor">{{ r.texto }}</option> }
           </select></label>
+        @if (u.permisos_personalizados && formEditar.controls.rol.value !== u.rol) {
+          <p class="nota-chica">Al cambiar el rol, sus permisos personalizados se borran y queda con los del rol nuevo.</p>
+        }
         <label class="casilla"><input type="checkbox" formControlName="activo" />
           <span>Cuenta activa <span class="nota-chica">(desactivarla cierra sus sesiones y le impide entrar)</span></span></label>
       }
@@ -192,6 +249,52 @@
         <button type="submit" class="boton" [disabled]="ocupado()">Cambiar</button>
       </div>
     </form>
+  </app-dialogo>
+}
+
+<!-- ---------- Permisos de una persona ---------- -->
+@if (ajustando(); as u) {
+  <app-dialogo titulo="Permisos" [descripcion]="u.nombre + ' · ' + nombreRol[u.rol]" ancho="ancho" (cerrar)="ajustando.set(null)">
+    <div class="formulario">
+      @if (permisosPersona()) {
+        <p class="nota-chica">
+          Marcado = puede hacerlo. Vienen marcados los del rol {{ nombreRol[u.rol] }}; cambia solo lo que esta persona necesite
+          distinto. Administrar cuentas y permisos es solo del SuperAdmin.
+        </p>
+        <div class="grupos-permisos">
+          @for (g of gruposPermisos(); track g.titulo) {
+            <fieldset class="grupo-permisos">
+              <legend>{{ g.titulo }}</legend>
+              @for (perm of g.permisos; track perm.codigo) {
+                <label class="casilla permiso">
+                  <input type="checkbox" [checked]="marcados().has(perm.codigo)" (change)="alternar(perm.codigo)" />
+                  <span>{{ perm.descripcion }}
+                    @switch (diferencia(perm.codigo)) {
+                      @case ('agregado') { <span class="marca agregado">agregado</span> }
+                      @case ('quitado') { <span class="marca quitado">quitado</span> }
+                    }
+                  </span>
+                </label>
+              }
+            </fieldset>
+          }
+        </div>
+        <p class="nota-chica" aria-live="polite">
+          {{ cambios() === 0 ? 'Igual que su rol.' : cambios() + (cambios() === 1 ? ' cambio' : ' cambios') + ' respecto a su rol.' }}
+          Aplica de inmediato, sin cerrar su sesión.
+        </p>
+      } @else if (!errorDialogo()) {
+        <p class="nota-chica">Cargando…</p>
+      }
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" [disabled]="!permisosPersona() || cambios() === 0" (click)="volverAlRol()">
+          Volver a los del rol
+        </button>
+        <button type="button" class="boton secundario" (click)="ajustando.set(null)">Cancelar</button>
+        <button type="button" class="boton" [disabled]="ocupado() || !permisosPersona()" (click)="guardarPermisos()">Guardar</button>
+      </div>
+    </div>
   </app-dialogo>
 }
 

@@ -12,6 +12,22 @@ const CUENTAS = [
   { id: 'u2', email: 'coach@club.com', nombre: 'Ana Coach', rol: 'ENTRENADOR', activo: true, permisos: [], vinculado_a: null },
   { id: 'u3', email: 'marta@club.com', nombre: 'Marta Gómez', rol: 'MIEMBRO', activo: true, permisos: [], vinculado_a: 'Acudiente de F001 Laura' },
 ];
+const ROLES = {
+  permisos: [
+    { codigo: 'alumnos.ver_todos', descripcion: 'Ver fichas de todos los alumnos' },
+    { codigo: 'config.editar', descripcion: 'Cambiar parámetros críticos' },
+    { codigo: 'pagos.registrar', descripcion: 'Registrar pagos' },
+    { codigo: 'reportes.ver', descripcion: 'Ver los reportes de ingresos' },
+    { codigo: 'usuarios.gestionar', descripcion: 'Crear usuarios' },
+  ],
+  roles: [
+    { codigo: 'SUPERADMIN', nombre: 'SuperAdmin', descripcion: null, permisos: ['alumnos.ver_todos', 'config.editar', 'pagos.registrar', 'reportes.ver', 'usuarios.gestionar'] },
+    { codigo: 'ADMIN', nombre: 'Admin', descripcion: null, permisos: ['alumnos.ver_todos', 'config.editar', 'pagos.registrar', 'reportes.ver'] },
+    { codigo: 'ENTRENADOR', nombre: 'Entrenador', descripcion: null, permisos: ['alumnos.ver_todos'] },
+    { codigo: 'MIEMBRO', nombre: 'Miembro', descripcion: null, permisos: [] },
+  ],
+  personalizables: ['alumnos.ver_todos', 'config.editar', 'pagos.registrar', 'reportes.ver'],
+};
 const ALUMNA = {
   id: 'a1', codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', edad: 12, es_menor: true,
   autorizacion: { nombre: 'Marta Gómez', imagen: true, registrada_en: '2026-01-10T15:00:00Z' },
@@ -29,6 +45,7 @@ describe('UsuariosPage', () => {
     fixture = TestBed.createComponent(UsuariosPage);
     fixture.detectChanges();
     backend.expectOne(`${API}/usuarios`).flush(CUENTAS);
+    backend.expectOne(`${API}/usuarios/roles`).flush(ROLES);
     await estable();
   });
 
@@ -152,6 +169,52 @@ describe('UsuariosPage', () => {
     r.flush(CUENTAS[1]!);
     await estable();
     expect(dialogo().textContent).toContain('NuevaClave2026x');
+  });
+  it('la vista «Roles y permisos» muestra la matriz (antes estaba en Configuración)', async () => {
+    [...el().querySelectorAll<HTMLButtonElement>('.vistas button')].find((b) => b.textContent?.includes('Roles y permisos'))!.click();
+    await estable();
+    const filas = [...el().querySelectorAll('.matriz tbody tr')].map((f) => f.textContent?.replace(/\s+/g, ''));
+    expect(filas).toContain('Cambiarparámetroscríticos✓✓——');
+    expect(filas).toContain('Cuentasypermisos✓———');
+    expect(el().querySelector('.cuentas')).toBeNull();
+  });
+
+  it('ajusta los permisos de un entrenador: marca lo distinto a su rol y guarda la lista completa', async () => {
+    // Solo Admin y Entrenador se ajustan; nunca la propia cuenta ni una de familia.
+    expect(el().querySelector('[aria-label="Permisos de Ana Coach"]')).not.toBeNull();
+    expect(el().querySelector('[aria-label="Permisos de Marta Gómez"]')).toBeNull();
+    expect(el().querySelector('[aria-label="Permisos de Dueño"]')).toBeNull();
+
+    el().querySelector<HTMLButtonElement>('[aria-label="Permisos de Ana Coach"]')!.click();
+    await estable();
+    backend.expectOne(`${API}/usuarios/u2/permisos`).flush({
+      rol: 'ENTRENADOR', personalizable: true, de_rol: ['alumnos.ver_todos'], concedidos: [], quitados: [],
+      efectivos: ['alumnos.ver_todos'],
+    });
+    await estable();
+    expect(dialogo().textContent).not.toContain('Crear usuarios'); // lo de cuentas no se ofrece
+    expect(dialogo().textContent).toContain('Igual que su rol.');
+
+    const casilla = (texto: string) => [...dialogo().querySelectorAll<HTMLLabelElement>('label.permiso')]
+      .find((l) => l.textContent?.includes(texto))!.querySelector('input')!;
+    casilla('Ver los reportes').click();
+    casilla('Ver fichas de todos').click();
+    await estable();
+    expect(dialogo().querySelector('.marca.agregado')?.closest('label')?.textContent).toContain('reportes');
+    expect(dialogo().querySelector('.marca.quitado')?.closest('label')?.textContent).toContain('fichas');
+    expect(dialogo().textContent).toContain('2 cambios respecto a su rol.');
+
+    boton('Guardar', dialogo())!.click();
+    const r = backend.expectOne(`${API}/usuarios/u2/permisos`);
+    expect(r.request.method).toBe('PUT');
+    expect(r.request.body).toEqual({ permisos: ['reportes.ver'] });
+    r.flush({ rol: 'ENTRENADOR', personalizable: true, de_rol: ['alumnos.ver_todos'], concedidos: ['reportes.ver'],
+      quitados: ['alumnos.ver_todos'], efectivos: ['reportes.ver'] });
+    await estable();
+    backend.expectOne(`${API}/usuarios`).flush(CUENTAS.map((c) => (c.id === 'u2' ? { ...c, permisos_personalizados: true } : c)));
+    await estable();
+    expect(el().textContent).toContain('Permisos de Ana Coach guardados (2 distintos a su rol).');
+    expect(el().querySelector('.chip-ajuste')).not.toBeNull();
   });
 });
 

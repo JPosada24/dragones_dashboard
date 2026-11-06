@@ -11,6 +11,7 @@ from tests.fabrica import (
     A,
     I,
     R,
+    ajustar_permisos,
     alumno_inscrito,
     cerrar_dia,
     crear_acudiente,
@@ -97,13 +98,13 @@ def test_pago_completo_o_por_abonos_del_talonario(client, h_admin):
     assert "comprador_nombre" not in str(t)  # el talonario es del alumno: no hay compradores
 
 
-def test_anular_un_pago_de_rifa_es_solo_del_superadmin_y_no_exige_motivo(client, h_admin, h_root):
+def test_anular_un_pago_de_rifa_exige_permiso_y_no_exige_motivo(client, h_admin, h_root, h_entrenador):
     alumno_inscrito(client, h_admin)
     rifa = crear_rifa(client, h_admin).json()
     t = _talonarios(client, h_admin, rifa["id"])[0]
     pago = _pagar_talonario(client, h_admin, rifa["id"], t["id"], 40000).json()["pagos"][0]
     url = f"{R}/{rifa['id']}/talonarios/{t['id']}/pagos/{pago['id']}/anular"
-    assert client.post(url, json={}, headers=h_admin).status_code == 403
+    assert client.post(url, json={}, headers=h_entrenador).status_code == 403  # sin pagos.anular
     t = client.post(url, json={"motivo": "   "}, headers=h_root).json()
     assert (t["recaudado"], t["pagado"]) == (0, False)
     assert [(p["monto"], p["motivo"]) for p in t["pagos"]] == [(40000, None), (-40000, None)]
@@ -184,7 +185,8 @@ def test_eliminar_una_rifa_la_quita_de_todo_pero_conserva_la_evidencia(client, h
     t = _talonarios(client, h_admin, con_pagos["id"])[0]
     _pagar_talonario(client, h_admin, con_pagos["id"], t["id"], 10000)
 
-    # Sin dinero ni sorteos la elimina el Admin; con pagos, solo el SuperAdmin.
+    # Sin dinero ni sorteos la elimina quien gestiona rifas; con pagos, solo quien además puede anular pagos.
+    ajustar_permisos(client, h_root, h_admin, quitar={"pagos.anular"})
     assert client.delete(f"{R}/{vacia['id']}", headers=h_admin).status_code == 204
     assert client.delete(f"{R}/{con_pagos['id']}", headers=h_admin).status_code == 403
     assert client.delete(f"{R}/{con_pagos['id']}", headers=h_root).status_code == 204

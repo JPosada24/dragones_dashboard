@@ -12,6 +12,7 @@ J = "/api/v1/justificaciones"
 M = "/api/v1/multas"
 R = "/api/v1/rifas"
 T = "/api/v1/torneos"
+U = "/api/v1/usuarios"
 
 # Lunes de referencia de las pruebas con reloj simulado (ver la fixture "reloj").
 LUNES = date(2026, 11, 2)
@@ -122,3 +123,14 @@ def inscribir_equipo(client, h, torneo_id, club="Club Halcones", **extra):
     cuerpo = {"nombre_club": club, "ciudad": "Medellín", "delegado_nombre": "Ana Ruiz",
               "delegado_telefono": "3101234567", **extra}
     return client.post(f"{T}/{torneo_id}/equipos", json=cuerpo, headers=h)
+
+
+def ajustar_permisos(client, h_root, h_persona, *, quitar=(), dar=()):
+    """El SuperAdmin deja a la persona (Admin o Entrenador) con sus permisos de hoy menos `quitar` y más `dar`."""
+    persona = client.get("/api/v1/auth/me", headers=h_persona).json()
+    actuales = set(client.get(f"{U}/{persona['id']}/permisos", headers=h_root).json()["efectivos"])
+    r = client.put(f"{U}/{persona['id']}/permisos", json={"permisos": sorted((actuales - set(quitar)) | set(dar))},
+                   headers=h_root)
+    assert r.status_code == 200, r.text
+    return r.json()
+

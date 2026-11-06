@@ -258,7 +258,7 @@
     <form class="formulario" [formGroup]="formMotivo" (ngSubmit)="guardarCambio()">
       @switch (c.t.hacia) {
         @case ('rechazado') { <p>La inscripción queda rechazada. Una rechazada a mano no se puede reactivar con prórroga.</p> }
-        @case ('a_expulsar') { <p>Queda en revisión hasta que el SuperAdmin confirme la expulsión o la devuelva a activa.</p> }
+        @case ('a_expulsar') { <p>Queda en revisión hasta que se confirme la expulsión o la devuelva a activa.</p> }
         @case ('expulsado') { <p>El alumno queda expulsado del club este año. Esta decisión es definitiva.</p> }
         @case ('activo') { <p>La inscripción vuelve a estar activa.</p> }
       }

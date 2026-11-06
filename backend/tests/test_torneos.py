@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from tests.fabrica import INICIO, LUNES, T, crear_torneo, en_hora, inscribir_equipo
+from tests.fabrica import INICIO, LUNES, T, ajustar_permisos, crear_torneo, en_hora, inscribir_equipo
 
 
 def _pagar(client, h, torneo_id, equipo_id, monto, fecha=LUNES):
@@ -100,13 +100,13 @@ def test_torneo_gratis_confirma_de_una(client, h_admin):
     assert inscribir_equipo(client, h_admin, torneo["id"]).json()["estado"] == "confirmado"
 
 
-def test_anular_pago_de_equipo_es_del_superadmin_y_lo_devuelve_a_pendiente(client, h_admin, h_root):
+def test_anular_pago_de_equipo_exige_permiso_y_lo_devuelve_a_pendiente(client, h_admin, h_root, h_entrenador):
     torneo = crear_torneo(client, h_admin).json()
     equipo = inscribir_equipo(client, h_admin, torneo["id"]).json()
     pagado = _pagar(client, h_admin, torneo["id"], equipo["id"], 150000).json()
     url = f"{T}/{torneo['id']}/equipos/{equipo['id']}/pagos/{pagado['pagos'][0]['id']}/anular"
     cuerpo = {"motivo": "El club pagó a otro torneo"}
-    assert client.post(url, json=cuerpo, headers=h_admin).status_code == 403
+    assert client.post(url, json=cuerpo, headers=h_entrenador).status_code == 403  # sin pagos.anular
     r = client.post(url, json=cuerpo, headers=h_root)
     assert r.json()["estado"] == "pendiente_pago" and r.json()["saldo"] == 150000
 
@@ -171,7 +171,7 @@ def test_editar_torneo_valida_fechas_y_al_subir_el_cupo_entran_los_que_esperan(c
     assert client.patch(url, json={"rama": "mixta"}, headers=h_admin).status_code == 422
 
 
-def test_eliminar_torneo_lo_quita_y_con_pagos_solo_el_superadmin(client, h_admin, h_root, db):
+def test_eliminar_torneo_lo_quita_y_con_pagos_exige_poder_anularlos(client, h_admin, h_root, db):
     from sqlalchemy import text
 
     vacio = crear_torneo(client, h_admin, nombre="Torneo de prueba").json()
@@ -179,6 +179,7 @@ def test_eliminar_torneo_lo_quita_y_con_pagos_solo_el_superadmin(client, h_admin
     equipo = inscribir_equipo(client, h_admin, con_pago["id"]).json()
     _pagar(client, h_admin, con_pago["id"], equipo["id"], 50000)
 
+    ajustar_permisos(client, h_root, h_admin, quitar={"pagos.anular"})  # con pagos hace falta poder anularlos
     assert client.delete(f"{T}/{vacio['id']}", headers=h_admin).status_code == 204
     assert client.delete(f"{T}/{con_pago['id']}", headers=h_admin).status_code == 403
     assert client.delete(f"{T}/{con_pago['id']}", headers=h_root).status_code == 204

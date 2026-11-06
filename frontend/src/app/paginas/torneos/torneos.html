@@ -161,7 +161,7 @@
     <div class="formulario">
       <p>El torneo desaparece de todas las pantallas y los entrenamientos de esas fechas vuelven. No se puede deshacer desde la aplicación.</p>
       @if (t.recaudado > 0) {
-        <p class="nota-chica">Tiene {{ t.recaudado | pesos }} en pagos: ese registro se conserva en la auditoría (solo el SuperAdmin puede eliminarlo).</p>
+        <p class="nota-chica">Tiene {{ t.recaudado | pesos }} en pagos: ese registro se conserva en la auditoría (solo quien puede anular pagos lo elimina).</p>
       }
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">

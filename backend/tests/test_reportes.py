@@ -59,7 +59,8 @@ def test_permisos_de_reportes(client, h_admin, crear_usuario, auth_header):
     rango = {"desde": "2026-11-01", "hasta": "2026-11-30"}
     assert client.get(f"{R}/ingresos", headers=h_coach).status_code == 403
     assert client.get(f"{R}/ingresos", headers=h_admin).status_code == 200
-    assert client.get(f"{R}/movimientos.csv", params=rango, headers=h_admin).status_code == 403  # solo SuperAdmin
+    assert client.get(f"{R}/movimientos.csv", params=rango, headers=h_coach).status_code == 403
+    assert client.get(f"{R}/movimientos.csv", params=rango, headers=h_admin).status_code == 200
 
 
 def test_el_rango_del_csv_se_valida(client, h_root):

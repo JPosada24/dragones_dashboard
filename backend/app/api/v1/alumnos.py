@@ -153,7 +153,7 @@ def registrar_autorizacion(
 def eliminar(
     alumno_id: uuid.UUID,
     request: Request,
-    actor: Usuario = Depends(requiere("alumnos.eliminar")),  # solo el SuperAdmin
+    actor: Usuario = Depends(requiere("alumnos.eliminar")),
     db: Session = Depends(get_db),
     almacen: Almacen = Depends(get_almacen),
 ) -> Response:

@@ -243,7 +243,7 @@ def cambiar_estado(
         detalle = " El paso a activo ocurre al registrar el pago." if i.estado == "pendiente_pago" else ""
         raise ErrorNegocio(f"No se puede pasar de '{ETIQUETAS[i.estado]}' a '{ETIQUETAS[nuevo]}'.{detalle}")
     if permiso not in actor.permisos_codigos:
-        raise Prohibido("Solo el SuperAdmin puede confirmar una expulsión.")
+        raise Prohibido("No tienes permiso para confirmar una expulsión.")
     if nuevo in ("rechazado", "a_expulsar", "expulsado") and not motivo:
         raise ErrorNegocio("Indica el motivo del cambio de estado.")
 

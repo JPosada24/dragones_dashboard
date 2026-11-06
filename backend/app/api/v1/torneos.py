@@ -74,10 +74,10 @@ def actualizar(
 def eliminar(
     torneo_id: uuid.UUID, request: Request, actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
 ) -> Response:
-    """Quita el torneo de todas las vistas. Si ya recibió pagos, solo el SuperAdmin puede."""
+    """Quita el torneo de todas las vistas. Si ya recibió pagos, solo quien puede anular pagos."""
     t = servicio.obtener(db, torneo_id)
     if servicio.resumen(db, t)["recaudado"] and "pagos.anular" not in actor.permisos_codigos:
-        raise Prohibido("Este torneo ya tiene pagos: solo el SuperAdmin puede eliminarlo.")
+        raise Prohibido("Este torneo ya tiene pagos: solo quien puede anular pagos lo elimina.")
     servicio.eliminar(db, t, actor=actor, ip=ip_cliente(request))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

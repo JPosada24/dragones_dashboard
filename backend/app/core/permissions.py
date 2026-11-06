@@ -37,21 +37,25 @@ PERMISOS: dict[str, str] = {
 
 ROLES: dict[str, tuple[str, str]] = {
     "SUPERADMIN": ("SuperAdmin", "Dueño y entrenador principal del club: acceso total y parámetros críticos"),
-    "ADMIN": ("Admin", "Coordinación y pagos del día a día"),
+    "ADMIN": ("Admin", "Todo el club menos las cuentas de usuario y sus permisos"),
     "ENTRENADOR": ("Entrenador", "Entrenador asistente: alumnos de ambas ramas, asistencia e inscripciones; no cobra"),
     "MIEMBRO": ("Miembro", "Alumno mayor de edad o acudiente"),
 }
 
+# Permisos de la cuenta de una familia (alumno o acudiente): no tienen sentido para el staff.
+SOLO_FAMILIA: frozenset[str] = frozenset({"alumnos.ver_propios", "asistencia.marcar_propia"})
+# Administrar cuentas y permisos es solo del SuperAdmin y no se le da a nadie más: quien lo tuviera podría darse
+# acceso total a sí mismo.
+SOLO_SUPERADMIN: frozenset[str] = frozenset({"usuarios.gestionar", "usuarios.eliminar"})
+# Lo que el SuperAdmin puede dar o quitar a una persona del staff desde Usuarios.
+PERSONALIZABLES: frozenset[str] = frozenset(PERMISOS) - SOLO_FAMILIA - SOLO_SUPERADMIN
+# Roles con permisos ajustables por persona: el SuperAdmin siempre lo tiene todo y la familia, solo lo suyo.
+ROLES_PERSONALIZABLES: frozenset[str] = frozenset({"ADMIN", "ENTRENADOR"})
+
 ROLES_PERMISOS: dict[str, set[str]] = {
     "SUPERADMIN": set(PERMISOS),
-    "ADMIN": {
-        "config.ver", "auditoria.ver",
-        "alumnos.ver_todos", "alumnos.ver_documento", "alumnos.editar",
-        "inscripciones.crear", "inscripciones.gestionar", "inscripciones.abonar", "prorroga.conceder",
-        "sesiones.gestionar", "asistencia.marcar_grupo", "asistencia.corregir", "justificaciones.revisar",
-        "pagos.registrar", "multas.anular", "rifas.gestionar", "sorteo.jugar",
-        "eventos.gestionar", "notificaciones.gestionar", "club.editar", "agente.usar", "reportes.ver",
-    },
+    # Todo menos administrar cuentas (decisión de Julian, 2026-11-06).
+    "ADMIN": set(PERSONALIZABLES),
     # El Entrenador es general (ambas ramas) y hace todo el proceso de inscripción (alumno, acudiente, documentos,
     # inscripción). No cobra multas ni rifas, no ve el documento completo ni gestiona horarios ni prórrogas.
     "ENTRENADOR": {

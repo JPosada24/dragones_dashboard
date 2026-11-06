@@ -51,17 +51,17 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Prórroga', texto: 'Solo Admin o SuperAdmin, con motivo. Reactiva una inscripción rechazada por vencimiento.' },
       { titulo: 'Vencimiento', texto: 'Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.' },
     ],
-    nota: 'Un abono errado no se borra: el SuperAdmin lo anula (el motivo es opcional) y queda en el historial.',
+    nota: 'Un abono errado no se borra: el SuperAdmin o el Admin lo anula (el motivo es opcional) y queda en el historial.',
   },
   rifas: {
     titulo: 'Cómo funcionan las rifas',
     pasos: [
       { titulo: 'Cuatro al año', texto: 'Cada rifa asigna un talonario a cada alumno inscrito: por defecto 20 puestos de $2.000, es decir $40.000 por talonario.' },
       { titulo: 'Talonario', texto: 'Es del alumno: sus boletas se leen con su código (F012-01 a F012-20). No hace falta anotar quién compró cada boleta.' },
-      { titulo: 'Pagos', texto: 'El talonario se paga completo o por abonos. Un pago errado no se borra: el SuperAdmin lo anula (el motivo es opcional).' },
+      { titulo: 'Pagos', texto: 'El talonario se paga completo o por abonos. Un pago errado no se borra: el SuperAdmin o el Admin lo anula (el motivo es opcional).' },
       { titulo: 'Paz y salvo', texto: 'El talonario está a paz y salvo cuando está pagado al 100 %. Si queda con saldo después de la fecha del sorteo, cuenta como deuda (y puede llevar a mora).' },
       { titulo: 'Sorteo', texto: 'Desde la fecha del sorteo, en la pestaña Sorteo. Solo participan los talonarios pagados al 100 %; se puede jugar varias veces.' },
-      { titulo: 'Cancelar o eliminar', texto: 'Cancelar la deja visible como cancelada; eliminar la quita de todas las pantallas y de las deudas. Si ya tiene pagos, solo el SuperAdmin la puede eliminar.', permisos: ['rifas.gestionar'] },
+      { titulo: 'Cancelar o eliminar', texto: 'Cancelar la deja visible como cancelada; eliminar la quita de todas las pantallas y de las deudas. Si ya tiene pagos, solo quien puede anular pagos (SuperAdmin o Admin) la elimina.', permisos: ['rifas.gestionar'] },
     ],
   },
   'rifas/sorteo': {
@@ -69,7 +69,7 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       { titulo: 'La urna', texto: 'Solo entran las boletas de los talonarios pagados al 100 %. Cada talonario aporta todas sus boletas (por defecto 20).' },
       { titulo: 'La boleta', texto: 'Se lee como código del alumno y número de boleta: F012-07 es la boleta 7 del talonario de F012. El código lo asigna el sistema al registrar al alumno (F femenina, M masculina).' },
-      { titulo: 'Jugar', texto: 'Desde la fecha del sorteo, el SuperAdmin presiona «Jugar la rifa»; se puede jugar otra vez (por ejemplo, para varios premios). Una boleta que ya ganó no vuelve a la urna. El servidor elige al azar; la pantalla solo muestra el giro.', permisos: ['sorteo.jugar'] },
+      { titulo: 'Jugar', texto: 'Desde la fecha del sorteo, el SuperAdmin o el Admin presiona «Jugar la rifa»; se puede jugar otra vez (por ejemplo, para varios premios). Una boleta que ya ganó no vuelve a la urna. El servidor elige al azar; la pantalla solo muestra el giro.', permisos: ['sorteo.jugar'] },
       { titulo: 'Acta', texto: 'Cada jugada deja su acta con la boleta ganadora, el alumno dueño del talonario, cuántas boletas había y una huella que prueba que la lista no cambió. No se puede modificar.' },
       { titulo: 'Aviso', texto: '«Avisar por WhatsApp» abre el mensaje listo para el acudiente principal (o el alumno, si es mayor), para enviarlo desde el número del club.' },
     ],
@@ -100,7 +100,7 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Pago', texto: 'Lo registran Admin o SuperAdmin. Una multa pagada no se anula.' },
       { titulo: 'Anular', texto: 'Una multa pendiente se puede anular (el motivo es opcional). Cancelar un entrenamiento anula sus multas pendientes.', permisos: ['multas.anular'] },
       { titulo: 'Mora', texto: 'Cualquier deuda (multas o talonarios de rifa) con más de 3 meses sin pagar pone la inscripción "en revisión". La familia recibe aviso antes.' },
-      { titulo: 'Expulsión', texto: 'La confirma el SuperAdmin. Si el alumno paga mientras está en revisión por mora, vuelve solo a activa.', permisos: STAFF },
+      { titulo: 'Expulsión', texto: 'La confirma el SuperAdmin o el Admin. Si el alumno paga mientras está en revisión por mora, vuelve solo a activa.', permisos: STAFF },
     ],
   },
   torneos: {
@@ -159,7 +159,7 @@ export const AYUDAS: Record<string, Ayuda> = {
     titulo: 'Configuración del club',
     pasos: [
       { titulo: 'Parámetros', texto: 'Valor de la inscripción, plazo de pago, valor de la multa, meses para la mora, rifas por año y demás reglas.' },
-      { titulo: 'Quién cambia', texto: 'Solo el SuperAdmin. Cada cambio queda en la auditoría y aplica a lo nuevo (lo ya creado conserva su valor).' },
+      { titulo: 'Quién cambia', texto: 'El SuperAdmin y el Admin (o quien tenga el permiso). Cada cambio queda en la auditoría y aplica a lo nuevo (lo ya creado conserva su valor).' },
     ],
   },
   usuarios: {
@@ -167,9 +167,10 @@ export const AYUDAS: Record<string, Ayuda> = {
     intro: 'Cada persona entra con su correo y su contraseña. Al crear una cuenta, la contraseña se muestra una sola vez para entregarla.',
     pasos: [
       { titulo: 'SuperAdmin', texto: 'El dueño y entrenador principal: acceso total.' },
-      { titulo: 'Admin', texto: 'Gestiona alumnos, cobros, inscripciones y torneos.' },
+      { titulo: 'Admin', texto: 'Todo el club (alumnos, cobros, rifas, torneos, parámetros) menos las cuentas de usuario.' },
       { titulo: 'Entrenador', texto: 'Asistente general (ambas ramas): alumnos, asistencia e inscripciones con abonos. No cobra multas ni rifas, no ve el documento completo ni cambia el horario.' },
       { titulo: 'Miembro', texto: 'Acudiente o alumno mayor de edad: solo consulta lo suyo. Al crear la cuenta se elige a qué alumno pertenece.' },
+      { titulo: 'Roles y permisos', texto: 'La vista «Roles y permisos» muestra lo que trae cada rol. A un Admin o Entrenador puedes darle o quitarle permisos con el botón de ajustes de su cuenta: aplica de inmediato y queda en la auditoría. Si le cambias el rol, vuelve a los permisos del rol nuevo. Administrar cuentas es solo del SuperAdmin.' },
       { titulo: 'Contraseña', texto: 'La llave cambia la contraseña y cierra sus sesiones abiertas. Desactivar una cuenta le impide entrar sin borrar nada.' },
       { titulo: 'Eliminar', texto: 'La papelera (solo el SuperAdmin) elimina la cuenta: la persona pierde el acceso al instante y su correo queda libre. Lo que registró (pagos, asistencias, auditoría) se conserva con su nombre, y el alumno o acudiente vinculado sigue intacto. Nadie puede eliminar su propia cuenta.', permisos: ['usuarios.eliminar'] },
     ],

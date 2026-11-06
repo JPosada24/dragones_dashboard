@@ -100,11 +100,11 @@ def eliminar(
     actor: Usuario = Depends(requiere("rifas.gestionar")),
     db: Session = Depends(get_db),
 ) -> Response:
-    """Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo el SuperAdmin puede."""
+    """Quita la rifa de todas las vistas y cuentas. Si ya tiene dinero o sorteos, solo quien puede anular pagos."""
     rifa = servicio.obtener(db, rifa_id)
     r = servicio.resumen(db, rifa)
     if (r["recaudado"] or servicio.actas(db, rifa)) and "pagos.anular" not in actor.permisos_codigos:
-        raise Prohibido("Esta rifa ya tiene pagos o sorteos: solo el SuperAdmin puede eliminarla.")
+        raise Prohibido("Esta rifa ya tiene pagos o sorteos: solo quien puede anular pagos la elimina.")
     servicio.eliminar(db, rifa, actor=actor, ip=ip_cliente(request))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

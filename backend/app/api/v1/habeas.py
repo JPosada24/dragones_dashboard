@@ -1,4 +1,4 @@
-"""Solicitudes de habeas data (Ley 1581). Solo el SuperAdmin (`habeas.gestionar`)."""
+"""Solicitudes de habeas data (Ley 1581). Quien tenga `habeas.gestionar` (SuperAdmin y Admin)."""
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Request, status

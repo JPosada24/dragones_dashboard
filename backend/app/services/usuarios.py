@@ -1,4 +1,4 @@
-"""Cuentas de usuario: alta (con su vínculo a un alumno o acudiente), edición, eliminación y listado."""
+"""Cuentas de usuario: alta (con su vínculo a un alumno o acudiente), edición, permisos, eliminación y listado."""
 import secrets
 import uuid
 from datetime import UTC, datetime
@@ -8,8 +8,9 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.fechas import ahora
+from app.core.permissions import PERMISOS, PERSONALIZABLES, ROLES_PERSONALIZABLES
 from app.core.security import hash_password
-from app.models.acceso import Rol, SesionRefresh, Usuario
+from app.models.acceso import AjustePermiso, Permiso, Rol, SesionRefresh, Usuario
 from app.models.alumnos import Acudiente, Alumno, AlumnoAcudiente
 from app.services import alumnos, auditoria
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado
@@ -138,7 +139,11 @@ def actualizar_usuario(
     nueva_clave = cambios.get("password")
     if nueva_clave is not None:
         usuario.password_hash = hash_password(nueva_clave)
-    cambio_credenciales = nueva_clave is not None or usuario.rol.codigo != antes["rol"]
+    cambio_rol = usuario.rol.codigo != antes["rol"]
+    reiniciados = cambio_rol and bool(usuario.ajustes)
+    if cambio_rol:
+        usuario.ajustes.clear()  # con el rol nuevo se empieza de cero: sus permisos son los del rol
+    cambio_credenciales = nueva_clave is not None or cambio_rol
     if cambio_credenciales:
         usuario.credenciales_version += 1  # los tokens anteriores dejan de valer de inmediato
     if cambios.get("activo") is False or cambio_credenciales:
@@ -148,8 +153,77 @@ def actualizar_usuario(
         antes=antes, despues={
             "nombre": usuario.nombre, "rol": usuario.rol.codigo, "activo": usuario.activo,
             "password_cambiada": nueva_clave is not None,  # nunca la contraseña
+            "permisos_personales_reiniciados": reiniciados,
         },
         ip=ip,
+    )
+    return usuario
+
+
+# ---------- Permisos ----------
+ORDEN_ROLES = ("SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO")
+
+
+def roles_y_permisos(db: Session) -> tuple[list[Permiso], list[Rol]]:
+    """Catálogo de permisos y los roles del más al menos privilegiado (matriz de Usuarios)."""
+    permisos = list(db.scalars(select(Permiso).order_by(Permiso.codigo)))
+    roles = sorted(
+        db.scalars(select(Rol)),
+        key=lambda r: ORDEN_ROLES.index(r.codigo) if r.codigo in ORDEN_ROLES else len(ORDEN_ROLES),
+    )
+    return permisos, roles
+
+
+def permisos_de(usuario: Usuario) -> dict[str, Any]:
+    """Los permisos de una persona: los de su rol, los que se le dieron, los que se le quitaron y el resultado."""
+    personalizable = usuario.rol.codigo in ROLES_PERSONALIZABLES
+    ajustes = usuario.ajustes if personalizable else []
+    return {
+        "rol": usuario.rol.codigo,
+        "personalizable": personalizable,
+        "de_rol": sorted(p.codigo for p in usuario.rol.permisos),
+        "concedidos": sorted(a.permiso.codigo for a in ajustes if a.concedido),
+        "quitados": sorted(a.permiso.codigo for a in ajustes if not a.concedido),
+        "efectivos": usuario.permisos_codigos,
+    }
+
+
+def ajustar_permisos(
+    db: Session, usuario: Usuario, permisos: set[str], *, actor: Usuario, ip: str | None
+) -> Usuario:
+    """Deja a la persona con exactamente `permisos` (dentro de lo que se puede dar): lo que su rol no trae se le da
+    y lo que trae y no está se le quita. Aplica desde la siguiente petición; no cierra sus sesiones."""
+    if usuario.id == actor.id:
+        raise ErrorNegocio("No puedes cambiar tus propios permisos.")
+    if usuario.rol.codigo not in ROLES_PERSONALIZABLES:
+        raise ErrorNegocio(
+            "Solo se ajustan permisos de Admin y Entrenador: el SuperAdmin siempre los tiene todos y una cuenta de "
+            "familia solo consulta lo suyo."
+        )
+    desconocidos = permisos - PERMISOS.keys()
+    if desconocidos:
+        raise ErrorNegocio(f"Permisos que no existen: {', '.join(sorted(desconocidos))}.")
+    vetados = permisos - PERSONALIZABLES
+    if vetados:
+        raise ErrorNegocio(f"Estos permisos no se le pueden dar a una persona: {', '.join(sorted(vetados))}.")
+
+    de_rol = {p.codigo for p in usuario.rol.permisos}
+    conceder = permisos - de_rol
+    quitar = (de_rol & PERSONALIZABLES) - permisos
+    antes = permisos_de(usuario)
+    usuario.ajustes.clear()
+    db.flush()  # borra los ajustes anteriores antes de insertar los nuevos (misma llave primaria)
+    catalogo = {p.codigo: p for p in db.scalars(select(Permiso).where(Permiso.codigo.in_(conceder | quitar)))}
+    for codigo in sorted(conceder):
+        usuario.ajustes.append(AjustePermiso(permiso=catalogo[codigo], concedido=True))
+    for codigo in sorted(quitar):
+        usuario.ajustes.append(AjustePermiso(permiso=catalogo[codigo], concedido=False))
+    db.flush()
+    despues = permisos_de(usuario)
+    auditoria.registrar(
+        db, accion="usuario.permisos", entidad="usuario", entidad_id=str(usuario.id), usuario_id=actor.id,
+        antes={"concedidos": antes["concedidos"], "quitados": antes["quitados"]},
+        despues={"concedidos": despues["concedidos"], "quitados": despues["quitados"]}, ip=ip,
     )
     return usuario
 

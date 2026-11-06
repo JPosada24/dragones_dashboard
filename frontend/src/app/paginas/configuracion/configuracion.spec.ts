@@ -15,19 +15,6 @@ const PARAMETROS = [
   { clave: 'dias_aviso_mora', valor: 15, descripcion: '' },
 ];
 
-const ROLES = {
-  permisos: [
-    { codigo: 'asistencia.marcar_grupo', descripcion: 'Marcar la asistencia de la planilla' },
-    { codigo: 'config.editar', descripcion: 'Cambiar parámetros críticos' },
-    { codigo: 'pagos.registrar', descripcion: 'Registrar pagos' },
-  ],
-  roles: [
-    { codigo: 'SUPERADMIN', nombre: 'SuperAdmin', descripcion: null, permisos: ['asistencia.marcar_grupo', 'config.editar', 'pagos.registrar'] },
-    { codigo: 'ADMIN', nombre: 'Admin', descripcion: null, permisos: ['asistencia.marcar_grupo', 'pagos.registrar'] },
-    { codigo: 'ENTRENADOR', nombre: 'Entrenador', descripcion: null, permisos: ['asistencia.marcar_grupo'] },
-  ],
-};
-
 describe('ConfiguracionPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<ConfiguracionPage>;
@@ -40,7 +27,6 @@ describe('ConfiguracionPage', () => {
     fixture = TestBed.createComponent(ConfiguracionPage);
     fixture.detectChanges();
     backend.expectOne(`${API}/configuracion`).flush(PARAMETROS);
-    backend.expectOne(`${API}/configuracion/roles`).flush(ROLES);
     await estable();
   }
 
@@ -60,7 +46,7 @@ describe('ConfiguracionPage', () => {
     c.dispatchEvent(new Event('input'));
   }
 
-  it('muestra los parámetros con valor y unidad, los recordatorios y la matriz de roles', async () => {
+  it('muestra los parámetros con valor y unidad y los recordatorios (los roles viven en Usuarios)', async () => {
     await cargar(['config.ver', 'config.editar']);
     const caja = el().querySelector('[aria-label^="Cambiar Valor de la inscripción"]')!;
     expect(caja.querySelector('.valor')?.textContent).toBe('$90.000');
@@ -68,9 +54,7 @@ describe('ConfiguracionPage', () => {
     expect(el().querySelector('[aria-label^="Cambiar Hora de cierre"] .unidad')?.textContent).toBe('11:59 pm');
     const cuando = [...el().querySelectorAll('.cuando')].map((c) => c.textContent?.trim());
     expect(cuando).toEqual(['7 DÍAS', '1 DÍA', 'VENCIDO', '15 DÍAS', 'mail']);
-    const filas = [...el().querySelectorAll('.matriz tbody tr')].map((f) => f.textContent?.replace(/\s+/g, ''));
-    expect(filas).toContain('Cambiarparámetroscríticos✓——');
-    expect(filas).toContain('Cobrarmultasyrifas✓✓—');
+    expect(el().querySelector('.matriz')).toBeNull();
   });
 
   it('cambia un valor: el campo empieza vacío y se valida antes de enviar', async () => {

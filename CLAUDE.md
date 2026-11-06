@@ -49,7 +49,10 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   incluidas las tareas de entrenador). El rol Entrenador queda para entrenadores asistentes y es **general (ambas
   ramas; los usuarios no tienen rama)**, pero sin cobrar multas ni rifas, sin ver el documento completo
   (`alumnos.ver_documento`, solo Admin/SA), sin prórrogas ni horario. No ampliar el rol Entrenador para "dar todo":
-  un asistente nuevo heredaría acceso total.
+  un asistente nuevo heredaría acceso total; si una persona necesita más, se le da a ella (permisos por persona).
+- **Admin = todo menos administrar cuentas** (`usuarios.*`). El SuperAdmin da o quita permisos a cada Admin o
+  Entrenador desde Usuarios (`usuarios_permisos`, 0027; efectivos = rol + dados − quitados en
+  `Usuario.permisos_codigos`). Los de cuentas no se le dan a nadie. Cambiar el rol borra los ajustes. Decisión 0013.
 - Los datos del prototipo HTML (138 alumnos, nombres, cifras) son solo ejemplo de diseño.
 - Todo valor "configurable" vive en la tabla `configuracion` (lo cambia solo el SuperAdmin).
 
@@ -61,7 +64,7 @@ saber para seguir trabajando.
   de IA (apagado sin `ANTHROPIC_API_KEY`), habeas data (autorización por alumno y registro de solicitudes con plazos
   en días hábiles, `services/habeas.py`), reportes de ingresos y CSV (`services/reportes.py`), nivel del alumno
   (Iniciación/Avanzado), panel instalable (PWA: el service worker no guarda datos de la API) y preparación para
-  producción. Migraciones hasta la **0026**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
+  producción. Migraciones hasta la **0027**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
 - **Panel (frontend):** secciones en `core/secciones.ts`, pantallas en `paginas/<seccion>/` registradas en `PANTALLAS`
   de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`. Todas las
   pantallas usan `compartido/operacion.ts` (`Operacion`: ocupado, mensaje, errorDialogo, abrir, ejecutar, exito,
@@ -85,7 +88,7 @@ saber para seguir trabajando.
   Limitador de intentos en Postgres (`intentos`, 0024) y latido del worker (`latidos`) → `/api/v1/salud/worker`.
   Claves rotables: `DATA_ENCRYPTION_KEY` admite varias (`app.scripts.rotar_clave`) y `SECRET_KEY_ANTERIOR`.
   Observabilidad en `core/observabilidad.py` (X-Request-ID, logs JSON en producción, `SENTRY_DSN` opcional sin datos
-  personales). Guías: `docs/despliegue.md` y `docs/operacion.md`. Aún no desplegado (VPS recomendado: Hetzner).
+  personales). Guías: `docs/despliegue.md` y `docs/operacion.md`. Desplegado en OVHcloud VPS-2 (Canadá): `panel.dragonesvolleyclub.com`; sitio en Netlify (`dragonesvolleyclub.com`, repo `dvc-website`).
 - **Dependencias:** Python en `requirements*.in`, fijadas con hashes con `pip-compile` (comando en
   `CONTRIBUTING.md`); npm con versiones exactas. Tras cambiar `package.json`, el contenedor del frontend tiene su
   propio `node_modules`: `docker compose exec frontend npm install`.
@@ -94,7 +97,8 @@ saber para seguir trabajando.
 - **Decidido:** el nivel (Iniciación/Avanzado) es solo un dato del alumno y un filtro. **No** se separan
   entrenamientos, asistencia ni multas por nivel: ambos niveles entrenan el mismo día y el entrenador marca esa
   sesión. La política de datos del sitio (`[POR COMPLETAR]`) la completa Julian.
-- **Pendiente:** desplegar (guía en `docs/despliegue.md`).
+- **Pendiente:** copias fuera del servidor (R2), monitoreo (UptimeRobot, healthchecks.io, Sentry), correo real (Gmail),
+  `SECURITY.md` y cerrar `filtro_acudientes_visibles` para quien no es staff.
 
 ## Seguridad (obligatorio en todo código nuevo)
 - Autorización en el servidor en cada ruta (`requiere`/`requiere_alguno`) **y** alcance en el servicio (rama/propios);

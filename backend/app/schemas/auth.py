@@ -30,6 +30,7 @@ class UsuarioOut(BaseModel):
 
 class UsuarioListaOut(UsuarioOut):
     vinculado_a: str | None = None  # "Alumno F012 · Laura Pérez" o "Acudiente de F012 · Laura Pérez"
+    permisos_personalizados: bool = False  # tiene permisos dados o quitados además de su rol
 
 
 class TokenOut(BaseModel):
@@ -82,3 +83,41 @@ class UsuarioActualizar(BaseModel):
         if v is not None:
             validar_politica_password(v)
         return v
+
+
+# ---------- Roles y permisos ----------
+class PermisoOut(BaseModel):
+    codigo: str
+    descripcion: str
+
+
+class RolOut(BaseModel):
+    codigo: str
+    nombre: str
+    descripcion: str | None
+    permisos: list[str]
+
+
+class RolesOut(BaseModel):
+    """Matriz de roles y permisos tal como está en la base de datos."""
+
+    permisos: list[PermisoOut]
+    roles: list[RolOut]
+    personalizables: list[str]  # los que se pueden dar o quitar a una persona del staff
+
+
+class PermisosUsuarioOut(BaseModel):
+    rol: str
+    personalizable: bool  # solo Admin y Entrenador
+    de_rol: list[str]
+    concedidos: list[str]  # dados además de su rol
+    quitados: list[str]  # quitados aunque su rol los traiga
+    efectivos: list[str]
+
+
+class PermisosIn(BaseModel):
+    """Los permisos con los que debe quedar la persona (lo que no esté y su rol lo traiga, se le quita)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    permisos: list[str] = Field(max_length=100)

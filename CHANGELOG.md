@@ -5,10 +5,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Permisos por persona:** el SuperAdmin da o quita permisos a un Admin o Entrenador desde Usuarios (botón de
+  ajustes), además de su rol; aplica sin cerrar su sesión y queda en la auditoría (migración 0027). Los permisos de
+  cuentas no se le dan a nadie. La matriz «Roles y permisos» pasó de Configuración a Usuarios (`GET /usuarios/roles`).
 - `deploy/oracle/conseguir-vm.ps1`: reintenta crear la VM gratuita de Oracle Cloud hasta que haya cupo (crea la red
   si falta y abre 80/443); sección «Oracle Cloud gratis» en `docs/despliegue.md`.
 
 ### Cambiado
+- El rol **Admin** tiene todos los permisos menos administrar cuentas (antes no anulaba pagos, no confirmaba
+  expulsiones ni cambiaba parámetros). Decisión 0013.
 - Galería: las fotos suben de a 3 a la vez y se reducen en el navegador a 1920 px (lo que guarda el servidor)
   desde 800 KB: menos datos por la subida del internet de hogar.
 

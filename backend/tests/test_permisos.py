@@ -1,4 +1,5 @@
 from tests.conftest import PASSWORD
+from tests.fabrica import ajustar_permisos
 
 NUEVO = {"email": "nuevo@club.com", "nombre": "Nuevo Usuario", "password": PASSWORD, "rol": "ENTRENADOR"}
 
@@ -77,7 +78,8 @@ def test_configuracion_lectura_y_edicion(client, crear_usuario, auth_header):
     assert valores["multa_inasistencia"] == 2000 and valores["meses_mora_expulsion"] == 3
     assert valores["puestos_por_talonario"] == 20 and valores["precio_puesto"] == 2000
 
-    # El Admin NO puede cambiar parámetros críticos
+    # Sin config.editar no se cambian parámetros críticos
+    ajustar_permisos(client, h_root, h_adm, quitar={"config.editar"})
     r = client.patch("/api/v1/configuracion/multa_inasistencia", json={"valor": 5000}, headers=h_adm)
     assert r.status_code == 403
     # El SuperAdmin sí
@@ -148,19 +150,23 @@ def test_superadmin_restablece_la_contrasena_y_cierra_las_sesiones(client, crear
     assert login("coach@club.com", nueva).status_code == 200
 
 
-def test_matriz_de_roles_solo_lectura_para_quien_ve_la_configuracion(client, crear_usuario, auth_header):
+def test_matriz_de_roles_en_usuarios_solo_para_el_superadmin(client, crear_usuario, auth_header):
+    crear_usuario("root@club.com", "SUPERADMIN")
     crear_usuario("adm@club.com", "ADMIN")
-    crear_usuario("ent@club.com", "ENTRENADOR")
-    r = client.get("/api/v1/configuracion/roles", headers=auth_header("adm@club.com"))
+    r = client.get("/api/v1/usuarios/roles", headers=auth_header("root@club.com"))
     assert r.status_code == 200
     datos = r.json()
     assert [x["codigo"] for x in datos["roles"]] == ["SUPERADMIN", "ADMIN", "ENTRENADOR", "MIEMBRO"]
     por_rol = {x["codigo"]: set(x["permisos"]) for x in datos["roles"]}
-    assert "config.editar" in por_rol["SUPERADMIN"] and "config.editar" not in por_rol["ADMIN"]
+    # El Admin tiene todo menos administrar cuentas (y los permisos propios de una familia).
+    assert por_rol["ADMIN"] == por_rol["SUPERADMIN"] - {
+        "usuarios.gestionar", "usuarios.eliminar", "alumnos.ver_propios", "asistencia.marcar_propia"}
     assert "pagos.registrar" not in por_rol["ENTRENADOR"]
     assert {p["codigo"] for p in datos["permisos"]} >= por_rol["SUPERADMIN"]
-    # Quien no ve la configuración tampoco ve la matriz.
-    assert client.get("/api/v1/configuracion/roles", headers=auth_header("ent@club.com")).status_code == 403
+    assert not {"usuarios.gestionar", "usuarios.eliminar", "alumnos.ver_propios"} & set(datos["personalizables"])
+    # El Admin no la ve (no administra cuentas) y ya no vive en Configuración.
+    assert client.get("/api/v1/usuarios/roles", headers=auth_header("adm@club.com")).status_code == 403
+    assert client.get("/api/v1/configuracion/roles", headers=auth_header("root@club.com")).status_code in (404, 405)
 
 
 # ---------- Eliminar usuarios (solo SuperAdmin) ----------

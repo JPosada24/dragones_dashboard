@@ -1,4 +1,4 @@
-from app.models.acceso import Permiso, Rol, SesionRefresh, Usuario, roles_permisos
+from app.models.acceso import AjustePermiso, Permiso, Rol, SesionRefresh, Usuario, roles_permisos
 from app.models.alumnos import (
     Acudiente,
     Alumno,
@@ -19,6 +19,7 @@ from app.models.torneos import EquipoTorneo, PagoEquipo, Torneo
 __all__ = [
     "ActaSorteo",
     "Acudiente",
+    "AjustePermiso",
     "Album",
     "Alumno",
     "AlumnoAcudiente",
