@@ -143,9 +143,11 @@ publicar.
 
 ## 5. Copias fuera del servidor y monitoreo (15 minutos, gratis)
 
-1. **Cloudflare R2** (o Backblaze B2): crea un bucket `dragones-respaldos` y una llave de API con acceso solo a ese
-   bucket. Completa `RESPALDO_DESTINO=remoto:dragones-respaldos` y los `RCLONE_*` del `.env`. En el bucket, activa
-   una regla de ciclo de vida que borre objetos de más de 200 días.
+1. **Cloudflare R2** (o Backblaze B2): crea un bucket `dragones-respaldos` y una llave de API («Object Read & Write»,
+   solo ese bucket). Completa `RESPALDO_DESTINO=remoto:dragones-respaldos` y en el `.env`: `RCLONE_TIPO=s3`,
+   `RCLONE_PROVEEDOR=Cloudflare`, `RCLONE_ENDPOINT=https://<id-de-cuenta>.r2.cloudflarestorage.com` y la llave
+   (`RCLONE_ACCESS_KEY_ID`, `RCLONE_SECRET_ACCESS_KEY`). En el bucket, activa una regla de ciclo de vida que borre
+   objetos de más de 200 días (el script solo agrega: no borra nada fuera del servidor).
 2. **healthchecks.io**: crea un chequeo diario y pega su URL en `RESPALDO_PING_URL`. Te escribe si una copia falla.
 3. **UptimeRobot**: dos monitores HTTP cada 5 minutos: `https://panel.dragones.com/api/v1/salud` y
    `https://panel.dragones.com/api/v1/salud/worker`.

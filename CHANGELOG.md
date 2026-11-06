@@ -16,6 +16,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
   expulsiones ni cambiaba parámetros). Decisión 0013.
 - Galería: las fotos suben de a 3 a la vez y se reducen en el navegador a 1920 px (lo que guarda el servidor)
   desde 800 KB: menos datos por la subida del internet de hogar.
+- Copia fuera del servidor: `rclone copy` en vez de `sync` (la rotación local ya no borra la copia externa; la
+  retención la pone el ciclo de vida del bucket) y `no_check_bucket` para llaves limitadas a un bucket (R2).
 
 ### Corregido
 - CORS del sitio público: `/api/v1/publico` ya no responde `Access-Control-Allow-Credentials: true` al dominio del

@@ -110,6 +110,8 @@ services:
       RCLONE_CONFIG_REMOTO_ACCESS_KEY_ID: ${RCLONE_ACCESS_KEY_ID:-}
       RCLONE_CONFIG_REMOTO_SECRET_ACCESS_KEY: ${RCLONE_SECRET_ACCESS_KEY:-}
       RCLONE_CONFIG_REMOTO_ENDPOINT: ${RCLONE_ENDPOINT:-}
+      # Una llave limitada a un bucket no puede crear buckets: rclone no debe intentarlo.
+      RCLONE_CONFIG_REMOTO_NO_CHECK_BUCKET: "true"
     volumes:
       - respaldos:/respaldos
       - documentos:/data/documentos

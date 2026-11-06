@@ -6,7 +6,10 @@
 #   - Todo se cifra con la CLAVE PÚBLICA de age (RESPALDO_AGE_PUBLICA): el servidor puede crear copias pero
 #     no leerlas. La clave privada la guarda el dueño fuera del servidor (gestor de contraseñas).
 #   - Retención local: 7 diarias, 4 semanales (domingo), 6 mensuales (día 1).
-#   - Fuera del servidor: si RESPALDO_DESTINO tiene un remoto de rclone (p. ej. "b2:dragones-respaldos"), se sincroniza.
+#   - Fuera del servidor: si RESPALDO_DESTINO tiene un remoto de rclone (p. ej. "remoto:dragones-respaldos"), se
+#     copian ahí las copias nuevas. Es "copy", no "sync": la rotación local no borra nada fuera, así que un servidor
+#     comprometido o un error no vacía también la copia externa. La retención externa la pone una regla de ciclo de
+#     vida del bucket (p. ej. borrar a los 200 días).
 #   - Aviso: si RESPALDO_PING_URL está (p. ej. healthchecks.io, gratis), se avisa el éxito o el fallo de cada copia.
 #
 # Uso:  respaldar.sh            -> espera a RESPALDO_HORA (03:30 por defecto, hora de Bogotá) y repite cada día
@@ -61,7 +64,7 @@ copia() {
 
   if [[ -n "$RESPALDO_DESTINO" ]]; then
     log "Copiando fuera del servidor ($RESPALDO_DESTINO)…"
-    rclone sync "$RAIZ" "$RESPALDO_DESTINO" --checksum --quiet
+    rclone copy "$RAIZ" "$RESPALDO_DESTINO" --checksum --quiet
   fi
 }
 
