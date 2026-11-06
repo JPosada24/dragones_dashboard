@@ -84,4 +84,5 @@ export const PESTANAS_CLUB: Pestana[] = [
   { ruta: '/perfil-club', texto: 'Contenido del sitio', icono: 'web' },
   { ruta: '/perfil-club/galeria', texto: 'Galería', icono: 'photo_library' },
   { ruta: '/perfil-club/equipo', texto: 'Equipo técnico', icono: 'sports' },
+  { ruta: '/perfil-club/torneos', texto: 'Torneos realizados', icono: 'emoji_events' },
 ];

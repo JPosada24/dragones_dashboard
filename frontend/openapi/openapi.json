@@ -1191,6 +1191,20 @@
         "title": "AutorizacionOut",
         "type": "object"
       },
+      "Body_subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post": {
+        "properties": {
+          "archivo": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Archivo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "archivo"
+        ],
+        "title": "Body_subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post",
+        "type": "object"
+      },
       "Body_subir_documento_api_v1_alumnos__alumno_id__documentos_post": {
         "properties": {
           "archivo": {
@@ -4926,6 +4940,13 @@
             "title": "Torneos",
             "type": "array"
           },
+          "torneos_realizados": {
+            "items": {
+              "$ref": "#/components/schemas/TorneoRealizadoOut"
+            },
+            "title": "Torneos Realizados",
+            "type": "array"
+          },
           "videos": {
             "items": {
               "$ref": "#/components/schemas/VideoOut"
@@ -4941,7 +4962,8 @@
           "albumes",
           "videos",
           "equipo",
-          "torneos"
+          "torneos",
+          "torneos_realizados"
         ],
         "title": "SitioOut",
         "type": "object"
@@ -5673,6 +5695,249 @@
           "cupos_libres"
         ],
         "title": "TorneoPublicoOut",
+        "type": "object"
+      },
+      "TorneoRealizadoCambios": {
+        "additionalProperties": false,
+        "description": "Solo se aplican los campos enviados; lugar, resumen y álbum se quitan enviándolos vacíos (null).",
+        "properties": {
+          "album_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album Id"
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          },
+          "lugar": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lugar"
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
+          "publicado": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicado"
+          },
+          "resumen": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resumen"
+          }
+        },
+        "title": "TorneoRealizadoCambios",
+        "type": "object"
+      },
+      "TorneoRealizadoIn": {
+        "additionalProperties": false,
+        "properties": {
+          "album_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album Id"
+          },
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "lugar": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lugar"
+          },
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Nombre",
+            "type": "string"
+          },
+          "publicado": {
+            "default": true,
+            "title": "Publicado",
+            "type": "boolean"
+          },
+          "resumen": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resumen"
+          }
+        },
+        "required": [
+          "nombre",
+          "fecha"
+        ],
+        "title": "TorneoRealizadoIn",
+        "type": "object"
+      },
+      "TorneoRealizadoOut": {
+        "properties": {
+          "album_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album Id"
+          },
+          "anuncio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio"
+          },
+          "anuncio_alto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio Alto"
+          },
+          "anuncio_ancho": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio Ancho"
+          },
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lugar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lugar"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "publicado": {
+            "title": "Publicado",
+            "type": "boolean"
+          },
+          "resumen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resumen"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "fecha",
+          "lugar",
+          "resumen",
+          "album_id",
+          "publicado"
+        ],
+        "title": "TorneoRealizadoOut",
         "type": "object"
       },
       "UsuarioActualizar": {
@@ -8425,6 +8690,336 @@
         ]
       }
     },
+    "/api/v1/club/torneos-realizados": {
+      "get": {
+        "operationId": "listar_torneos_realizados_api_v1_club_torneos_realizados_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TorneoRealizadoOut"
+                  },
+                  "title": "Response Listar Torneos Realizados Api V1 Club Torneos Realizados Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Listar Torneos Realizados",
+        "tags": [
+          "club"
+        ]
+      },
+      "post": {
+        "operationId": "crear_torneo_realizado_api_v1_club_torneos_realizados_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TorneoRealizadoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoRealizadoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Crear Torneo Realizado",
+        "tags": [
+          "club"
+        ]
+      }
+    },
+    "/api/v1/club/torneos-realizados/{torneo_id}": {
+      "delete": {
+        "operationId": "eliminar_torneo_realizado_api_v1_club_torneos_realizados__torneo_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Eliminar Torneo Realizado",
+        "tags": [
+          "club"
+        ]
+      },
+      "patch": {
+        "operationId": "actualizar_torneo_realizado_api_v1_club_torneos_realizados__torneo_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TorneoRealizadoCambios"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoRealizadoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Actualizar Torneo Realizado",
+        "tags": [
+          "club"
+        ]
+      }
+    },
+    "/api/v1/club/torneos-realizados/{torneo_id}/anuncio": {
+      "delete": {
+        "operationId": "quitar_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoRealizadoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Quitar Anuncio",
+        "tags": [
+          "club"
+        ]
+      },
+      "get": {
+        "operationId": "ver_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tam",
+            "required": false,
+            "schema": {
+              "default": "mini",
+              "pattern": "^(mini|grande)$",
+              "title": "Tam",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ver Anuncio",
+        "tags": [
+          "club"
+        ]
+      },
+      "post": {
+        "operationId": "subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoRealizadoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subir Anuncio",
+        "tags": [
+          "club"
+        ]
+      }
+    },
     "/api/v1/club/videos": {
       "get": {
         "operationId": "listar_videos_api_v1_club_videos_get",
@@ -10421,6 +11016,59 @@
           }
         },
         "summary": "Foto",
+        "tags": [
+          "sitio público"
+        ]
+      }
+    },
+    "/api/v1/publico/torneos-realizados/{torneo_id}/anuncio": {
+      "get": {
+        "description": "Anuncio de un torneo realizado publicado. El enlace lleva ?v=… y cambia con cada anuncio nuevo.",
+        "operationId": "anuncio_torneo_api_v1_publico_torneos_realizados__torneo_id__anuncio_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tam",
+            "required": false,
+            "schema": {
+              "default": "mini",
+              "pattern": "^(mini|grande)$",
+              "title": "Tam",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anuncio Torneo",
         "tags": [
           "sitio público"
         ]

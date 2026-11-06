@@ -1,4 +1,4 @@
-"""Sitio público del club: perfil, galería (álbumes y fotos), videos y equipo de trabajo.
+"""Sitio público del club: perfil, galería (álbumes y fotos), videos, equipo de trabajo y torneos realizados.
 
 Todo lo de aquí puede verse sin iniciar sesión cuando está publicado; nunca guarda datos privados de alumnos.
 """
@@ -94,3 +94,26 @@ class IntegranteEquipo(UUIDMixin, TiempoMixin, Base):
     publicado: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     # Foto cuadrada (600 px, sin metadatos) en el almacén; la clave cambia con cada foto nueva.
     foto_clave: Mapped[str | None] = mapped_column(String(32))
+
+
+class TorneoRealizado(UUIDMixin, TiempoMixin, Base):
+    """Torneo ya jugado, para la sección «Torneos realizados» del sitio, con su anuncio (afiche).
+
+    Es contenido del sitio, aparte de la tabla `torneos` (la operación: cupos, equipos, pagos): así caben también los
+    torneos de antes de la plataforma, y borrar uno de aquí nunca toca el dinero ni la auditoría de un torneo.
+    """
+
+    __tablename__ = "torneos_realizados"
+
+    nombre: Mapped[str] = mapped_column(String(120))
+    fecha: Mapped[date] = mapped_column(Date, index=True)  # cuándo se jugó (el sitio los ordena por aquí)
+    lugar: Mapped[str | None] = mapped_column(String(120))
+    resumen: Mapped[str | None] = mapped_column(String(600))  # resultados, campeón, equipos participantes…
+    publicado: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Álbum de la galería con las fotos del torneo (opcional); si se borra el álbum, el enlace se quita solo.
+    album_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("albumes.id", ondelete="SET NULL"))
+    # Anuncio: se guarda entero (sin recortar: un afiche lleva texto) en dos tamaños, sin metadatos.
+    anuncio_clave: Mapped[str | None] = mapped_column(String(32))
+    anuncio_mini_clave: Mapped[str | None] = mapped_column(String(32))
+    anuncio_ancho: Mapped[int | None] = mapped_column(Integer)
+    anuncio_alto: Mapped[int | None] = mapped_column(Integer)

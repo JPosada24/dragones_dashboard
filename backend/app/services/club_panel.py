@@ -1,4 +1,4 @@
-"""Operaciones del panel sobre el contenido del sitio: álbumes, fotos, portadas, videos y equipo técnico.
+"""Operaciones del panel sobre el contenido del sitio: álbumes, fotos, portadas, videos, equipo y torneos realizados.
 
 Las funciones que dejan archivos sin uso devuelven sus claves: la ruta los borra del almacén **después** del commit,
 así un fallo de la transacción nunca deja filas apuntando a archivos inexistentes.
@@ -10,9 +10,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.acceso import Usuario
-from app.models.club import Album, Foto, IntegranteEquipo, Video
+from app.models.club import Album, Foto, IntegranteEquipo, TorneoRealizado, Video
 from app.services import configuracion
-from app.services.club import auditar, claves_de, procesar_portada, procesar_retrato, youtube_id
+from app.services.club import (
+    MINIATURA_ANUNCIO,
+    auditar,
+    claves_de,
+    procesar_foto,
+    procesar_portada,
+    procesar_retrato,
+    youtube_id,
+)
 from app.services.errores import ErrorNegocio, NoEncontrado
 
 AUTORIZACION_FOTOS = "Confirma que tienes autorización de los acudientes de los menores que aparecen."
@@ -181,3 +189,74 @@ def quitar_retrato(db: Session, i: IntegranteEquipo, *, actor: Usuario, ip: str 
     auditar(db, "club.equipo_foto_quitar", "integrante", i.id, actor, ip)
     return anterior
 
+
+# ---------- Torneos realizados ----------
+def listar_torneos_realizados(db: Session) -> list[TorneoRealizado]:
+    return list(db.scalars(select(TorneoRealizado).order_by(TorneoRealizado.fecha.desc(), TorneoRealizado.nombre)))
+
+
+def obtener_torneo_realizado(db: Session, torneo_id: uuid.UUID) -> TorneoRealizado:
+    t = db.get(TorneoRealizado, torneo_id)
+    if t is None:
+        raise NoEncontrado("Torneo realizado no encontrado.")
+    return t
+
+
+def _validar_album(db: Session, album_id: uuid.UUID | None) -> None:
+    if album_id is not None and db.get(Album, album_id) is None:
+        raise ErrorNegocio("El álbum elegido ya no existe.")
+
+
+def crear_torneo_realizado(db: Session, datos: dict[str, Any], *, actor: Usuario, ip: str | None) -> TorneoRealizado:
+    _validar_album(db, datos.get("album_id"))
+    t = TorneoRealizado(**datos)
+    db.add(t)
+    db.flush()
+    auditar(db, "club.torneo_realizado_crear", "torneo_realizado", t.id, actor, ip,
+            despues={"nombre": t.nombre, "fecha": str(t.fecha)})
+    return t
+
+
+def editar_torneo_realizado(
+    db: Session, t: TorneoRealizado, cambios: dict[str, Any], *, actor: Usuario, ip: str | None
+) -> TorneoRealizado:
+    # lugar, resumen y álbum se pueden quitar (null); nombre, fecha y publicado en null = no cambiarlos.
+    cambios = {k: v for k, v in cambios.items() if v is not None or k in ("lugar", "resumen", "album_id")}
+    _validar_album(db, cambios.get("album_id"))
+    for k, v in cambios.items():
+        setattr(t, k, v)
+    auditar(db, "club.torneo_realizado_editar", "torneo_realizado", t.id, actor, ip,
+            despues={k: str(v) if v is not None else None for k, v in cambios.items()})
+    return t
+
+
+def _claves_anuncio(t: TorneoRealizado) -> list[str]:
+    return [c for c in (t.anuncio_clave, t.anuncio_mini_clave) if c]
+
+
+def eliminar_torneo_realizado(db: Session, t: TorneoRealizado, *, actor: Usuario, ip: str | None) -> list[str]:
+    claves = _claves_anuncio(t)
+    auditar(db, "club.torneo_realizado_eliminar", "torneo_realizado", t.id, actor, ip, antes={"nombre": t.nombre})
+    db.delete(t)
+    return claves
+
+
+def cambiar_anuncio(
+    db: Session, t: TorneoRealizado, datos: bytes, *, almacen: Any, actor: Usuario, ip: str | None
+) -> list[str]:
+    """Anuncio (afiche) entero, sin recortar, en dos tamaños. Devuelve las claves del anterior, para borrarlas."""
+    grande, mini, ancho, alto = procesar_foto(datos, miniatura=MINIATURA_ANUNCIO)
+    anteriores = _claves_anuncio(t)
+    t.anuncio_clave, t.anuncio_mini_clave = uuid.uuid4().hex, uuid.uuid4().hex
+    almacen.guardar(t.anuncio_clave, grande)
+    almacen.guardar(t.anuncio_mini_clave, mini)
+    t.anuncio_ancho, t.anuncio_alto = ancho, alto
+    auditar(db, "club.torneo_realizado_anuncio", "torneo_realizado", t.id, actor, ip)
+    return anteriores
+
+
+def quitar_anuncio(db: Session, t: TorneoRealizado, *, actor: Usuario, ip: str | None) -> list[str]:
+    anteriores = _claves_anuncio(t)
+    t.anuncio_clave = t.anuncio_mini_clave = t.anuncio_ancho = t.anuncio_alto = None
+    auditar(db, "club.torneo_realizado_anuncio_quitar", "torneo_realizado", t.id, actor, ip)
+    return anteriores

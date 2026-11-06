@@ -9,7 +9,7 @@ from app.models.alumnos import (
     Prorroga,
 )
 from app.models.asistencia import Asistencia, HorarioEntrenamiento, Justificacion, Multa, Sesion
-from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, Video
+from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, TorneoRealizado, Video
 from app.models.habeas import SolicitudDatos  # noqa: F401
 from app.models.notificaciones import Notificacion
 from app.models.rifas import ActaSorteo, PagoTalonario, Rifa, Talonario
@@ -47,6 +47,7 @@ __all__ = [
     "SesionRefresh",
     "Talonario",
     "Torneo",
+    "TorneoRealizado",
     "UsoAgente",
     "Usuario",
     "Video",

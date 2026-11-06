@@ -18,6 +18,7 @@ from app.schemas.club import (
     PerfilOut,
     SitioOut,
     TorneoPublicoOut,
+    TorneoRealizadoOut,
     VideoOut,
 )
 from app.services import club as servicio
@@ -33,6 +34,8 @@ class DemasiadosEnvios(ErrorNegocio):
 @router.get("/club", response_model=SitioOut)
 def sitio(db: Session = Depends(get_db)) -> SitioOut:
     d = servicio.publico(db)
+    # El enlace a las fotos solo si ese álbum también se ve en el sitio (publicado y con fotos).
+    albumes_visibles = {a.id for a in d["albumes"]}
     return SitioOut(
         perfil=PerfilOut.model_validate(d["perfil"]),
         cifras=CifrasOut(**d["cifras"]),
@@ -47,6 +50,12 @@ def sitio(db: Session = Depends(get_db)) -> SitioOut:
                 valor_inscripcion=t.valor_inscripcion, cupos_libres=libres,
             )
             for t, libres in d["torneos"]
+        ],
+        torneos_realizados=[
+            TorneoRealizadoOut.model_validate(t).model_copy(
+                update={"album_id": t.album_id if t.album_id in albumes_visibles else None}
+            )
+            for t in d["torneos_realizados"]
         ],
     )
 
@@ -108,3 +117,14 @@ def portada_album(
     a = servicio.portada_publica(db, album_id)
     return Response(almacen.leer(a.portada_clave), media_type="image/jpeg",
                     headers={"Cache-Control": "public, max-age=604800"})
+
+
+@router.get("/torneos-realizados/{torneo_id}/anuncio")
+def anuncio_torneo(
+    torneo_id: uuid.UUID, tam: str = Query("mini", pattern="^(mini|grande)$"), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    """Anuncio de un torneo realizado publicado. El enlace lleva ?v=… y cambia con cada anuncio nuevo."""
+    t = servicio.anuncio_publico(db, torneo_id)
+    datos = almacen.leer(t.anuncio_mini_clave if tam == "mini" else t.anuncio_clave)
+    return Response(datos, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})

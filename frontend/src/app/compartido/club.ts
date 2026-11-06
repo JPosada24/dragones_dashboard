@@ -8,6 +8,8 @@ export type AlbumClub = Esquema<'AlbumOut'>;
 export type VideoClub = Esquema<'VideoOut'>;
 /** `foto`: versión de la foto; null = sin foto. */
 export type IntegranteClub = Esquema<'IntegranteOut'>;
+/** Torneo ya jugado del sitio. `anuncio`: versión del afiche; null = sin anuncio. */
+export type TorneoRealizadoClub = Esquema<'TorneoRealizadoOut'>;
 
 /** El id de YouTube lo valida el servidor; aquí se vuelve a comprobar antes de armar cualquier enlace. */
 const ID_YOUTUBE = /^[A-Za-z0-9_-]{11}$/;

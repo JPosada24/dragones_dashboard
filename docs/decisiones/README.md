@@ -15,3 +15,4 @@ Cada archivo registra una decisión: el contexto, lo que se decidió y lo que im
 - [0011. Copias de seguridad cifradas con clave pública](0011-respaldos-cifrados.md)
 - [0012. Rifas sin compradores y sorteo verificable](0012-rifas-y-sorteo.md)
 - [0013. Admin con todo menos cuentas, y permisos ajustables por persona](0013-permisos-por-persona.md)
+- [0014. Torneos realizados: contenido del sitio aparte de la operación de torneos](0014-torneos-realizados.md)

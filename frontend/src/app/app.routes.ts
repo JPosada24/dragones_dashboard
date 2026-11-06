@@ -24,6 +24,7 @@ const PANTALLAS: Record<string, Cargar> = {
   avisos: () => import('./paginas/avisos/avisos').then((m) => m.AvisosPage),
   'perfil-club/galeria': () => import('./paginas/galeria/galeria').then((m) => m.GaleriaPage),
   'perfil-club/equipo': () => import('./paginas/equipo-tecnico/equipo-tecnico').then((m) => m.EquipoTecnicoPage),
+  'perfil-club/torneos': () => import('./paginas/torneos-realizados/torneos-realizados').then((m) => m.TorneosRealizadosPage),
   'perfil-club': () => import('./paginas/perfil-club/perfil-club').then((m) => m.PerfilClubPage),
   asistente: () => import('./paginas/asistente/asistente').then((m) => m.AsistentePage),
   'alumnos/inscripciones': () => import('./paginas/inscripciones/inscripciones').then((m) => m.InscripcionesPage),

@@ -25,6 +25,9 @@ from app.schemas.club import (
     IntegranteOut,
     PerfilIn,
     PerfilOut,
+    TorneoRealizadoCambios,
+    TorneoRealizadoIn,
+    TorneoRealizadoOut,
     VideoCambios,
     VideoIn,
     VideoOut,
@@ -312,3 +315,84 @@ def ver_foto_integrante(
     if not i.foto_clave:
         raise NoEncontrado("Sin foto.")
     return _jpeg(almacen.leer(i.foto_clave))
+
+
+# ---------- Torneos realizados (sección del sitio con su anuncio) ----------
+URL_REALIZADOS = "/torneos-realizados"
+
+
+@router.get(URL_REALIZADOS, response_model=list[TorneoRealizadoOut])
+def listar_torneos_realizados(
+    _: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+) -> list[TorneoRealizadoOut]:
+    return [TorneoRealizadoOut.model_validate(t) for t in panel.listar_torneos_realizados(db)]
+
+
+@router.post(URL_REALIZADOS, response_model=TorneoRealizadoOut, status_code=status.HTTP_201_CREATED)
+def crear_torneo_realizado(
+    datos: TorneoRealizadoIn, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+) -> TorneoRealizadoOut:
+    t = panel.crear_torneo_realizado(db, datos.model_dump(), actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return TorneoRealizadoOut.model_validate(t)
+
+
+@router.patch(URL_REALIZADOS + "/{torneo_id}", response_model=TorneoRealizadoOut)
+def actualizar_torneo_realizado(
+    torneo_id: uuid.UUID, datos: TorneoRealizadoCambios, request: Request, actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+) -> TorneoRealizadoOut:
+    t = panel.editar_torneo_realizado(
+        db, panel.obtener_torneo_realizado(db, torneo_id), datos.model_dump(exclude_unset=True),
+        actor=actor, ip=ip_cliente(request),
+    )
+    db.commit()
+    return TorneoRealizadoOut.model_validate(t)
+
+
+@router.delete(URL_REALIZADOS + "/{torneo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_torneo_realizado(
+    torneo_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    t = panel.obtener_torneo_realizado(db, torneo_id)
+    _confirmar(db, almacen, panel.eliminar_torneo_realizado(db, t, actor=actor, ip=ip_cliente(request)))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(URL_REALIZADOS + "/{torneo_id}/anuncio", response_model=TorneoRealizadoOut)
+def subir_anuncio(
+    torneo_id: uuid.UUID,
+    request: Request,
+    archivo: UploadFile = File(),
+    actor: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> TorneoRealizadoOut:
+    t = panel.obtener_torneo_realizado(db, torneo_id)
+    anteriores = panel.cambiar_anuncio(
+        db, t, panel.leer_foto(db, archivo.file), almacen=almacen, actor=actor, ip=ip_cliente(request),
+    )
+    _confirmar(db, almacen, anteriores)
+    return TorneoRealizadoOut.model_validate(t)
+
+
+@router.delete(URL_REALIZADOS + "/{torneo_id}/anuncio", response_model=TorneoRealizadoOut)
+def quitar_anuncio(
+    torneo_id: uuid.UUID, request: Request, actor: Usuario = Depends(EDITAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> TorneoRealizadoOut:
+    t = panel.obtener_torneo_realizado(db, torneo_id)
+    _confirmar(db, almacen, panel.quitar_anuncio(db, t, actor=actor, ip=ip_cliente(request)))
+    return TorneoRealizadoOut.model_validate(t)
+
+
+@router.get(URL_REALIZADOS + "/{torneo_id}/anuncio")
+def ver_anuncio(
+    torneo_id: uuid.UUID, tam: str = Query("mini", pattern="^(mini|grande)$"), _: Usuario = Depends(EDITAR),
+    db: Session = Depends(get_db), almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    t = panel.obtener_torneo_realizado(db, torneo_id)
+    if not t.anuncio_clave or not t.anuncio_mini_clave:
+        raise NoEncontrado("El torneo no tiene anuncio.")
+    return _jpeg(almacen.leer(t.anuncio_mini_clave if tam == "mini" else t.anuncio_clave))

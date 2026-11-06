@@ -1,0 +1,113 @@
+<app-pestanas [pestanas]="pestanas" etiqueta="Vistas del perfil del club" />
+
+@if (mensaje(); as m) {
+  <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="mensaje.set(null)" />
+}
+
+<div class="encabezado">
+  <p class="sub">Es la sección «Torneos realizados» del sitio: los torneos que ya se jugaron, con su anuncio y resultados.</p>
+  <button type="button" class="boton" (click)="abrir('nuevo')">
+    <span class="icono" aria-hidden="true">add</span> Agregar torneo
+  </button>
+</div>
+
+@if (errorCarga()) {
+  <p class="panel vacio" role="alert">No se pudieron cargar los torneos realizados. Recarga la página.</p>
+} @else if (torneos(); as lista) {
+  <ul class="tarjetas">
+    @for (t of lista; track t.id) {
+      <li class="panel tarjeta" [class.oculto]="!t.publicado">
+        <div class="anuncio">
+          @if (anuncio(t); as src) {
+            <img [src]="src" [alt]="'Anuncio de ' + t.nombre" [attr.width]="t.anuncio_ancho" [attr.height]="t.anuncio_alto" />
+          } @else {
+            <span class="sin-anuncio"><span class="icono" aria-hidden="true">emoji_events</span> Sin anuncio</span>
+          }
+        </div>
+        <div class="datos">
+          <p class="fecha mono">{{ t.fecha | date: 'd MMM y' }}@if (t.lugar) { · {{ t.lugar }} }</p>
+          <h2>{{ t.nombre }}</h2>
+          @if (t.resumen) { <p class="resumen">{{ t.resumen }}</p> }
+          @if (nombreAlbum(t); as album) {
+            <p class="album"><span class="icono" aria-hidden="true">photo_library</span> {{ album }}</p>
+          }
+        </div>
+        <div class="acciones-tarjeta">
+          <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="t.publicado"
+                  [attr.aria-label]="'Mostrar ' + t.nombre + ' en el sitio'" (click)="cambiarPublicado(t)">
+            <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
+            {{ t.publicado ? 'En el sitio' : 'Oculto' }}
+          </button>
+          <span class="crece"></span>
+          <button type="button" class="boton-icono" (click)="abrir(t)" [attr.aria-label]="'Editar ' + t.nombre">
+            <span class="icono" aria-hidden="true">edit</span>
+          </button>
+          <button type="button" class="boton-icono peligro" (click)="abrirEliminar(t)" [attr.aria-label]="'Eliminar ' + t.nombre">
+            <span class="icono" aria-hidden="true">delete</span>
+          </button>
+        </div>
+      </li>
+    } @empty {
+      <li class="panel vacio">Aún no hay torneos realizados. Agrega los que ya organizó el club, con su anuncio.</li>
+    }
+  </ul>
+} @else {
+  <p class="panel vacio">Cargando…</p>
+}
+
+@if (editando(); as t) {
+  <app-dialogo [titulo]="t === 'nuevo' ? 'Agregar torneo realizado' : 'Editar · ' + t.nombre" (cerrar)="editando.set(null)">
+    <form class="formulario" [formGroup]="form" (ngSubmit)="guardar()">
+      <div class="rejilla">
+        <label class="campo"><span class="etiqueta">Nombre del torneo</span>
+          <input class="control" formControlName="nombre" maxlength="120" placeholder="Ej.: Copa Dragones 2025" /></label>
+        <label class="campo"><span class="etiqueta">Fecha en que se jugó</span>
+          <input class="control" formControlName="fecha" type="date" /></label>
+        <label class="campo"><span class="etiqueta">Lugar (opcional)</span>
+          <input class="control" formControlName="lugar" maxlength="120" placeholder="Ej.: Coliseo Mayor" /></label>
+      </div>
+      <label class="campo"><span class="etiqueta">Resultados o reseña (opcional)</span>
+        <textarea class="control" formControlName="resumen" rows="3" maxlength="600"
+                  placeholder="Campeón, subcampeón, equipos participantes…"></textarea></label>
+      <label class="campo"><span class="etiqueta">Fotos del torneo (opcional)</span>
+        <select class="control" formControlName="album_id">
+          <option value="">Sin álbum</option>
+          @for (a of albumes(); track a.id) {
+            <option [value]="a.id">{{ a.nombre }}{{ a.publicado ? '' : ' (borrador)' }}</option>
+          }
+        </select>
+        <span class="nota-campo">El sitio muestra «Ver fotos» solo si el álbum está publicado y tiene fotos.</span>
+      </label>
+      <div class="campo">
+        <span class="etiqueta">Anuncio (opcional)</span>
+        <div class="anuncio-fila">
+          @if (t !== 'nuevo' && anuncio(t) && !quitarAnuncio()) {
+            <img class="anuncio-previa" [src]="anuncio(t)" alt="Anuncio actual" width="48" height="60" />
+          }
+          <app-zona-archivos class="crece" etiqueta="Elegir anuncio" (elegidos)="elegirAnuncio($event)" />
+          @if (t !== 'nuevo' && t.anuncio && !quitarAnuncio()) {
+            <button type="button" class="enlace-rojo" (click)="quitarAnuncio.set(true)">Quitar anuncio</button>
+          }
+        </div>
+        <span class="nota-campo">El afiche con que se promocionó. Se guarda entero (sin recortar) y sin los datos ocultos del archivo.</span>
+      </div>
+      <label class="casilla"><input type="checkbox" formControlName="publicado" /><span>Mostrar en el sitio</span></label>
+      @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+      <div class="acciones">
+        <button type="button" class="boton secundario" (click)="editando.set(null)">Cancelar</button>
+        <button type="submit" class="boton" [disabled]="ocupado()">Guardar</button>
+      </div>
+    </form>
+  </app-dialogo>
+}
+
+@if (eliminando(); as t) {
+  <app-dialogo [titulo]="'Eliminar ' + t.nombre" (cerrar)="eliminando.set(null)">
+    <p class="advertencia">Deja de aparecer en el sitio y se borra su anuncio. El álbum de fotos no se toca. Si solo quieres ocultarlo, usa el interruptor.</p>
+    @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
+    <div class="acciones">
+      <button type="button" class="boton secundario" (click)="eliminando.set(null)">Cancelar</button>
+      <button type="button" class="boton peligro" [disabled]="ocupado()" (click)="eliminar()">Eliminar</button>
+    </div>
+  </app-dialogo>
+}

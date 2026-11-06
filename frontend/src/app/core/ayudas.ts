@@ -115,7 +115,7 @@ export const AYUDAS: Record<string, Ayuda> = {
   'perfil-club': {
     titulo: 'Cómo funciona el perfil del club',
     pasos: [
-      { titulo: 'Sitio público', texto: 'El sitio del club (proyecto aparte, «Ver sitio») toma de aquí el equipo, la galería, los videos, el contacto, la misión, visión e historia, y de Torneos los torneos abiertos. También muestra cifras totales del club. Nada privado de los alumnos sale allí.' },
+      { titulo: 'Sitio público', texto: 'El sitio del club (proyecto aparte, «Ver sitio») toma de aquí el equipo, la galería, los videos, los torneos realizados, el contacto, la misión, visión e historia, y de Torneos los torneos abiertos. También muestra cifras totales del club. Nada privado de los alumnos sale allí.' },
       { titulo: 'Publicar', texto: 'El interruptor general y el de cada álbum, video e integrante deciden qué se ve. Con el general apagado, el sitio muestra solo su contenido fijo.' },
       { titulo: 'Fotos', texto: 'Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación del celular). Sube solo fotos con autorización de los acudientes de los menores que aparecen.' },
       { titulo: 'Torneos', texto: 'Los torneos con inscripciones abiertas aparecen en el sitio y los clubes externos se inscriben solos; quedan en Torneos marcados «desde el sitio» y te llega un aviso.' },
@@ -137,6 +137,15 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Ocultar o quitar', texto: 'El interruptor lo oculta del sitio sin borrar nada; «Quitar» lo borra con su foto.' },
       { titulo: 'Foto', texto: 'Se recorta cuadrada y se le quitan los datos ocultos del celular. Mejor una foto de frente y con buena luz.' },
       { titulo: 'No es una cuenta', texto: 'Estos perfiles son solo para el sitio. Para que un entrenador entre a la plataforma, créale una cuenta en Usuarios.' },
+    ],
+  },
+  'perfil-club/torneos': {
+    titulo: 'Cómo funcionan los torneos realizados',
+    pasos: [
+      { titulo: 'En el sitio', texto: 'Cada torneo aparece en «Torneos realizados» con su anuncio, la fecha, el lugar y la reseña. Los más recientes van primero.' },
+      { titulo: 'Anuncio', texto: 'Es el afiche con que se promocionó. Se guarda entero, sin recortar, y se le quitan los datos ocultos del archivo. Al tocarlo en el sitio se ve en grande.' },
+      { titulo: 'Fotos', texto: 'Puedes enlazar un álbum de la Galería: el sitio muestra «Ver fotos» cuando ese álbum está publicado y tiene fotos.' },
+      { titulo: 'Aparte de Torneos', texto: 'Esta lista es solo para el sitio: sirve también para torneos de antes de la plataforma, y borrar uno de aquí no toca los equipos ni los pagos de la sección Torneos.' },
     ],
   },
   asistente: {

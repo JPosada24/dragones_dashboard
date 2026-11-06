@@ -5,6 +5,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Torneos realizados:** nueva pestaña en Perfil del club para la sección del sitio con los torneos ya jugados:
+  nombre, fecha, lugar, reseña, anuncio (afiche entero, sin metadatos) y álbum de fotos opcional. Tabla propia,
+  aparte de la operación de Torneos (migración 0028, decisión 0014). Público en `GET /publico/club`
+  (`torneos_realizados`) y `GET /publico/torneos-realizados/{id}/anuncio`.
 - **Permisos por persona:** el SuperAdmin da o quita permisos a un Admin o Entrenador desde Usuarios (botón de
   ajustes), además de su rol; aplica sin cerrar su sesión y queda en la auditoría (migración 0027). Los permisos de
   cuentas no se le dan a nadie. La matriz «Roles y permisos» pasó de Configuración a Usuarios (`GET /usuarios/roles`).

@@ -72,7 +72,7 @@ export const SECCIONES: Seccion[] = [
   {
     ruta: 'perfil-club', etiqueta: 'Perfil del club', icono: 'shield', grupo: 'Club', permisos: ['club.editar'],
     titulo: 'Perfil del club', subtitulo: 'Contenido del sitio público',
-    descripcion: 'Galería, videos, misión, visión, historia, contacto y equipo del club que se muestran en el sitio.',
+    descripcion: 'Galería, videos, misión, visión, historia, contacto, equipo y torneos realizados que se muestran en el sitio.',
   },
   {
     // Pestaña de Perfil del club: álbumes de fotos y videos del sitio.
@@ -87,6 +87,13 @@ export const SECCIONES: Seccion[] = [
     enMenu: false,
     titulo: 'Perfil del club', subtitulo: 'Equipo técnico: entrenadores que se muestran en el sitio',
     descripcion: 'Entrenadores con cargo, presentación y foto.',
+  },
+  {
+    // Pestaña de Perfil del club: «Torneos realizados» del sitio.
+    ruta: 'perfil-club/torneos', etiqueta: 'Torneos realizados', icono: 'emoji_events', grupo: 'Club',
+    permisos: ['club.editar'], enMenu: false,
+    titulo: 'Perfil del club', subtitulo: 'Torneos realizados: los que ya se jugaron, con su anuncio',
+    descripcion: 'Torneos ya jugados con su anuncio, resultados y fotos.',
   },
   {
     ruta: 'avisos', etiqueta: 'Avisos WhatsApp', icono: 'chat', grupo: 'Club', permisos: ['notificaciones.gestionar'],

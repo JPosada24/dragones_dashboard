@@ -198,6 +198,61 @@ class IntegranteOut(BaseModel):
         return datos
 
 
+class TorneoRealizadoIn(_Entrada):
+    nombre: str = Field(min_length=2, max_length=120)
+    fecha: date
+    lugar: str | None = Field(default=None, max_length=120)
+    resumen: str | None = Field(default=None, max_length=600)
+    album_id: uuid.UUID | None = None
+    publicado: bool = True
+
+    @field_validator("lugar", "resumen")
+    @classmethod
+    def _vacio(cls, v: str | None) -> str | None:
+        return v or None
+
+
+class TorneoRealizadoCambios(_Entrada):
+    """Solo se aplican los campos enviados; lugar, resumen y álbum se quitan enviándolos vacíos (null)."""
+
+    nombre: str | None = Field(default=None, min_length=2, max_length=120)
+    fecha: date | None = None
+    lugar: str | None = Field(default=None, max_length=120)
+    resumen: str | None = Field(default=None, max_length=600)
+    album_id: uuid.UUID | None = None
+    publicado: bool | None = None
+
+    @field_validator("lugar", "resumen")
+    @classmethod
+    def _vacio(cls, v: str | None) -> str | None:
+        return v or None
+
+
+class TorneoRealizadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    nombre: str
+    fecha: date
+    lugar: str | None
+    resumen: str | None
+    album_id: uuid.UUID | None
+    publicado: bool
+    anuncio: str | None = None  # versión del anuncio (cambia con cada anuncio nuevo); None = sin anuncio
+    anuncio_ancho: int | None = None
+    anuncio_alto: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _version_anuncio(cls, datos: Any) -> Any:
+        """Solo una versión corta de la clave (para refrescar la caché), nunca la clave entera."""
+        if not hasattr(datos, "anuncio_clave"):
+            return datos
+        campos = ("id", "nombre", "fecha", "lugar", "resumen", "album_id", "publicado", "anuncio_ancho", "anuncio_alto")
+        clave = datos.anuncio_clave
+        return {**{k: getattr(datos, k) for k in campos}, "anuncio": clave[:8] if clave else None}
+
+
 class ClubPanelOut(BaseModel):
     sitio_url: str | None  # dirección del sitio público (SITIO_URL), para el botón «Ver sitio»
     perfil: PerfilOut
@@ -247,6 +302,7 @@ class SitioOut(BaseModel):
     videos: list[VideoOut]
     equipo: list[IntegranteOut]
     torneos: list[TorneoPublicoOut]
+    torneos_realizados: list[TorneoRealizadoOut]
 
 
 class InscripcionSitioIn(EquipoCrear):

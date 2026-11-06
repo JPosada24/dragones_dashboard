@@ -1,4 +1,4 @@
-"""Sitio público del club: perfil, galería, videos, equipo de trabajo e inscripción pública de clubes a torneos."""
+"""Sitio público del club: perfil, galería, videos, equipo, torneos realizados e inscripción pública a torneos."""
 import io
 import re
 import uuid
@@ -14,7 +14,7 @@ from app.core import fechas
 from app.models.acceso import Usuario
 from app.models.alumnos import Alumno, Inscripcion
 from app.models.asistencia import HorarioEntrenamiento
-from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, Video
+from app.models.club import Album, Foto, IntegranteEquipo, PerfilClub, TorneoRealizado, Video
 from app.models.dominio import ESTADOS_VIGENTES
 from app.models.torneos import EquipoTorneo, Torneo
 from app.services import auditoria, notificaciones, torneos
@@ -24,6 +24,7 @@ from app.services.errores import ErrorNegocio, NoEncontrado
 Image.MAX_IMAGE_PIXELS = 40_000_000
 TAMANO_GRANDE = 1920
 TAMANO_MINIATURA = 480
+MINIATURA_ANUNCIO = 720  # un afiche lleva texto: la tarjeta del sitio necesita más detalle que una foto
 FORMATOS = {"JPEG", "PNG", "WEBP"}
 _YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _HOSTS_YOUTUBE = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtube-nocookie.com"}
@@ -91,7 +92,7 @@ def procesar_retrato(datos: bytes) -> bytes:
     return salida.getvalue()
 
 
-def procesar_foto(datos: bytes) -> tuple[bytes, bytes, int, int]:
+def procesar_foto(datos: bytes, *, miniatura: int = TAMANO_MINIATURA) -> tuple[bytes, bytes, int, int]:
     """Vuelve a codificar la imagen: corrige la orientación, quita EXIF/ubicación y genera dos tamaños.
 
     Re-codificar también neutraliza archivos manipulados: lo que se guarda lo produjo el servidor.
@@ -106,8 +107,8 @@ def procesar_foto(datos: bytes) -> tuple[bytes, bytes, int, int]:
         return salida.getvalue(), copia.width, copia.height
 
     grande, ancho, alto = jpeg(TAMANO_GRANDE)
-    miniatura, _, _ = jpeg(TAMANO_MINIATURA)
-    return grande, miniatura, ancho, alto
+    mini, _, _ = jpeg(miniatura)
+    return grande, mini, ancho, alto
 
 
 def subir_foto(
@@ -215,6 +216,10 @@ def publico(db: Session) -> dict[str, Any]:
         "equipo": db.scalars(select(IntegranteEquipo).where(IntegranteEquipo.publicado.is_(True))
                              .order_by(IntegranteEquipo.orden, IntegranteEquipo.nombre)).all(),
         "torneos": torneos_abiertos(db),
+        "torneos_realizados": db.scalars(
+            select(TorneoRealizado).where(TorneoRealizado.publicado.is_(True))
+            .order_by(TorneoRealizado.fecha.desc(), TorneoRealizado.nombre)
+        ).all(),
     }
 
 
@@ -258,3 +263,11 @@ def portada_publica(db: Session, album_id: uuid.UUID) -> Album:
     if a is None or not a.publicado or not a.portada_clave or not perfil(db).publicado:
         raise NoEncontrado("Portada no encontrada.")
     return a
+
+
+def anuncio_publico(db: Session, torneo_id: uuid.UUID) -> TorneoRealizado:
+    """Torneo realizado cuyo anuncio se puede ver en el sitio: publicado, con anuncio y con el sitio publicado."""
+    t = db.get(TorneoRealizado, torneo_id)
+    if t is None or not t.publicado or not t.anuncio_clave or not perfil(db).publicado:
+        raise NoEncontrado("Anuncio no encontrado.")
+    return t
