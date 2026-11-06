@@ -29,3 +29,9 @@ def salud_worker(db: Session = Depends(get_db)) -> dict[str, str | int]:
     if segundos is None or segundos > WORKER_SIN_LATIDO_SEGUNDOS:
         raise HTTPException(status_code=503, detail="El worker no está corriendo")
     return {"estado": "ok", "ultimo_latido_hace_s": segundos}
+
+
+# Los monitores externos (UptimeRobot) revisan con HEAD; solo con GET respondían 405 y daban "caído".
+# Fuera del esquema: es el mismo contrato que el GET.
+router.add_api_route("/salud", salud, methods=["HEAD"], include_in_schema=False)
+router.add_api_route("/salud/worker", salud_worker, methods=["HEAD"], include_in_schema=False)

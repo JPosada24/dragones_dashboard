@@ -25,6 +25,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 - Copias de seguridad: un paso fallido se anunciaba como «Copia lista» (bash ignora `set -e` dentro de
   `if función`); ahora la copia corre en un proceso aparte y el fallo se reporta (y se avisa a `RESPALDO_PING_URL`).
   Además, el volumen `/respaldos` pertenece al usuario del contenedor y se instaló `findutils` (rotación).
+- `/api/v1/salud` y `/salud/worker` responden a `HEAD`: UptimeRobot revisa así y el 405 lo marcaba como caído.
 - Simulacro de restauración: con `SOLO_BASE=si` restaura solo la base aparte; antes el simulacro documentado
   reemplazaba también los archivos reales.
 

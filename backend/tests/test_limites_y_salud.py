@@ -52,3 +52,11 @@ def test_salud_del_worker(client, db):
     db.execute(text("UPDATE latidos SET en = now() - interval '1 hour'"))
     db.commit()
     assert client.get("/api/v1/salud/worker").status_code == 503  # se detuvo
+
+
+def test_salud_responde_a_head(client, db):
+    # UptimeRobot revisa con HEAD: un 405 lo marcaba como caído aunque todo estuviera bien.
+    assert client.head("/api/v1/salud").status_code == 200
+    assert client.head("/api/v1/salud/worker").status_code == 503  # el worker nunca ha corrido
+    registrar_latido()
+    assert client.head("/api/v1/salud/worker").status_code == 200
