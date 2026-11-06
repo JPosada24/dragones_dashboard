@@ -84,7 +84,8 @@ saber para seguir trabajando.
 - **Datos personales:** autorización de datos obligatoria al dar de alta un alumno (0022); eliminar un usuario lo
   anonimiza sin borrar la fila (0023).
 - **Producción:** `docker-compose.prod.yml` + `deploy/Caddyfile` (HTTPS, CSP estricta; por eso el build no inyecta
-  CSS crítico en línea) + `deploy/respaldo/` (copias diarias cifradas con age y rclone; restauración probada).
+  CSS crítico en línea) + `deploy/respaldo/` (copias diarias cifradas con age; fuera del servidor en Cloudflare R2 con `rclone copy`; restauración desde
+  R2 probada el 2026-11-06).
   Limitador de intentos en Postgres (`intentos`, 0024) y latido del worker (`latidos`) → `/api/v1/salud/worker`.
   Claves rotables: `DATA_ENCRYPTION_KEY` admite varias (`app.scripts.rotar_clave`) y `SECRET_KEY_ANTERIOR`.
   Observabilidad en `core/observabilidad.py` (X-Request-ID, logs JSON en producción, `SENTRY_DSN` opcional sin datos
@@ -97,7 +98,7 @@ saber para seguir trabajando.
 - **Decidido:** el nivel (Iniciación/Avanzado) es solo un dato del alumno y un filtro. **No** se separan
   entrenamientos, asistencia ni multas por nivel: ambos niveles entrenan el mismo día y el entrenador marca esa
   sesión. La política de datos del sitio (`[POR COMPLETAR]`) la completa Julian.
-- **Pendiente:** copias fuera del servidor (R2), monitoreo (UptimeRobot, healthchecks.io, Sentry), correo real (Gmail),
+- **Pendiente:** monitoreo (UptimeRobot, healthchecks.io, Sentry), correo real (Gmail),
   `SECURITY.md` y cerrar `filtro_acudientes_visibles` para quien no es staff.
 
 ## Seguridad (obligatorio en todo código nuevo)
