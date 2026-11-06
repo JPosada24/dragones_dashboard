@@ -48,8 +48,10 @@ dc exec respaldo ls -lh /respaldos/diario
    ```
    Para una copia que solo está fuera del servidor: `dc run --rm --entrypoint rclone respaldo copy remoto:dragones-respaldos/diario/<archivo> /respaldos/diario/`.
 
-**Simulacro mensual**: restaura la última copia en una base aparte (`-e PGDATABASE=prueba_restauracion`, creada antes
-con `dc exec db createdb -U dragones prueba_restauracion`) y compara conteos (`select count(*) from alumnos`). Una
+**Simulacro mensual**: restaura la última copia en una base aparte (`-e PGDATABASE=prueba_restauracion -e SOLO_BASE=si`,
+creada antes con `dc exec db createdb -U dragones prueba_restauracion`) y compara conteos
+(`select count(*) from alumnos`). Sin `SOLO_BASE=si` el script reemplaza también los archivos **reales** (el volumen
+de documentos es el mismo). Al terminar: `dc exec db dropdb -U dragones prueba_restauracion`. Una
 copia que nunca se restauró no es una copia.
 
 ## Rotar claves

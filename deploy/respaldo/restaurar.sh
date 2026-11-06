@@ -8,6 +8,7 @@
 #   docker compose -f docker-compose.prod.yml up -d
 #
 # La clave privada de age NO vive en el servidor: se trae solo para restaurar y se borra después.
+# Simulacro en una base aparte: -e PGDATABASE=prueba_restauracion -e SOLO_BASE=si (no toca los archivos reales).
 set -Eeuo pipefail
 
 archivo="${1:?Uso: restaurar.sh <copia.tar.age> <clave-privada-age>}"
@@ -29,6 +30,11 @@ fi
 
 echo "Restaurando la base de datos…"
 pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --dbname="$PGDATABASE" "$tmp/base.dump"
+if [[ "${SOLO_BASE:-}" == "si" ]]; then
+  echo "SOLO_BASE=si: los archivos no se tocan."
+  echo "Listo."
+  exit 0
+fi
 echo "Restaurando los archivos…"
 find /data/documentos -mindepth 1 -delete
 tar -C /data/documentos -xf "$tmp/documentos.tar"
