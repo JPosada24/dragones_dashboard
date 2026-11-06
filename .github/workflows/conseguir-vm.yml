@@ -1,19 +1,19 @@
 name: Conseguir VM Oracle (reintenta hasta que haya cupo)
 
 # La VM ARM gratuita de Oracle casi nunca tiene cupo al primer intento ("Out of host capacity").
-# Este workflow reintenta cada 5 minutos rotando por las zonas, con la misma lógica de
+# Este workflow intenta crear la VM rotando por las zonas, con la misma lógica de
 # deploy/oracle/conseguir-vm.ps1 (el equivalente para correr desde el PC) portada a
 # deploy/oracle/conseguir-vm.py. Configuración de secretos: settings → Secrets → Actions.
 #
-# Repo público ⇒ minutos de Actions gratis e ilimitados. Nota: GitHub desactiva los schedules
-# tras 60 días sin commits en el repo; subiendo cualquier cambio se reactiva, o se enciende a
-# mano desde Actions → este workflow → "Enable workflow".
-#
-# Secreto obligatorios: OCI_CLI_USER, OCI_CLI_TENANCY, OCI_CLI_FINGERPRINT, OCI_CLI_KEY_CONTENT,
+# Secretos obligatorios: OCI_CLI_USER, OCI_CLI_TENANCY, OCI_CLI_FINGERPRINT, OCI_CLI_KEY_CONTENT,
 # OCI_CLI_REGION y SSH_PUB_KEY. Opcionales: TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID (aviso inmediato).
+#
+# El reintento automático (schedule) se DESACTIVÓ el 2026-11-06: la VM ya quedó creada y el cron
+# gastaba una ejecución cada 5 minutos solo para salir verde. Quedó el disparo manual; si vuelve a
+# faltar cupo (¿otra VM gratis?), vuelve a añadir el bloque al `on:`:
+#   schedule:
+#     - cron: "*/5 * * * *"
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       ocpus:

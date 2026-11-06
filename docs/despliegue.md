@@ -94,7 +94,9 @@ desde la consola ("Out of host capacity"). `deploy/oracle/conseguir-vm.ps1` lo r
      - Para `OCI_CLI_KEY_CONTENT`, pega el texto completo de `~\.oci\oci_api_key.pem` (con sus líneas
        `BEGIN/END PRIVATE KEY`): es una contraseña, nunca la subas al repo ni la compartas.
      - Corre el workflow a mano una vez (*Actions → Conseguir VM Oracle → Run workflow*) sobre `'main'` para
-       validar los secretos: si el run sale verde sin "PARO:", queda reintentando solo cada 5 minutos.
+       validar los secretos (debe salir verde, sin "PARO:"). El `schedule` del yml reintentaba solo
+       cada 5 minutos: **quedó desactivado el 2026-11-06** cuando la VM ya encendió, para dejar de gastar
+       ejecuciones; si algún día vuelve a faltar cupo, vuelve a añadir esa línea al `on:`.
      - Cuando consiga la VM, abre un **issue con la IP** en el repositorio (aviso por Telegram si defines los
        dos secretos `TELEGRAM_*`) y sigue en el punto 1.4 de esta guía con `ssh ubuntu@IP`.
 
