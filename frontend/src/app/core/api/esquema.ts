@@ -351,6 +351,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/tutorial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tutorial Visto
+         * @description Marca que la cuenta ya vio (o saltó) el tutorial guiado: no vuelve a salir solo, en ningún dispositivo.
+         */
+        post: operations["tutorial_visto_api_v1_auth_tutorial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/club": {
         parameters: {
             query?: never;
@@ -4135,6 +4155,8 @@ export interface components {
              * @enum {string}
              */
             rol: "SUPERADMIN" | "ADMIN" | "ENTRENADOR" | "MIEMBRO";
+            /** Tutorial Visto */
+            tutorial_visto: boolean;
             /** Vinculado A */
             vinculado_a?: string | null;
         };
@@ -4158,6 +4180,8 @@ export interface components {
              * @enum {string}
              */
             rol: "SUPERADMIN" | "ADMIN" | "ENTRENADOR" | "MIEMBRO";
+            /** Tutorial Visto */
+            tutorial_visto: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -5043,6 +5067,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    tutorial_visto_api_v1_auth_tutorial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

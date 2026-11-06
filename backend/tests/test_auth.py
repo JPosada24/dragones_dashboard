@@ -130,3 +130,20 @@ def test_el_login_deja_rastro_en_auditoria(client, crear_usuario, login, db):
     login("m@club.com")
     acciones = [a.accion for a in db.scalars(select(Auditoria).order_by(Auditoria.id))]
     assert "auth.login_fallido" in acciones and "auth.login" in acciones
+
+
+def test_el_tutorial_sale_una_vez_por_cuenta(client, crear_usuario, auth_header, db):
+    crear_usuario("nuevo@club.com", "ADMIN")
+    h = auth_header("nuevo@club.com")
+    assert client.get("/api/v1/auth/me", headers=h).json()["tutorial_visto"] is False
+    assert client.post("/api/v1/auth/tutorial").status_code == 401
+    assert client.post("/api/v1/auth/tutorial", headers=h).status_code == 204
+    assert client.get("/api/v1/auth/me", headers=h).json()["tutorial_visto"] is True
+    # Verlo otra vez (desde la ayuda) no cambia la fecha de la primera.
+    primera = db.scalar(select(Usuario.tutorial_visto_en).where(Usuario.email == "nuevo@club.com"))
+    client.post("/api/v1/auth/tutorial", headers=h)
+    db.expire_all()
+    assert db.scalar(select(Usuario.tutorial_visto_en).where(Usuario.email == "nuevo@club.com")) == primera
+    # También llega al iniciar sesión, en cualquier dispositivo.
+    r = client.post("/api/v1/auth/login", json={"email": "nuevo@club.com", "password": PASSWORD})
+    assert r.status_code == 200 and r.json()["usuario"]["tutorial_visto"] is True

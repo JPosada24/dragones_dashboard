@@ -17,7 +17,7 @@ const DATOS: Ingresos = {
       : m.mes === 3 ? { ...m, multas: 4000, rifas: 40000, torneos: 6000, total: 50000 } : m),
 };
 const usuario = (permisos: string[]): Usuario =>
-  ({ id: 'u1', email: 'a@club.com', nombre: 'Ana', rol: 'ADMIN', activo: true, permisos });
+  ({ id: 'u1', email: 'a@club.com', nombre: 'Ana', rol: 'ADMIN', activo: true, tutorial_visto: true, permisos });
 
 describe('ReportesPage', () => {
   let backend: HttpTestingController;

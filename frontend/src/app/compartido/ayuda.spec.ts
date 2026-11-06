@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '../core/auth/auth.service';
-import { Usuario } from '../core/modelos';
+import { Rol, Usuario } from '../core/modelos';
+import { TutorialService } from '../core/tutorial.service';
 import { Ayuda, AyudaBoton } from './ayuda';
 
 const AYUDA: Ayuda = {
@@ -16,8 +17,8 @@ const AYUDA: Ayuda = {
 describe('AyudaBoton', () => {
   let fixture: ComponentFixture<AyudaBoton>;
 
-  function crear(permisos: string[]) {
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'MIEMBRO', activo: true, permisos };
+  function crear(permisos: string[], rol: Rol = 'MIEMBRO') {
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol, activo: true, tutorial_visto: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     fixture = TestBed.createComponent(AyudaBoton);
     fixture.componentRef.setInput('ayuda', AYUDA);
@@ -50,5 +51,20 @@ describe('AyudaBoton', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(el().querySelector('dialog')).toBeNull();
+  });
+
+  it('el staff puede volver a ver el recorrido del panel; la familia no lo ve', async () => {
+    crear(['alumnos.ver_propios']);
+    await abrir();
+    expect(el().textContent).not.toContain('Ver el recorrido');
+
+    TestBed.resetTestingModule();
+    crear(['alumnos.ver_todos'], 'ADMIN');
+    await abrir();
+    [...el().querySelectorAll('button')].find((b) => b.textContent?.includes('Ver el recorrido'))!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(TestBed.inject(TutorialService).activo()).toBe(true);
+    expect(el().querySelector('dialog')).toBeNull(); // la ayuda se cierra para dar paso al recorrido
   });
 });

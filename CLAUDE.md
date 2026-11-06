@@ -64,9 +64,11 @@ saber para seguir trabajando.
   de IA (apagado sin `ANTHROPIC_API_KEY`), habeas data (autorización por alumno y registro de solicitudes con plazos
   en días hábiles, `services/habeas.py`), reportes de ingresos y CSV (`services/reportes.py`), nivel del alumno
   (Iniciación/Avanzado), panel instalable (PWA: el service worker no guarda datos de la API) y preparación para
-  producción. Migraciones hasta la **0029**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
+  producción. Migraciones hasta la **0030**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
 - **Panel (frontend):** secciones en `core/secciones.ts`, pantallas en `paginas/<seccion>/` registradas en `PANTALLAS`
-  de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`. Todas las
+  de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`, tutorial guiado en
+  `core/tutorial.service.ts` (pasos) + `layout/tutorial/` (resalta `data-tutorial="…"`) con el dragón
+  `compartido/dragon.ts`. Todas las
   pantallas usan `compartido/operacion.ts` (`Operacion`: ocupado, mensaje, errorDialogo, abrir, ejecutar, exito,
   error; el error de un popup queda en el popup). Popups `compartido/dialogo.ts`, mensajes `<app-aviso>`, archivos
   `<app-zona-archivos>` (arrastrar y soltar) y `compartido/reducir-imagen.ts`. Acceso a datos en `*.api.ts` por

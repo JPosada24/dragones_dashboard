@@ -6,11 +6,11 @@ import { AuthService } from '../../core/auth/auth.service';
 import { API, Usuario } from '../../core/modelos';
 import { UsuariosPage, generarContrasena } from './usuarios';
 
-const YO: Usuario = { id: 'yo', email: 'dueno@club.com', nombre: 'Dueño', rol: 'SUPERADMIN', activo: true, permisos: ['usuarios.gestionar'] };
+const YO: Usuario = { id: 'yo', email: 'dueno@club.com', nombre: 'Dueño', rol: 'SUPERADMIN', activo: true, tutorial_visto: true, permisos: ['usuarios.gestionar'] };
 const CUENTAS = [
   { ...YO, vinculado_a: null },
-  { id: 'u2', email: 'coach@club.com', nombre: 'Ana Coach', rol: 'ENTRENADOR', activo: true, permisos: [], vinculado_a: null },
-  { id: 'u3', email: 'marta@club.com', nombre: 'Marta Gómez', rol: 'MIEMBRO', activo: true, permisos: [], vinculado_a: 'Acudiente de F001 Laura' },
+  { id: 'u2', email: 'coach@club.com', nombre: 'Ana Coach', rol: 'ENTRENADOR', activo: true, tutorial_visto: true, permisos: [], vinculado_a: null },
+  { id: 'u3', email: 'marta@club.com', nombre: 'Marta Gómez', rol: 'MIEMBRO', activo: true, tutorial_visto: true, permisos: [], vinculado_a: 'Acudiente de F001 Laura' },
 ];
 const ROLES = {
   permisos: [

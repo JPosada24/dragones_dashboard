@@ -1,0 +1,123 @@
+// Diálogo a pantalla completa y transparente: el oscurecido lo pone el recuadro del foco (o el velo).
+.tutorial {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+
+  &::backdrop {
+    background: transparent;
+  }
+}
+
+.velo {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 9, 0.72);
+}
+
+// El recuadro deja ver el elemento y oscurece todo lo demás con su sombra.
+.foco {
+  position: absolute;
+  border: 2px solid var(--naranja);
+  border-radius: var(--radio);
+  box-shadow: 0 0 0 9999px rgba(4, 6, 9, 0.72), 0 0 24px var(--naranja-tenue);
+  pointer-events: none;
+  transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+}
+
+.burbuja {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px 14px 10px;
+  border: 1px solid var(--borde-fuerte);
+  border-top: 3px solid var(--naranja);
+  border-radius: var(--radio);
+  background: var(--panel-elevado);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  transition: top 0.3s ease, left 0.3s ease;
+
+  app-dragon {
+    flex-shrink: 0;
+    margin-top: -26px;
+    width: 88px;
+    height: 88px;
+  }
+}
+
+.texto {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+
+  h2 {
+    margin: 0;
+    font: 700 16px var(--f-titulo);
+    color: var(--texto-blanco);
+  }
+
+  p {
+    margin: 0;
+    font: 400 12.5px/1.55 var(--f-texto);
+    color: var(--texto-2);
+  }
+}
+
+.progreso {
+  font-size: 10.5px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--naranja) !important;
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.crece {
+  flex: 1;
+}
+
+.saltar {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: 500 12px var(--f-texto);
+  color: var(--texto-3);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--texto);
+  }
+}
+
+@media (max-width: 420px) {
+  .burbuja app-dragon {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foco,
+  .burbuja {
+    transition: none;
+  }
+}

@@ -5,6 +5,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Tutorial guiado del panel con Brasa, el dragón del club** (ilustración vectorial propia, tres poses): la primera
+  vez que una cuenta del staff entra, recorre en menos de un minuto solo las secciones que esa persona tiene en su
+  menú. Se puede saltar y volver a ver desde la ayuda «?». Lo guarda el servidor por cuenta
+  (`usuarios.tutorial_visto_en`, migración 0030; `POST /auth/tutorial`), así no se repite en otro dispositivo.
 - **Anuncio (flyer) de los torneos:** se adjunta al crear o editar un torneo y el sitio lo muestra junto a su
   información mientras las inscripciones estén abiertas (`GET /publico/torneos/{id}/anuncio`; un torneo cerrado,
   cancelado o eliminado deja de exponerlo). **«Pasar a realizados»** copia nombre, fecha, lugar y flyer a Torneos

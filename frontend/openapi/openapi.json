@@ -6185,6 +6185,10 @@
             "title": "Rol",
             "type": "string"
           },
+          "tutorial_visto": {
+            "title": "Tutorial Visto",
+            "type": "boolean"
+          },
           "vinculado_a": {
             "anyOf": [
               {
@@ -6203,7 +6207,8 @@
           "nombre",
           "rol",
           "activo",
-          "permisos"
+          "permisos",
+          "tutorial_visto"
         ],
         "title": "UsuarioListaOut",
         "type": "object"
@@ -6243,6 +6248,10 @@
             ],
             "title": "Rol",
             "type": "string"
+          },
+          "tutorial_visto": {
+            "title": "Tutorial Visto",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6251,7 +6260,8 @@
           "nombre",
           "rol",
           "activo",
-          "permisos"
+          "permisos",
+          "tutorial_visto"
         ],
         "title": "UsuarioOut",
         "type": "object"
@@ -7861,6 +7871,26 @@
           }
         },
         "summary": "Refrescar",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/tutorial": {
+      "post": {
+        "description": "Marca que la cuenta ya vio (o saltó) el tutorial guiado: no vuelve a salir solo, en ningún dispositivo.",
+        "operationId": "tutorial_visto_api_v1_auth_tutorial_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tutorial Visto",
         "tags": [
           "auth"
         ]

@@ -75,4 +75,5 @@ def usuario_a_out(usuario: Usuario) -> UsuarioOut:
         rol=usuario.rol.codigo,
         activo=usuario.activo,
         permisos=usuario.permisos_codigos,
+        tutorial_visto=usuario.tutorial_visto_en is not None,
     )

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 
 import { AuthService } from '../core/auth/auth.service';
+import { TutorialService } from '../core/tutorial.service';
 import { Dialogo } from './dialogo';
 
 /** Explicación de una pantalla: pasos o reglas, y una nota final. Texto plano (nunca HTML). */
@@ -36,6 +37,11 @@ export interface Ayuda {
             <p class="nota-ayuda">{{ ayuda().nota }}</p>
           }
           <div class="acciones">
+            @if (conTutorial()) {
+              <button type="button" class="boton secundario chico" (click)="verTutorial()">
+                <span class="icono" aria-hidden="true">tour</span> Ver el recorrido del panel
+              </button>
+            }
             <button type="button" class="boton chico" (click)="abierta.set(false)">Entendido</button>
           </div>
         </div>
@@ -96,9 +102,17 @@ export interface Ayuda {
 })
 export class AyudaBoton {
   private readonly auth = inject(AuthService);
+  private readonly tutorial = inject(TutorialService);
 
   readonly ayuda = input.required<Ayuda>();
   protected readonly abierta = signal(false);
+  /** El recorrido es del panel del staff (las familias tienen otro, más simple). */
+  protected readonly conTutorial = computed(() => !!this.auth.usuario() && this.auth.usuario()?.rol !== 'MIEMBRO');
+
+  protected verTutorial(): void {
+    this.abierta.set(false);
+    this.tutorial.iniciar();
+  }
 
   protected readonly pasos = computed(() =>
     this.ayuda().pasos.filter((p) => !p.permisos || this.auth.tieneAlguno(p.permisos)),

@@ -20,6 +20,7 @@
               routerLinkActive="activo"
               [routerLinkActiveOptions]="{ exact: s.ruta === '' }"
               ariaCurrentWhenActive="page"
+              [attr.data-tutorial]="'seccion:' + s.ruta"
             >
               <span class="icono" aria-hidden="true">{{ s.icono }}</span>
               <span>{{ s.etiqueta }}</span>
@@ -48,7 +49,7 @@
       <div class="barra-movil-textos">
         <div class="barra-movil-titulo">
           <span class="recorte">{{ encabezado().titulo }}</span>
-          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" /> }
+          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" data-tutorial="ayuda" /> }
         </div>
         <div class="barra-movil-sub">{{ encabezado().subtitulo }}</div>
       </div>
@@ -60,7 +61,7 @@
       <div>
         <div class="titulo-fila">
           <h1 class="titulo">{{ encabezado().titulo }}</h1>
-          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" /> }
+          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" data-tutorial="ayuda" /> }
         </div>
         <p class="subtitulo">{{ encabezado().subtitulo }}</p>
       </div>
@@ -81,6 +82,7 @@
         routerLinkActive="activo"
         [routerLinkActiveOptions]="{ exact: s.ruta === '' }"
         ariaCurrentWhenActive="page"
+        [attr.data-tutorial]="'seccion:' + s.ruta"
       >
         <span class="icono" aria-hidden="true">{{ s.icono }}</span>
         <span>{{ s.etiqueta }}</span>
@@ -112,3 +114,5 @@
     </div>
   }
 </div>
+
+<app-tutorial />

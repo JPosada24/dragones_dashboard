@@ -92,3 +92,11 @@ def logout(
 @router.get("/me", response_model=UsuarioOut)
 def me(usuario: Usuario = Depends(usuario_actual)) -> UsuarioOut:
     return usuario_a_out(usuario)
+
+
+@router.post("/tutorial", status_code=status.HTTP_204_NO_CONTENT)
+def tutorial_visto(usuario: Usuario = Depends(usuario_actual), db: Session = Depends(get_db)) -> Response:
+    """Marca que la cuenta ya vio (o saltó) el tutorial guiado: no vuelve a salir solo, en ningún dispositivo."""
+    servicio.marcar_tutorial_visto(db, usuario)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

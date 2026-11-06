@@ -12,7 +12,7 @@ describe('AsistentePage', () => {
 
   async function cargar(estado: object, permisos = ['agente.usar', 'alumnos.ver_todos']) {
     TestBed.configureTestingModule({ imports: [AsistentePage], providers: [provideHttpClient(), provideHttpClientTesting()] });
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, tutorial_visto: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(AsistentePage);

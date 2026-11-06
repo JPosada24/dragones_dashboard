@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith, tap } from 'rxjs';
@@ -7,12 +7,14 @@ import { Ayuda, AyudaBoton } from '../compartido/ayuda';
 import { AuthService } from '../core/auth/auth.service';
 import { NOMBRE_ROL } from '../core/modelos';
 import { NotificacionesService } from '../core/notificaciones.service';
+import { TutorialService } from '../core/tutorial.service';
 import { Campana } from './campana/campana';
+import { Tutorial } from './tutorial/tutorial';
 import { GRUPOS, PESTANAS_MOVIL, Seccion, seccionesVisibles } from '../core/secciones';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Campana, AyudaBoton],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Campana, AyudaBoton, Tutorial],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,6 +27,16 @@ export class Shell {
 
   protected readonly usuario = this.auth.usuario;
   protected readonly menuAbierto = signal(false);
+  private readonly tutorial = inject(TutorialService);
+
+  constructor() {
+    // La primera vez que una cuenta del staff entra, Brasa le presenta el panel (una sola vez por cuenta).
+    effect(() => {
+      if (this.usuario() && untracked(() => this.tutorial.debeMostrarse() && !this.tutorial.activo())) {
+        untracked(() => this.tutorial.iniciar());
+      }
+    });
+  }
 
   protected readonly secciones = computed(() => {
     this.usuario(); // se recalcula si cambia el usuario

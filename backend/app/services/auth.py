@@ -139,3 +139,10 @@ def cerrar_sesion(db: Session, token_plano: str) -> None:
         .values(revocado_en=datetime.now(UTC))
     )
     db.commit()
+
+
+def marcar_tutorial_visto(db: Session, usuario: Usuario) -> None:
+    """Queda la primera vez: volver a verlo desde la ayuda no cambia la fecha."""
+    if usuario.tutorial_visto_en is None:
+        usuario.tutorial_visto_en = datetime.now(UTC)
+        db.flush()

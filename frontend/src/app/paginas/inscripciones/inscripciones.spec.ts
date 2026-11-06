@@ -43,7 +43,7 @@ describe('InscripcionesPage', () => {
       imports: [InscripcionesPage],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
     });
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, tutorial_visto: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(InscripcionesPage);

@@ -26,6 +26,7 @@ class UsuarioOut(BaseModel):
     rol: RolCodigo
     activo: bool
     permisos: list[str]
+    tutorial_visto: bool  # ya vio (o saltó) el tutorial guiado del panel
 
 
 class UsuarioListaOut(UsuarioOut):

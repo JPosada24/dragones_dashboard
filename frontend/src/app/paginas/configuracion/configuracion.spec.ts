@@ -21,7 +21,7 @@ describe('ConfiguracionPage', () => {
 
   async function cargar(permisos: string[]) {
     TestBed.configureTestingModule({ imports: [ConfiguracionPage], providers: [provideHttpClient(), provideHttpClientTesting()] });
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'SUPERADMIN', activo: true, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'SUPERADMIN', activo: true, tutorial_visto: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ConfiguracionPage);
