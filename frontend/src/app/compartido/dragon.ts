@@ -4,9 +4,9 @@ import type { Pose } from '../core/tutorial.service';
 
 /** Imagen de cada pose (WebP con transparencia, ~50 KB, servida por el propio panel: la CSP no deja cargar de afuera). */
 const IMAGEN: Record<Pose, { src: string; ancho: number; alto: number }> = {
-  saluda: { src: 'brasa/saluda.webp', ancho: 397, alto: 512 },
-  senala: { src: 'brasa/senala.webp', ancho: 415, alto: 512 },
-  remata: { src: 'brasa/remata.webp', ancho: 512, alto: 366 },
+  saluda: { src: 'kiira/saluda.webp', ancho: 397, alto: 512 },
+  senala: { src: 'kiira/senala.webp', ancho: 415, alto: 512 },
+  remata: { src: 'kiira/remata.webp', ancho: 512, alto: 366 },
 };
 
 /**

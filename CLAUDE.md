@@ -68,7 +68,7 @@ saber para seguir trabajando.
 - **Panel (frontend):** secciones en `core/secciones.ts`, pantallas en `paginas/<seccion>/` registradas en `PANTALLAS`
   de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`, tutorial guiado en
   `core/tutorial.service.ts` (pasos) + `layout/tutorial/` (resalta `data-tutorial="…"`) con el dragón
-  `compartido/dragon.ts` (imágenes en `public/brasa/`). Todas las
+  `compartido/dragon.ts` (imágenes en `public/kiira/`). Todas las
   pantallas usan `compartido/operacion.ts` (`Operacion`: ocupado, mensaje, errorDialogo, abrir, ejecutar, exito,
   error; el error de un popup queda en el popup). Popups `compartido/dialogo.ts`, mensajes `<app-aviso>`, archivos
   `<app-zona-archivos>` (arrastrar y soltar) y `compartido/reducir-imagen.ts`. Acceso a datos en `*.api.ts` por
