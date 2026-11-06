@@ -53,6 +53,12 @@
     margin-top: -48px;
     width: 92px;
     height: 118px;
+
+    // El remate es horizontal (alas abiertas): más ancho.
+    &[data-pose='remata'] {
+      width: 132px;
+      margin-top: -40px;
+    }
   }
 }
 

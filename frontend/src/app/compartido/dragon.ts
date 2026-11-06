@@ -2,14 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 import type { Pose } from '../core/tutorial.service';
 
-/**
- * Imagen de cada pose (WebP con transparencia, ~50 KB, servida por el propio panel: la CSP no deja cargar imágenes
- * de afuera). Mientras no esté la del remate con el balón nuevo, esa pose usa la del saludo.
- */
+/** Imagen de cada pose (WebP con transparencia, ~50 KB, servida por el propio panel: la CSP no deja cargar de afuera). */
 const IMAGEN: Record<Pose, { src: string; ancho: number; alto: number }> = {
-  saluda: { src: 'brasa/saluda.webp', ancho: 398, alto: 512 },
-  senala: { src: 'brasa/senala.webp', ancho: 420, alto: 512 },
-  remata: { src: 'brasa/saluda.webp', ancho: 398, alto: 512 },
+  saluda: { src: 'brasa/saluda.webp', ancho: 397, alto: 512 },
+  senala: { src: 'brasa/senala.webp', ancho: 415, alto: 512 },
+  remata: { src: 'brasa/remata.webp', ancho: 512, alto: 366 },
 };
 
 /**
