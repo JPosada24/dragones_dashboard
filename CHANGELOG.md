@@ -5,8 +5,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
-- **Tutorial guiado del panel con Brasa, el dragón del club** (ilustración vectorial propia: busto en 3/4 estilo
-  mascota deportiva, con degradados; tres poses): la primera
+- **Tutorial guiado del panel con Brasa, el dragón del club** (estilo animación 3D, imágenes WebP con
+  transparencia en `frontend/public/brasa/`; tres poses): la primera
   vez que una cuenta del staff entra, recorre en menos de un minuto solo las secciones que esa persona tiene en su
   menú. Se puede saltar y volver a ver desde la ayuda «?». Lo guarda el servidor por cuenta
   (`usuarios.tutorial_visto_en`, migración 0030; `POST /auth/tutorial`), así no se repite en otro dispositivo.

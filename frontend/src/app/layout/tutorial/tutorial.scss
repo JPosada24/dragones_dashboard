@@ -47,11 +47,12 @@
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
   transition: top 0.3s ease, left 0.3s ease;
 
+  // Cuerpo entero: asoma por encima de la burbuja.
   app-dragon {
     flex-shrink: 0;
-    margin-top: -26px;
-    width: 88px;
-    height: 88px;
+    margin-top: -48px;
+    width: 92px;
+    height: 118px;
   }
 }
 
@@ -110,8 +111,8 @@
 
 @media (max-width: 420px) {
   .burbuja app-dragon {
-    width: 72px;
-    height: 72px;
+    width: 76px;
+    height: 98px;
   }
 }
 

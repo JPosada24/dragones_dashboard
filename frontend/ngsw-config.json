@@ -14,7 +14,7 @@
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
-        "files": ["/escudo.png", "/icons/**", "/fuentes/**"]
+        "files": ["/escudo.png", "/icons/**", "/fuentes/**", "/brasa/**"]
       }
     }
   ],
