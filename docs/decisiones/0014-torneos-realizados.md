@@ -23,5 +23,8 @@ torneos se jugaron antes de la plataforma y no están ahí.
 
 ## Consecuencias
 
-- Al terminar un torneo de la plataforma hay que agregarlo a mano en Torneos realizados, con su anuncio y resultados.
-  Si se vuelve repetitivo, se puede agregar un botón que copie nombre, fecha y lugar desde Torneos.
+- Los torneos de la plataforma también tienen anuncio (flyer, migración 0029), visible en el sitio solo mientras las
+  inscripciones están abiertas. Al jugarse, **«Pasar a realizados»** copia nombre, fecha, lugar y flyer (a archivos
+  nuevos: borrar uno no deja al otro sin imagen) a una ficha oculta, enlazada con `torneo_id` (único: una sola vez).
+  Solo falta escribir los resultados y publicarla. Como crea contenido del sitio, exige `eventos.gestionar` y
+  `club.editar`.

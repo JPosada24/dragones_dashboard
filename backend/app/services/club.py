@@ -170,12 +170,13 @@ def youtube_id(enlace: str) -> str:
 
 
 # ---------- Vista pública ----------
+def _abiertos():
+    return select(Torneo).where(Torneo.estado == "programado", Torneo.fecha_limite_inscripcion >= fechas.hoy())
+
+
 def torneos_abiertos(db: Session) -> list[tuple[Torneo, int]]:
     """Torneos con inscripciones abiertas y cuántos cupos les quedan."""
-    filas = db.scalars(
-        select(Torneo).where(Torneo.estado == "programado", Torneo.fecha_limite_inscripcion >= fechas.hoy())
-        .order_by(Torneo.fecha_inicio)
-    ).all()
+    filas = db.scalars(_abiertos().order_by(Torneo.fecha_inicio)).all()
     return [(t, max(0, t.cupo_equipos - torneos.resumen(db, t)["ocupados"])) for t in filas]
 
 
@@ -269,5 +270,16 @@ def anuncio_publico(db: Session, torneo_id: uuid.UUID) -> TorneoRealizado:
     """Torneo realizado cuyo anuncio se puede ver en el sitio: publicado, con anuncio y con el sitio publicado."""
     t = db.get(TorneoRealizado, torneo_id)
     if t is None or not t.publicado or not t.anuncio_clave or not perfil(db).publicado:
+        raise NoEncontrado("Anuncio no encontrado.")
+    return t
+
+
+def anuncio_torneo_abierto(db: Session, torneo_id: uuid.UUID) -> Torneo:
+    """Flyer de un torneo que el sitio muestra: con inscripciones abiertas, con anuncio y con el sitio publicado.
+
+    Un torneo cancelado, eliminado o ya cerrado deja de exponer su anuncio.
+    """
+    t = db.scalar(_abiertos().where(Torneo.id == torneo_id))
+    if t is None or not t.anuncio_clave or not perfil(db).publicado:
         raise NoEncontrado("Anuncio no encontrado.")
     return t

@@ -37,6 +37,11 @@ class Torneo(UUIDMixin, TiempoMixin, Base):
     estado: Mapped[str] = mapped_column(String(15), default="programado")
     motivo_cancelacion: Mapped[str | None] = mapped_column(String(255))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
+    # Anuncio (flyer) para el sitio mientras tenga inscripciones abiertas: entero, en dos tamaños, sin metadatos.
+    anuncio_clave: Mapped[str | None] = mapped_column(String(32))
+    anuncio_mini_clave: Mapped[str | None] = mapped_column(String(32))
+    anuncio_ancho: Mapped[int | None] = mapped_column(Integer)
+    anuncio_alto: Mapped[int | None] = mapped_column(Integer)
 
 
 class EquipoTorneo(UUIDMixin, TiempoMixin, Base):

@@ -1,13 +1,16 @@
 import uuid
+from collections.abc import Iterable
 from datetime import date
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente, requiere
+from app.core.almacen import Almacen, get_almacen
 from app.db.session import get_db
 from app.models.acceso import Usuario
 from app.models.torneos import Torneo
+from app.schemas.club import TorneoRealizadoOut
 from app.schemas.torneos import (
     AnularPagoEquipoIn,
     EquipoCrear,
@@ -19,8 +22,9 @@ from app.schemas.torneos import (
     TorneoCrear,
     TorneoOut,
 )
+from app.services import club_panel
 from app.services import torneos as servicio
-from app.services.errores import Prohibido
+from app.services.errores import NoEncontrado, Prohibido
 
 # Los torneos guardan datos de contacto de delegados externos: solo los ve quien los gestiona.
 router = APIRouter(prefix="/torneos", tags=["torneos"])
@@ -32,8 +36,17 @@ def torneo_a_out(db: Session, t: Torneo) -> TorneoOut:
         id=t.id, nombre=t.nombre, rama=t.rama, fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
         fecha_limite_inscripcion=t.fecha_limite_inscripcion, lugar=t.lugar, cupo_equipos=t.cupo_equipos,
         valor_inscripcion=t.valor_inscripcion, estado=t.estado, motivo_cancelacion=t.motivo_cancelacion,
+        anuncio=t.anuncio_clave[:8] if t.anuncio_clave else None, anuncio_ancho=t.anuncio_ancho,
+        anuncio_alto=t.anuncio_alto, realizado_id=(r.id if (r := club_panel.realizado_de(db, t)) else None),
         **servicio.resumen(db, t),
     )
+
+
+def _confirmar(db: Session, almacen: Almacen, claves: Iterable[str]) -> None:
+    """Confirma la transacción y solo entonces borra los archivos que quedaron sin uso."""
+    db.commit()
+    for clave in claves:
+        almacen.borrar(clave)
 
 
 @router.get("", response_model=list[TorneoOut])
@@ -144,3 +157,57 @@ def anular_pago(
     servicio.anular_pago(db, equipo, pago_id, motivo=datos.motivo, actor=actor, ip=ip_cliente(request))
     db.commit()
     return EquipoOut.model_validate(equipo)
+
+
+# ---------- Anuncio (flyer) para el sitio ----------
+@router.post("/{torneo_id}/anuncio", response_model=TorneoOut)
+def subir_anuncio(
+    torneo_id: uuid.UUID,
+    request: Request,
+    archivo: UploadFile = File(),
+    actor: Usuario = Depends(GESTIONAR),
+    db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> TorneoOut:
+    t = servicio.obtener(db, torneo_id)
+    anteriores = club_panel.cambiar_anuncio(
+        db, t, club_panel.leer_foto(db, archivo.file), almacen=almacen, actor=actor, ip=ip_cliente(request),
+    )
+    _confirmar(db, almacen, anteriores)
+    return torneo_a_out(db, t)
+
+
+@router.delete("/{torneo_id}/anuncio", response_model=TorneoOut)
+def quitar_anuncio(
+    torneo_id: uuid.UUID, request: Request, actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> TorneoOut:
+    t = servicio.obtener(db, torneo_id)
+    _confirmar(db, almacen, club_panel.quitar_anuncio(db, t, actor=actor, ip=ip_cliente(request)))
+    return torneo_a_out(db, t)
+
+
+@router.get("/{torneo_id}/anuncio")
+def ver_anuncio(
+    torneo_id: uuid.UUID, tam: str = Query("mini", pattern="^(mini|grande)$"), _: Usuario = Depends(GESTIONAR),
+    db: Session = Depends(get_db), almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    t = servicio.obtener(db, torneo_id)
+    if not t.anuncio_clave or not t.anuncio_mini_clave:
+        raise NoEncontrado("El torneo no tiene anuncio.")
+    datos = almacen.leer(t.anuncio_mini_clave if tam == "mini" else t.anuncio_clave)
+    return Response(datos, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+
+@router.post("/{torneo_id}/realizado", response_model=TorneoRealizadoOut, status_code=status.HTTP_201_CREATED)
+def pasar_a_realizado(
+    torneo_id: uuid.UUID, request: Request, actor: Usuario = Depends(GESTIONAR),
+    _: Usuario = Depends(requiere("club.editar")),  # crea contenido del sitio: exige también ese permiso
+    db: Session = Depends(get_db), almacen: Almacen = Depends(get_almacen),
+) -> TorneoRealizadoOut:
+    """Copia el torneo (nombre, fecha, lugar y anuncio) a «Torneos realizados», oculto hasta que tenga resultados."""
+    r = club_panel.pasar_a_realizado(
+        db, servicio.obtener(db, torneo_id), almacen=almacen, actor=actor, ip=ip_cliente(request),
+    )
+    db.commit()
+    return TorneoRealizadoOut.model_validate(r)

@@ -58,6 +58,10 @@ class TorneoOut(BaseModel):
     confirmados: int
     en_espera: int
     recaudado: int
+    anuncio: str | None = None  # versión del flyer (cambia con cada uno nuevo); None = sin anuncio
+    anuncio_ancho: int | None = None
+    anuncio_alto: int | None = None
+    realizado_id: uuid.UUID | None = None  # ya se pasó a «Torneos realizados» (id de esa ficha)
 
 
 class MotivoIn(_Entrada):

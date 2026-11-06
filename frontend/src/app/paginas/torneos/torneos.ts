@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 
 import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
@@ -9,6 +11,8 @@ import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { diasEntre, isoLocal } from '../../compartido/fechas';
 import { PesosPipe } from '../../compartido/pesos.pipe';
+import { reducirImagen } from '../../compartido/reducir-imagen';
+import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { numeroWhatsApp } from '../../compartido/whatsapp';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
@@ -27,7 +31,7 @@ const torneoUrl = (id: string) => `${API}/torneos/${encodeURIComponent(id)}`;
 
 @Component({
   selector: 'app-torneos',
-  imports: [DatePipe, ReactiveFormsModule, Aviso, Dialogo, PesosPipe],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, ZonaArchivos],
   templateUrl: './torneos.html',
   styleUrl: './torneos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +44,8 @@ export class TorneosPage implements OnInit {
 
   protected readonly puedeCobrar = computed(() => this.auth.tiene('pagos.registrar'));
   protected readonly puedeAnular = computed(() => this.auth.tiene('pagos.anular'));
+  /** Pasar un torneo a «Torneos realizados» crea contenido del sitio: exige también editarlo. */
+  protected readonly puedeEditarSitio = computed(() => this.auth.tiene('club.editar'));
   protected readonly estadoEquipo = ESTADO_EQUIPO;
   protected readonly hoy = isoLocal(new Date());
 
@@ -62,6 +68,10 @@ export class TorneosPage implements OnInit {
   protected readonly pagando = signal<Equipo | null>(null);
   protected readonly retirando = signal<Equipo | null>(null);
   protected readonly anulando = signal<{ equipo: Equipo; pago: PagoEquipo } | null>(null);
+  /** Anuncio (flyer) en la ventana de edición: el actual (blob:, pedido con el token), el elegido o quitarlo. */
+  protected readonly anuncioActual = signal<string | null>(null);
+  protected archivoAnuncio: File | null = null;
+  protected readonly quitarAnuncio = signal(false);
 
   protected readonly formTorneo = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
@@ -117,6 +127,10 @@ export class TorneosPage implements OnInit {
     };
   });
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.soltarAnuncio());
+  }
+
   ngOnInit(): void {
     this.cargar();
   }
@@ -158,7 +172,43 @@ export class TorneosPage implements OnInit {
   // ---------- Torneo: crear / editar ----------
   protected abrirNuevo(): void {
     this.formTorneo.reset();
+    this.prepararAnuncio(null);
     this.op.abrir(() => this.editando.set('nuevo'));
+  }
+
+  private soltarAnuncio(): void {
+    const url = this.anuncioActual();
+    if (url) URL.revokeObjectURL(url);
+    this.anuncioActual.set(null);
+  }
+
+  private prepararAnuncio(t: Torneo | null): void {
+    this.soltarAnuncio();
+    this.archivoAnuncio = null;
+    this.quitarAnuncio.set(false);
+    if (!t?.anuncio) return;
+    this.http.get(`${torneoUrl(t.id)}/anuncio`, { responseType: 'blob' }).subscribe({
+      next: (blob) => { if (this.editando() === t) this.anuncioActual.set(URL.createObjectURL(blob)); },
+    });
+  }
+
+  protected elegirAnuncio(archivos: File[]): void {
+    this.archivoAnuncio = archivos[0] ?? null;
+    if (this.archivoAnuncio) {
+      this.quitarAnuncio.set(false);
+      const original = this.archivoAnuncio;
+      void reducirImagen(original).then((f) => { if (this.archivoAnuncio === original) this.archivoAnuncio = f; });
+    }
+  }
+
+  /** Tras guardar los datos: sube el flyer elegido o quita el actual (si se pidió). */
+  private pasoAnuncio(t: Torneo): Observable<Torneo> | null {
+    if (this.archivoAnuncio) {
+      const datos = new FormData();
+      datos.append('archivo', this.archivoAnuncio);
+      return this.http.post<Torneo>(`${torneoUrl(t.id)}/anuncio`, datos);
+    }
+    return this.quitarAnuncio() && t.anuncio ? this.http.delete<Torneo>(`${torneoUrl(t.id)}/anuncio`) : null;
   }
 
   protected abrirEditar(t: Torneo): void {
@@ -168,6 +218,7 @@ export class TorneosPage implements OnInit {
       valor_inscripcion: t.valor_inscripcion,
     });
     this.op.abrir(() => this.editando.set(t));
+    this.prepararAnuncio(t);
   }
 
   protected guardarTorneo(): void {
@@ -180,12 +231,32 @@ export class TorneosPage implements OnInit {
       ? this.http.post<Torneo>(`${API}/torneos`, cuerpo)
       : this.http.patch<Torneo>(torneoUrl(modo.id), cuerpo);
     this.op.ejecutar(peticion, (t) => {
-      this.editando.set(null);
-      this.cargar();
-      this.op.exito(modo === 'nuevo'
-        ? `«${t.nombre}» creado. Los entrenamientos de esas fechas se cancelan solos.`
-        : `«${t.nombre}» actualizado.`);
+      const listo = () => {
+        this.editando.set(null);
+        this.soltarAnuncio();
+        this.cargar();
+        this.op.exito(modo === 'nuevo'
+          ? `«${t.nombre}» creado. Los entrenamientos de esas fechas se cancelan solos.`
+          : `«${t.nombre}» actualizado.`);
+      };
+      const anuncio = this.pasoAnuncio(t);
+      if (!anuncio) return listo();
+      // Los datos ya quedaron guardados: si el flyer falla, el error se ve en la ventana y se puede reintentar.
+      if (modo === 'nuevo') this.editando.set(t);
+      this.op.ejecutar(anuncio, listo);
     });
+  }
+
+  /** Torneo ya empezado y no pasado aún a «Torneos realizados». */
+  protected puedePasar(t: Torneo): boolean {
+    return t.estado === 'programado' && t.fecha_inicio <= this.hoy && !t.realizado_id && this.puedeEditarSitio();
+  }
+
+  protected pasarARealizados(t: Torneo): void {
+    this.op.ejecutar(this.http.post(`${torneoUrl(t.id)}/realizado`, {}), () => {
+      this.cargar();
+      this.op.exito(`«${t.nombre}» pasó a Torneos realizados, oculto en el sitio. Agrégale los resultados y publícalo desde Perfil del club.`);
+    }, { enDialogo: false });
   }
 
   protected abrirCancelar(t: Torneo): void {

@@ -281,6 +281,9 @@ class TorneoPublicoOut(BaseModel):
     lugar: str | None
     valor_inscripcion: int
     cupos_libres: int
+    anuncio: str | None = None  # versión del flyer; None = sin anuncio
+    anuncio_ancho: int | None = None
+    anuncio_alto: int | None = None
 
 
 class CifrasOut(BaseModel):

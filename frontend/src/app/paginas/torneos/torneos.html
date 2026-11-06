@@ -54,6 +54,12 @@
             <h2>{{ t.nombre }}</h2>
             <span class="chip-rama capital">{{ t.rama }}</span>
             @if (t.estado === 'cancelado') { <span class="chip-cancelado">Cancelado</span> }
+            @if (t.anuncio) {
+              <span class="chip-anuncio" title="Tiene anuncio (flyer) para el sitio"><span class="icono" aria-hidden="true">image</span> Con anuncio</span>
+            }
+            @if (t.realizado_id) {
+              <a class="chip-realizado" routerLink="/perfil-club/torneos"><span class="icono" aria-hidden="true">emoji_events</span> En torneos realizados</a>
+            }
           </div>
           <p class="detalle">
             {{ t.fecha_inicio | date: 'EEE d MMM' }}@if (t.fecha_fin !== t.fecha_inicio) { – {{ t.fecha_fin | date: 'EEE d MMM' }} }
@@ -79,6 +85,12 @@
             <button type="button" class="boton chico" (click)="verEquipos(t)">
               <span class="icono" aria-hidden="true">groups</span> Clubes
             </button>
+            @if (puedePasar(t)) {
+              <button type="button" class="boton chico secundario" [disabled]="ocupado()" (click)="pasarARealizados(t)"
+                      title="Copia nombre, fecha, lugar y anuncio a la sección «Torneos realizados» del sitio">
+                <span class="icono" aria-hidden="true">history</span> Pasar a realizados
+              </button>
+            }
             @if (t.estado === 'programado') {
               <button type="button" class="boton-icono" (click)="abrirEditar(t)" [attr.aria-label]="'Editar ' + t.nombre" title="Editar">
                 <span class="icono" aria-hidden="true">edit</span></button>
@@ -128,6 +140,19 @@
           <input class="control mono" type="number" min="2" max="200" step="1" formControlName="cupo_equipos" placeholder="Ej.: 18" /></label>
         <label class="campo"><span class="etiqueta">Valor por equipo (pesos)</span>
           <input class="control mono" type="number" min="0" step="1" inputmode="numeric" formControlName="valor_inscripcion" placeholder="Ej.: 150000 (0 = gratis)" /></label>
+      </div>
+      <div class="campo">
+        <span class="etiqueta">Anuncio para el sitio <span class="nota-campo">opcional</span></span>
+        <div class="anuncio-fila">
+          @if (anuncioActual() && !quitarAnuncio()) {
+            <img class="anuncio-previa" [src]="anuncioActual()" alt="Anuncio actual" width="48" height="60" />
+          }
+          <app-zona-archivos class="crece" etiqueta="Elegir flyer" (elegidos)="elegirAnuncio($event)" />
+          @if (modo !== 'nuevo' && modo.anuncio && !quitarAnuncio()) {
+            <button type="button" class="enlace-rojo" (click)="quitarAnuncio.set(true)">Quitar anuncio</button>
+          }
+        </div>
+        <span class="nota-campo">El flyer del torneo. Se ve en el sitio mientras las inscripciones estén abiertas; se guarda entero y sin los datos ocultos del archivo.</span>
       </div>
       @if (modo !== 'nuevo') {
         <p class="nota-chica">Un valor nuevo aplica a los clubes que se inscriban después. Si subes el cupo, entran los primeros de la lista de espera.</p>

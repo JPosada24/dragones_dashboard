@@ -5,6 +5,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Anuncio (flyer) de los torneos:** se adjunta al crear o editar un torneo y el sitio lo muestra junto a su
+  información mientras las inscripciones estén abiertas (`GET /publico/torneos/{id}/anuncio`; un torneo cerrado,
+  cancelado o eliminado deja de exponerlo). **«Pasar a realizados»** copia nombre, fecha, lugar y flyer a Torneos
+  realizados, oculto hasta tener resultados; exige también `club.editar` (migración 0029).
 - **Torneos realizados:** nueva pestaña en Perfil del club para la sección del sitio con los torneos ya jugados:
   nombre, fecha, lugar, reseña, anuncio (afiche entero, sin metadatos) y álbum de fotos opcional. Tabla propia,
   aparte de la operación de Torneos (migración 0028, decisión 0014). Público en `GET /publico/club`

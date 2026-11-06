@@ -1217,6 +1217,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/publico/torneos/{torneo_id}/anuncio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anuncio Torneo Abierto
+         * @description Flyer de un torneo con inscripciones abiertas. El enlace lleva ?v=… y cambia con cada flyer nuevo.
+         */
+        get: operations["anuncio_torneo_abierto_api_v1_publico_torneos__torneo_id__anuncio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/publico/torneos/{torneo_id}/inscripcion": {
         parameters: {
             query?: never;
@@ -1728,6 +1748,25 @@ export interface paths {
         patch: operations["actualizar_api_v1_torneos__torneo_id__patch"];
         trace?: never;
     };
+    "/api/v1/torneos/{torneo_id}/anuncio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ver Anuncio */
+        get: operations["ver_anuncio_api_v1_torneos__torneo_id__anuncio_get"];
+        put?: never;
+        /** Subir Anuncio */
+        post: operations["subir_anuncio_api_v1_torneos__torneo_id__anuncio_post"];
+        /** Quitar Anuncio */
+        delete: operations["quitar_anuncio_api_v1_torneos__torneo_id__anuncio_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/torneos/{torneo_id}/cancelar": {
         parameters: {
             query?: never;
@@ -1808,6 +1847,26 @@ export interface paths {
         put?: never;
         /** Retirar */
         post: operations["retirar_api_v1_torneos__torneo_id__equipos__equipo_id__retirar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torneos/{torneo_id}/realizado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pasar A Realizado
+         * @description Copia el torneo (nombre, fecha, lugar y anuncio) a «Torneos realizados», oculto hasta que tenga resultados.
+         */
+        post: operations["pasar_a_realizado_api_v1_torneos__torneo_id__realizado_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2270,6 +2329,11 @@ export interface components {
         };
         /** Body_subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post */
         Body_subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post: {
+            /** Archivo */
+            archivo: string;
+        };
+        /** Body_subir_anuncio_api_v1_torneos__torneo_id__anuncio_post */
+        Body_subir_anuncio_api_v1_torneos__torneo_id__anuncio_post: {
             /** Archivo */
             archivo: string;
         };
@@ -3825,6 +3889,12 @@ export interface components {
         };
         /** TorneoOut */
         TorneoOut: {
+            /** Anuncio */
+            anuncio?: string | null;
+            /** Anuncio Alto */
+            anuncio_alto?: number | null;
+            /** Anuncio Ancho */
+            anuncio_ancho?: number | null;
             /** Confirmados */
             confirmados: number;
             /** Cupo Equipos */
@@ -3869,6 +3939,8 @@ export interface components {
              * @enum {string}
              */
             rama: "masculina" | "femenina";
+            /** Realizado Id */
+            realizado_id?: string | null;
             /** Recaudado */
             recaudado: number;
             /** Valor Inscripcion */
@@ -3904,6 +3976,12 @@ export interface components {
         };
         /** TorneoPublicoOut */
         TorneoPublicoOut: {
+            /** Anuncio */
+            anuncio?: string | null;
+            /** Anuncio Alto */
+            anuncio_alto?: number | null;
+            /** Anuncio Ancho */
+            anuncio_ancho?: number | null;
             /** Cupos Libres */
             cupos_libres: number;
             /**
@@ -6971,6 +7049,39 @@ export interface operations {
             };
         };
     };
+    anuncio_torneo_abierto_api_v1_publico_torneos__torneo_id__anuncio_get: {
+        parameters: {
+            query?: {
+                tam?: string;
+            };
+            header?: never;
+            path: {
+                torneo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     inscribir_club_api_v1_publico_torneos__torneo_id__inscripcion_post: {
         parameters: {
             query?: never;
@@ -8104,6 +8215,105 @@ export interface operations {
             };
         };
     };
+    ver_anuncio_api_v1_torneos__torneo_id__anuncio_get: {
+        parameters: {
+            query?: {
+                tam?: string;
+            };
+            header?: never;
+            path: {
+                torneo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subir_anuncio_api_v1_torneos__torneo_id__anuncio_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_subir_anuncio_api_v1_torneos__torneo_id__anuncio_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TorneoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quitar_anuncio_api_v1_torneos__torneo_id__anuncio_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TorneoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cancelar_api_v1_torneos__torneo_id__cancelar_post: {
         parameters: {
             query?: never;
@@ -8301,6 +8511,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetiroOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pasar_a_realizado_api_v1_torneos__torneo_id__realizado_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TorneoRealizadoOut"];
                 };
             };
             /** @description Validation Error */

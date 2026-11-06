@@ -1205,6 +1205,20 @@
         "title": "Body_subir_anuncio_api_v1_club_torneos_realizados__torneo_id__anuncio_post",
         "type": "object"
       },
+      "Body_subir_anuncio_api_v1_torneos__torneo_id__anuncio_post": {
+        "properties": {
+          "archivo": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Archivo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "archivo"
+        ],
+        "title": "Body_subir_anuncio_api_v1_torneos__torneo_id__anuncio_post",
+        "type": "object"
+      },
       "Body_subir_documento_api_v1_alumnos__alumno_id__documentos_post": {
         "properties": {
           "archivo": {
@@ -5460,6 +5474,39 @@
       },
       "TorneoOut": {
         "properties": {
+          "anuncio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio"
+          },
+          "anuncio_alto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio Alto"
+          },
+          "anuncio_ancho": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio Ancho"
+          },
           "confirmados": {
             "title": "Confirmados",
             "type": "integer"
@@ -5538,6 +5585,18 @@
             ],
             "title": "Rama",
             "type": "string"
+          },
+          "realizado_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realizado Id"
           },
           "recaudado": {
             "title": "Recaudado",
@@ -5631,6 +5690,39 @@
       },
       "TorneoPublicoOut": {
         "properties": {
+          "anuncio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio"
+          },
+          "anuncio_alto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio Alto"
+          },
+          "anuncio_ancho": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anuncio Ancho"
+          },
           "cupos_libres": {
             "title": "Cupos Libres",
             "type": "integer"
@@ -11074,6 +11166,59 @@
         ]
       }
     },
+    "/api/v1/publico/torneos/{torneo_id}/anuncio": {
+      "get": {
+        "description": "Flyer de un torneo con inscripciones abiertas. El enlace lleva ?v=… y cambia con cada flyer nuevo.",
+        "operationId": "anuncio_torneo_abierto_api_v1_publico_torneos__torneo_id__anuncio_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tam",
+            "required": false,
+            "schema": {
+              "default": "mini",
+              "pattern": "^(mini|grande)$",
+              "title": "Tam",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anuncio Torneo Abierto",
+        "tags": [
+          "sitio público"
+        ]
+      }
+    },
     "/api/v1/publico/torneos/{torneo_id}/inscripcion": {
       "post": {
         "operationId": "inscribir_club_api_v1_publico_torneos__torneo_id__inscripcion_post",
@@ -12930,6 +13075,165 @@
         ]
       }
     },
+    "/api/v1/torneos/{torneo_id}/anuncio": {
+      "delete": {
+        "operationId": "quitar_anuncio_api_v1_torneos__torneo_id__anuncio_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Quitar Anuncio",
+        "tags": [
+          "torneos"
+        ]
+      },
+      "get": {
+        "operationId": "ver_anuncio_api_v1_torneos__torneo_id__anuncio_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tam",
+            "required": false,
+            "schema": {
+              "default": "mini",
+              "pattern": "^(mini|grande)$",
+              "title": "Tam",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ver Anuncio",
+        "tags": [
+          "torneos"
+        ]
+      },
+      "post": {
+        "operationId": "subir_anuncio_api_v1_torneos__torneo_id__anuncio_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_subir_anuncio_api_v1_torneos__torneo_id__anuncio_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subir Anuncio",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
     "/api/v1/torneos/{torneo_id}/cancelar": {
       "post": {
         "operationId": "cancelar_api_v1_torneos__torneo_id__cancelar_post",
@@ -13305,6 +13609,55 @@
           }
         ],
         "summary": "Retirar",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
+    "/api/v1/torneos/{torneo_id}/realizado": {
+      "post": {
+        "description": "Copia el torneo (nombre, fecha, lugar y anuncio) a «Torneos realizados», oculto hasta que tenga resultados.",
+        "operationId": "pasar_a_realizado_api_v1_torneos__torneo_id__realizado_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TorneoRealizadoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pasar A Realizado",
         "tags": [
           "torneos"
         ]

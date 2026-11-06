@@ -110,6 +110,8 @@ export const AYUDAS: Record<string, Ayuda> = {
       { titulo: 'Cupo', texto: 'Cada torneo tiene un cupo de equipos. Si se llena, los nuevos quedan en lista de espera y entran solos cuando alguien se retira.' },
       { titulo: 'Pagos', texto: 'Cada equipo paga la inscripción fijada en el torneo; se aceptan abonos y queda confirmado al completar.' },
       { titulo: 'Entrenamientos', texto: 'Los días de torneo se cancelan los entrenamientos; si el torneo se cancela, vuelven.' },
+      { titulo: 'Anuncio', texto: 'Adjunta el flyer al crear o editar el torneo: el sitio lo muestra junto a la información mientras las inscripciones estén abiertas.' },
+      { titulo: 'Al terminar', texto: '«Pasar a realizados» copia nombre, fecha, lugar y flyer a Perfil del club → Torneos realizados, oculto hasta que le agregues los resultados.' },
     ],
   },
   'perfil-club': {

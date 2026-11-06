@@ -9,8 +9,10 @@ from typing import Any, BinaryIO
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import fechas
 from app.models.acceso import Usuario
 from app.models.club import Album, Foto, IntegranteEquipo, TorneoRealizado, Video
+from app.models.torneos import Torneo
 from app.services import configuracion
 from app.services.club import (
     MINIATURA_ANUNCIO,
@@ -230,8 +232,19 @@ def editar_torneo_realizado(
     return t
 
 
-def _claves_anuncio(t: TorneoRealizado) -> list[str]:
+# El anuncio vive igual en un torneo abierto (flyer) y en uno realizado: mismas columnas anuncio_*.
+Anunciable = Torneo | TorneoRealizado
+
+
+def _claves_anuncio(t: Anunciable) -> list[str]:
     return [c for c in (t.anuncio_clave, t.anuncio_mini_clave) if c]
+
+
+def _auditar_anuncio(db: Session, t: Anunciable, accion: str, actor: Usuario, ip: str | None) -> None:
+    if isinstance(t, Torneo):
+        auditar(db, f"torneo.{accion}", "torneo", t.id, actor, ip)
+    else:
+        auditar(db, f"club.torneo_realizado_{accion}", "torneo_realizado", t.id, actor, ip)
 
 
 def eliminar_torneo_realizado(db: Session, t: TorneoRealizado, *, actor: Usuario, ip: str | None) -> list[str]:
@@ -242,7 +255,7 @@ def eliminar_torneo_realizado(db: Session, t: TorneoRealizado, *, actor: Usuario
 
 
 def cambiar_anuncio(
-    db: Session, t: TorneoRealizado, datos: bytes, *, almacen: Any, actor: Usuario, ip: str | None
+    db: Session, t: Anunciable, datos: bytes, *, almacen: Any, actor: Usuario, ip: str | None
 ) -> list[str]:
     """Anuncio (afiche) entero, sin recortar, en dos tamaños. Devuelve las claves del anterior, para borrarlas."""
     grande, mini, ancho, alto = procesar_foto(datos, miniatura=MINIATURA_ANUNCIO)
@@ -251,12 +264,43 @@ def cambiar_anuncio(
     almacen.guardar(t.anuncio_clave, grande)
     almacen.guardar(t.anuncio_mini_clave, mini)
     t.anuncio_ancho, t.anuncio_alto = ancho, alto
-    auditar(db, "club.torneo_realizado_anuncio", "torneo_realizado", t.id, actor, ip)
+    _auditar_anuncio(db, t, "anuncio", actor, ip)
     return anteriores
 
 
-def quitar_anuncio(db: Session, t: TorneoRealizado, *, actor: Usuario, ip: str | None) -> list[str]:
+def quitar_anuncio(db: Session, t: Anunciable, *, actor: Usuario, ip: str | None) -> list[str]:
     anteriores = _claves_anuncio(t)
     t.anuncio_clave = t.anuncio_mini_clave = t.anuncio_ancho = t.anuncio_alto = None
-    auditar(db, "club.torneo_realizado_anuncio_quitar", "torneo_realizado", t.id, actor, ip)
+    _auditar_anuncio(db, t, "anuncio_quitar", actor, ip)
     return anteriores
+
+
+def realizado_de(db: Session, torneo: Torneo) -> TorneoRealizado | None:
+    return db.scalar(select(TorneoRealizado).where(TorneoRealizado.torneo_id == torneo.id))
+
+
+def pasar_a_realizado(
+    db: Session, torneo: Torneo, *, almacen: Any, actor: Usuario, ip: str | None
+) -> TorneoRealizado:
+    """Copia nombre, fecha, lugar y anuncio del torneo a «Torneos realizados», oculto hasta que le pongan resultados.
+
+    El anuncio se copia a archivos nuevos: borrar uno de los dos nunca deja al otro sin imagen.
+    """
+    if torneo.estado != "programado":
+        raise ErrorNegocio("Un torneo cancelado no se pasa a torneos realizados.")
+    if torneo.fecha_inicio > fechas.hoy():
+        raise ErrorNegocio("El torneo aún no se ha jugado: pásalo cuando empiece.")
+    if realizado_de(db, torneo) is not None:
+        raise ErrorNegocio("Este torneo ya está en Torneos realizados.")
+    t = TorneoRealizado(nombre=torneo.nombre, fecha=torneo.fecha_inicio, lugar=torneo.lugar, publicado=False,
+                        torneo_id=torneo.id)
+    if torneo.anuncio_clave and torneo.anuncio_mini_clave:
+        t.anuncio_clave, t.anuncio_mini_clave = uuid.uuid4().hex, uuid.uuid4().hex
+        almacen.guardar(t.anuncio_clave, almacen.leer(torneo.anuncio_clave))
+        almacen.guardar(t.anuncio_mini_clave, almacen.leer(torneo.anuncio_mini_clave))
+        t.anuncio_ancho, t.anuncio_alto = torneo.anuncio_ancho, torneo.anuncio_alto
+    db.add(t)
+    db.flush()
+    auditar(db, "club.torneo_realizado_crear", "torneo_realizado", t.id, actor, ip,
+            despues={"nombre": t.nombre, "fecha": str(t.fecha), "torneo_id": str(torneo.id)})
+    return t

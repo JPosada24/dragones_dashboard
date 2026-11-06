@@ -48,6 +48,8 @@ def sitio(db: Session = Depends(get_db)) -> SitioOut:
                 id=t.id, nombre=t.nombre, rama=t.rama, fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
                 fecha_limite_inscripcion=t.fecha_limite_inscripcion, lugar=t.lugar,
                 valor_inscripcion=t.valor_inscripcion, cupos_libres=libres,
+                anuncio=t.anuncio_clave[:8] if t.anuncio_clave else None,
+                anuncio_ancho=t.anuncio_ancho, anuncio_alto=t.anuncio_alto,
             )
             for t, libres in d["torneos"]
         ],
@@ -126,5 +128,16 @@ def anuncio_torneo(
 ) -> Response:
     """Anuncio de un torneo realizado publicado. El enlace lleva ?v=… y cambia con cada anuncio nuevo."""
     t = servicio.anuncio_publico(db, torneo_id)
+    datos = almacen.leer(t.anuncio_mini_clave if tam == "mini" else t.anuncio_clave)
+    return Response(datos, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})
+
+
+@router.get("/torneos/{torneo_id}/anuncio")
+def anuncio_torneo_abierto(
+    torneo_id: uuid.UUID, tam: str = Query("mini", pattern="^(mini|grande)$"), db: Session = Depends(get_db),
+    almacen: Almacen = Depends(get_almacen),
+) -> Response:
+    """Flyer de un torneo con inscripciones abiertas. El enlace lleva ?v=… y cambia con cada flyer nuevo."""
+    t = servicio.anuncio_torneo_abierto(db, torneo_id)
     datos = almacen.leer(t.anuncio_mini_clave if tam == "mini" else t.anuncio_clave)
     return Response(datos, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})

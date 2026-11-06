@@ -117,3 +117,6 @@ class TorneoRealizado(UUIDMixin, TiempoMixin, Base):
     anuncio_mini_clave: Mapped[str | None] = mapped_column(String(32))
     anuncio_ancho: Mapped[int | None] = mapped_column(Integer)
     anuncio_alto: Mapped[int | None] = mapped_column(Integer)
+    # Torneo de la plataforma del que salió («Pasar a torneos realizados»); vacío si se cargó a mano.
+    torneo_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("torneos.id", ondelete="SET NULL"), unique=True)

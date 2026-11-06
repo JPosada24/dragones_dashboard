@@ -4,6 +4,7 @@ import { registerLocaleData } from '@angular/common';
 import localeEsCo from '@angular/common/locales/es-CO';
 import { LOCALE_ID } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { isoLocal, sumarDias } from '../../compartido/fechas';
 import { AuthService } from '../../core/auth/auth.service';
@@ -36,7 +37,7 @@ describe('TorneosPage', () => {
   async function cargar(permisos: string[], lista: Torneo[]) {
     TestBed.configureTestingModule({
       imports: [TorneosPage],
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: LOCALE_ID, useValue: 'es-CO' }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: LOCALE_ID, useValue: 'es-CO' }],
     });
     const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol: 'ADMIN', activo: true, permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
@@ -149,5 +150,55 @@ describe('TorneosPage', () => {
     backend.expectOne(`${API}/torneos`).flush([]);
     await estable();
     expect(texto()).toContain('«Copa 1» eliminado');
+  });
+
+  it('sube el flyer del torneo al crearlo', async () => {
+    globalThis.URL.createObjectURL ??= () => 'blob:prueba';
+    globalThis.URL.revokeObjectURL ??= () => undefined;
+    await cargar(ADMIN, []);
+    boton('add Nuevo torneo')!.click();
+    await estable();
+    escribir('[formcontrolname="nombre"]', 'Copa Flyer');
+    escribir('[formcontrolname="rama"]', 'femenina');
+    escribir('[formcontrolname="fecha_inicio"]', isoLocal(sumarDias(HOY, 20)));
+    escribir('[formcontrolname="fecha_fin"]', isoLocal(sumarDias(HOY, 21)));
+    escribir('[formcontrolname="fecha_limite_inscripcion"]', isoLocal(sumarDias(HOY, 10)));
+    escribir('[formcontrolname="valor_inscripcion"]', '150000');
+    const input = ultimo().querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'flyer.jpg', { type: 'image/jpeg' })] });
+    input.dispatchEvent(new Event('change'));
+    boton('Crear torneo', ultimo())!.click();
+    const crear = backend.expectOne(`${API}/torneos`);
+    expect(crear.request.method).toBe('POST');
+    crear.flush(torneo('9', { nombre: 'Copa Flyer' }));
+    const flyer = backend.expectOne(`${API}/torneos/9/anuncio`);
+    expect(flyer.request.method).toBe('POST');
+    expect(flyer.request.body instanceof FormData).toBe(true);
+    flyer.flush(torneo('9', { nombre: 'Copa Flyer', anuncio: 'abcd1234', anuncio_ancho: 1080, anuncio_alto: 1350 }));
+    backend.expectOne(`${API}/torneos`).flush([torneo('9', { nombre: 'Copa Flyer', anuncio: 'abcd1234' })]);
+    await estable();
+    expect(texto()).toContain('«Copa Flyer» creado');
+    expect(el().querySelector('.chip-anuncio')).not.toBeNull();
+  });
+
+  it('pasa un torneo ya jugado a torneos realizados (solo con permiso del sitio)', async () => {
+    const jugado = torneo('5', { fecha_inicio: isoLocal(sumarDias(HOY, -3)), fecha_fin: isoLocal(sumarDias(HOY, -2)) });
+    await cargar([...ADMIN, 'club.editar'], [jugado]);
+    boton('Pasados')!.click();
+    await estable();
+    boton('history Pasar a realizados')!.click();
+    const r = backend.expectOne(`${API}/torneos/5/realizado`);
+    expect(r.request.method).toBe('POST');
+    r.flush({ id: 'r1' });
+    backend.expectOne(`${API}/torneos`).flush([{ ...jugado, realizado_id: 'r1' }]);
+    await estable();
+    expect(texto()).toContain('«Copa 5» pasó a Torneos realizados');
+    expect(boton('history Pasar a realizados')).toBeUndefined();
+    expect(el().querySelector('a.chip-realizado')?.getAttribute('href')).toBe('/perfil-club/torneos');
+  });
+
+  it('sin permiso del sitio no ofrece pasarlo a realizados', async () => {
+    await cargar(ADMIN, [torneo('6', { fecha_inicio: isoLocal(HOY) })]);
+    expect(boton('history Pasar a realizados')).toBeUndefined();
   });
 });
