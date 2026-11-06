@@ -48,6 +48,13 @@ def test_en_el_demo_se_ven_las_cuentas_y_no_se_tocan_usuarios_ni_archivos(modo_d
     assert cliente.get("/api/v1/usuarios", headers=h).status_code == 200
 
 
+def test_en_el_demo_el_tutorial_sale_en_cada_ingreso(modo_demo, client, crear_usuario, auth_header):
+    crear_usuario("admin@club.com", "ADMIN")
+    h = auth_header("admin@club.com")
+    assert client.post("/api/v1/auth/tutorial", headers=h).status_code == 204
+    assert client.get("/api/v1/auth/me", headers=h).json()["tutorial_visto"] is False
+
+
 def test_el_generador_no_corre_fuera_del_demo():
     with pytest.raises(SystemExit, match="solo corre en el demo"):
         script.generar()

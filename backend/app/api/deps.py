@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.security import decodificar_access_token
 from app.db.session import get_db
 from app.models.acceso import Usuario
@@ -75,5 +76,6 @@ def usuario_a_out(usuario: Usuario) -> UsuarioOut:
         rol=usuario.rol.codigo,
         activo=usuario.activo,
         permisos=usuario.permisos_codigos,
-        tutorial_visto=usuario.tutorial_visto_en is not None,
+        # En el demo público el recorrido sale en cada ingreso: quien lo prueba siempre llega por primera vez.
+        tutorial_visto=usuario.tutorial_visto_en is not None and not get_settings().demo,
     )
