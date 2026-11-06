@@ -43,6 +43,12 @@
   </aside>
 
   <div class="principal">
+    @if (esDemo()) {
+      <p class="franja-demo" role="note">
+        <span class="icono" aria-hidden="true">science</span>
+        Demo con datos ficticios · todo se reinicia cada noche
+      </p>
+    }
     <!-- Celular: barra superior -->
     <header class="barra-movil">
       <img src="escudo.png" alt="" width="34" height="34" />

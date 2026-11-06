@@ -91,7 +91,8 @@ saber para seguir trabajando.
   Limitador de intentos en Postgres (`intentos`, 0024) y latido del worker (`latidos`) → `/api/v1/salud/worker`.
   Claves rotables: `DATA_ENCRYPTION_KEY` admite varias (`app.scripts.rotar_clave`) y `SECRET_KEY_ANTERIOR`.
   Observabilidad en `core/observabilidad.py` (X-Request-ID, logs JSON en producción, `SENTRY_DSN` opcional sin datos
-  personales). Guías: `docs/despliegue.md` y `docs/operacion.md`. Desplegado en OVHcloud VPS-2 (Canadá): `panel.dragonesvolleyclub.com`; sitio en Netlify (`dragonesvolleyclub.com`, repo `dvc-website`).
+  personales). Guías: `docs/despliegue.md` y `docs/operacion.md`. Desplegado en OVHcloud VPS-2 (Canadá): `panel.dragonesvolleyclub.com` y el demo público
+  `demo.dragonesvolleyclub.com` (`docker-compose.demo.yml`, `app/scripts/demo.py`, `core/demo.py`; datos ficticios); sitio en Netlify (`dragonesvolleyclub.com`, repo `dvc-website`).
 - **Dependencias:** Python en `requirements*.in`, fijadas con hashes con `pip-compile` (comando en
   `CONTRIBUTING.md`); npm con versiones exactas. Tras cambiar `package.json`, el contenedor del frontend tiene su
   propio `node_modules`: `docker compose exec frontend npm install`.

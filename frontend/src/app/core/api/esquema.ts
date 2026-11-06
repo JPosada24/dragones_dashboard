@@ -698,6 +698,23 @@ export interface paths {
         patch: operations["actualizar_api_v1_configuracion__clave__patch"];
         trace?: never;
     };
+    "/api/v1/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demo */
+        get: operations["demo_api_v1_demo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/habeas": {
         parameters: {
             query?: never;
@@ -2500,6 +2517,25 @@ export interface components {
             tipo: string;
             /** Titulo */
             titulo: string;
+        };
+        /** CuentaDemoOut */
+        CuentaDemoOut: {
+            /** Email */
+            email: string;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Rol
+             * @enum {string}
+             */
+            rol: "SUPERADMIN" | "ADMIN" | "ENTRENADOR" | "MIEMBRO";
+        };
+        /** DemoOut */
+        DemoOut: {
+            /** Clave */
+            clave: string;
+            /** Cuentas */
+            cuentas: components["schemas"]["CuentaDemoOut"][];
         };
         /** DeudaOut */
         DeudaOut: {
@@ -6085,6 +6121,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_api_v1_demo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoOut"];
                 };
             };
         };

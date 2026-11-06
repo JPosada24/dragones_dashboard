@@ -7,6 +7,7 @@ import { Ayuda, AyudaBoton } from '../compartido/ayuda';
 import { AuthService } from '../core/auth/auth.service';
 import { NOMBRE_ROL } from '../core/modelos';
 import { NotificacionesService } from '../core/notificaciones.service';
+import { DemoService } from '../core/demo.service';
 import { TutorialService } from '../core/tutorial.service';
 import { Campana } from './campana/campana';
 import { Tutorial } from './tutorial/tutorial';
@@ -28,8 +29,11 @@ export class Shell {
   protected readonly usuario = this.auth.usuario;
   protected readonly menuAbierto = signal(false);
   private readonly tutorial = inject(TutorialService);
+  private readonly demo = inject(DemoService);
+  protected readonly esDemo = computed(() => this.demo.info() !== null);
 
   constructor() {
+    this.demo.cargar();
     // La primera vez que una cuenta del staff entra, Brasa le presenta el panel (una sola vez por cuenta).
     effect(() => {
       if (this.usuario() && untracked(() => this.tutorial.debeMostrarse() && !this.tutorial.activo())) {

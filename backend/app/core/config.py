@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     # Reporte de errores (Sentry o GlitchTip). Vacío = desactivado. Nunca se envían datos personales.
     sentry_dsn: str = ""
 
+    # Demo público con datos ficticios (demo.<dominio>): no se tocan cuentas ni se suben archivos, y el panel muestra
+    # las cuentas de prueba. Los datos se regeneran cada noche (python -m app.scripts.demo).
+    demo: bool = False
+
     @field_validator("data_encryption_key")
     @classmethod
     def _validar_clave_cifrado(cls, v: str) -> str:

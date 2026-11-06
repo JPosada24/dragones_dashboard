@@ -1,7 +1,8 @@
 # Operación del día a día
 
 Comandos desde la carpeta del proyecto en el servidor. `dc` = `docker compose -f docker-compose.prod.yml`
-(puedes crear el atajo con `alias dc='docker compose -f docker-compose.prod.yml'`).
+(puedes crear el atajo con `alias dc='docker compose -f docker-compose.prod.yml'`; con el demo público,
+`alias dc='docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml'`).
 
 ## Estado y logs
 

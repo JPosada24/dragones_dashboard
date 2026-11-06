@@ -4,6 +4,8 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService, rutaSegura } from '../../core/auth/auth.service';
+import { DemoService, InfoDemo } from '../../core/demo.service';
+import { NOMBRE_ROL } from '../../core/modelos';
 
 @Component({
   selector: 'app-login',
@@ -20,6 +22,19 @@ export class LoginPage {
   protected readonly enviando = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly expirada = this.ruta.snapshot.queryParamMap.has('expirada');
+  private readonly demo = inject(DemoService);
+  /** En el demo público: las cuentas de prueba, para entrar con un clic. */
+  protected readonly infoDemo = this.demo.info;
+  protected readonly nombreRol = NOMBRE_ROL;
+
+  constructor() {
+    this.demo.cargar();
+  }
+
+  protected entrarComo(cuenta: InfoDemo['cuentas'][number], clave: string): void {
+    this.form.setValue({ email: cuenta.email, password: clave });
+    this.ingresar();
+  }
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],

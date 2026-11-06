@@ -1619,6 +1619,56 @@
         "title": "CorreoEstadoOut",
         "type": "object"
       },
+      "CuentaDemoOut": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "rol": {
+            "enum": [
+              "SUPERADMIN",
+              "ADMIN",
+              "ENTRENADOR",
+              "MIEMBRO"
+            ],
+            "title": "Rol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rol",
+          "email",
+          "nombre"
+        ],
+        "title": "CuentaDemoOut",
+        "type": "object"
+      },
+      "DemoOut": {
+        "properties": {
+          "clave": {
+            "title": "Clave",
+            "type": "string"
+          },
+          "cuentas": {
+            "items": {
+              "$ref": "#/components/schemas/CuentaDemoOut"
+            },
+            "title": "Cuentas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "clave",
+          "cuentas"
+        ],
+        "title": "DemoOut",
+        "type": "object"
+      },
       "DeudaOut": {
         "properties": {
           "concepto": {
@@ -9397,6 +9447,27 @@
         "summary": "Actualizar",
         "tags": [
           "configuracion"
+        ]
+      }
+    },
+    "/api/v1/demo": {
+      "get": {
+        "operationId": "demo_api_v1_demo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo",
+        "tags": [
+          "demo"
         ]
       }
     },

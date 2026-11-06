@@ -7,6 +7,7 @@ from app.api.v1 import (
     auth,
     club,
     configuracion,
+    demo,
     habeas,
     inscripciones,
     justificaciones,
@@ -25,6 +26,7 @@ from app.api.v1 import (
 
 api_router = APIRouter()
 api_router.include_router(salud.router)
+api_router.include_router(demo.router)
 api_router.include_router(auth.router)
 api_router.include_router(usuarios.router)
 api_router.include_router(configuracion.router)

@@ -1,0 +1,81 @@
+# Demo público con datos ficticios (demo.<dominio>). Se usa JUNTO con el de producción:
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml up -d --build
+#
+# Base de datos, archivos y claves PROPIOS: el demo no ve los datos reales ni recibe los secretos de producción
+# (no usa .env: solo las variables de abajo; sin clave de IA ni correo). Se regenera cada día a las 04:00.
+# Guía: docs/despliegue.md, sección «Demo público».
+x-logs: &logs
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+x-demo: &demo
+  build: ./backend
+  restart: unless-stopped
+  environment:
+    ENTORNO: produccion
+    DEMO: "true"
+    COOKIE_SECURE: "true"
+    CORS_ORIGINS: https://${DEMO_DOMINIO:?falta DEMO_DOMINIO en .env}
+    DATABASE_URL: postgresql+psycopg://demo:${DEMO_POSTGRES_PASSWORD:?falta DEMO_POSTGRES_PASSWORD en .env}@db-demo:5432/demo
+    SECRET_KEY: ${DEMO_SECRET_KEY:?falta DEMO_SECRET_KEY en .env}
+    DATA_ENCRYPTION_KEY: ${DEMO_DATA_ENCRYPTION_KEY:?falta DEMO_DATA_ENCRYPTION_KEY en .env}
+    EMAIL_MODO: registro
+  volumes:
+    - documentos_demo:/data/documentos
+  <<: *logs
+
+services:
+  db-demo:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: ${DEMO_POSTGRES_PASSWORD}
+      POSTGRES_DB: demo
+    volumes:
+      - pgdata_demo:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy: { resources: { limits: { memory: 256m } } }
+    networks: [demo]  # red propia: la API de producción no la alcanza
+    <<: *logs
+
+  api-demo:
+    <<: *demo
+    depends_on:
+      db-demo: { condition: service_healthy }
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+               --proxy-headers --forwarded-allow-ips='*' --no-server-header"
+    deploy: { resources: { limits: { memory: 384m } } }
+    networks: [demo, interna]  # interna: solo para que Caddy le llegue
+
+  # Llena el demo si está vacío y lo regenera cada día a las 04:00 (hora de Bogotá). No hay worker en el demo:
+  # sin él, nadie recibe multas por entrenamientos que nadie marcó; el reinicio deja todo al día.
+  demo-reinicio:
+    <<: *demo
+    depends_on:
+      api-demo: { condition: service_healthy }
+    command: python -m app.scripts.demo --cada-noche
+    healthcheck: { disable: true }
+    deploy: { resources: { limits: { memory: 384m } } }
+    networks: [demo]
+
+  web:
+    environment:
+      DEMO_DOMINIO: ${DEMO_DOMINIO}
+    volumes:
+      - ./deploy/demo.caddy:/etc/caddy/sitios/demo.caddy:ro
+
+volumes:
+  pgdata_demo:
+  documentos_demo:
+
+networks:
+  demo:

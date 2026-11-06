@@ -330,3 +330,21 @@ $movil: 899px;
   align-items: center;
   gap: 10px;
 }
+
+.franja-demo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  background: var(--oro-tenue);
+  border-bottom: 1px solid var(--borde);
+  font: 600 11.5px var(--f-texto);
+  color: var(--oro);
+  text-align: center;
+
+  .icono {
+    font-size: 15px;
+  }
+}

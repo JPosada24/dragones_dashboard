@@ -1,10 +1,12 @@
 # Caddy en producción: certificado HTTPS automático (Let's Encrypt), cabeceras de seguridad, el panel compilado
 # y la API detrás del mismo dominio (/api). Variables en .env: PANEL_DOMINIO y ACME_EMAIL.
+# El demo público (docker-compose.demo.yml) agrega su sitio en /etc/caddy/sitios/ con la misma configuración.
 {
 	email {$ACME_EMAIL}
 }
 
-{$PANEL_DOMINIO} {
+# Lo común a cada sitio del panel. Argumento: el contenedor de la API (api, o api-demo en el demo).
+(panel) {
 	encode zstd gzip
 
 	header {
@@ -23,7 +25,7 @@
 	# La API: mismo origen que el panel (la cookie de sesión funciona sin CORS). El sitio público la llama desde
 	# su dominio y la API solo le permite /api/v1/publico (SITIO_ORIGENES).
 	handle /api/* {
-		reverse_proxy api:8000 {
+		reverse_proxy {args[0]}:8000 {
 			header_up X-Forwarded-Proto {scheme}
 		}
 	}
@@ -49,3 +51,10 @@
 		format json
 	}
 }
+
+{$PANEL_DOMINIO} {
+	import panel api
+}
+
+# Sitios adicionales (el demo). Sin el demo no hay archivos aquí y no pasa nada.
+import /etc/caddy/sitios/*.caddy

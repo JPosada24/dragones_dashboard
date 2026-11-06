@@ -37,5 +37,20 @@
     <button type="submit" class="boton" [disabled]="enviando()">
       {{ enviando() ? 'Ingresando…' : 'Ingresar' }}
     </button>
+
+    @if (infoDemo(); as d) {
+      <section class="demo" aria-labelledby="demo-titulo">
+        <h2 id="demo-titulo">Demo con datos ficticios</h2>
+        <p>Entra con una cuenta de prueba (contraseña <span class="mono">{{ d.clave }}</span>). Todo se reinicia cada noche.</p>
+        <div class="cuentas">
+          @for (c of d.cuentas; track c.email) {
+            <button type="button" class="cuenta" [disabled]="enviando()" (click)="entrarComo(c, d.clave)">
+              <b>{{ nombreRol[c.rol] }}</b>
+              <span>{{ c.nombre }}</span>
+            </button>
+          }
+        </div>
+      </section>
+    }
   </form>
 </main>

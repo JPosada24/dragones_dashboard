@@ -176,3 +176,29 @@ docker compose -f docker-compose.prod.yml up -d --build                       # 
 
 Si algo sale mal: `git checkout <versión anterior>` y vuelve a levantar; si la migración ya cambió datos, restaura
 la copia que acabas de hacer.
+
+## 7. Demo público (opcional)
+
+Una copia del panel con un **club ficticio** (58 alumnos, seis semanas de asistencia, multas, una rifa y dos
+torneos) en `demo.<dominio>`, para mostrarlo sin tocar nada real. Corre en el mismo servidor con **base de datos,
+archivos y claves propios** (`docker-compose.demo.yml`): no ve los datos reales ni recibe los secretos de
+producción. La pantalla de entrada muestra las cuentas de prueba (una por rol, clave pública `DemoDragones2026`);
+en el demo no se pueden tocar las cuentas ni subir archivos, y todo se regenera cada día a las 04:00.
+
+1. DNS: registro `A demo` → la IP del servidor (nube gris, igual que `panel`).
+2. En el `.env` del servidor agrega (claves nuevas, **distintas** de las de producción):
+   ```bash
+   docker compose -f docker-compose.prod.yml run --rm --no-deps api python -c "import secrets; from cryptography.fernet import Fernet; print('DEMO_POSTGRES_PASSWORD=' + secrets.token_hex(24)); print('DEMO_SECRET_KEY=' + secrets.token_hex(32)); print('DEMO_DATA_ENCRYPTION_KEY=' + Fernet.generate_key().decode())" >> .env
+   echo "DEMO_DOMINIO=demo.dragonesvolleyclub.com" >> .env
+   ```
+3. Arranca todo con **los dos archivos** (desde ahora, siempre así; si actualizas solo con el de producción, el
+   sitio del demo se cae hasta el siguiente `up` con ambos):
+   ```bash
+   alias dc='docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml'
+   dc up -d --build
+   dc logs -f demo-reinicio   # «Demo listo: 58 alumnos…» (tarda uno o dos minutos la primera vez)
+   ```
+
+Regenerarlo ya (por ejemplo después de una actualización): `dc exec demo-reinicio python -m app.scripts.demo`.
+Quitarlo: `dc stop api-demo db-demo demo-reinicio` y vuelve a arrancar solo con `docker-compose.prod.yml`.
+

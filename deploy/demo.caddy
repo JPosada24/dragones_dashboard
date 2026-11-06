@@ -1,0 +1,6 @@
+# Demo público con datos ficticios: el mismo panel y la misma seguridad, con su propia API y base de datos.
+{$DEMO_DOMINIO} {
+	import panel api-demo
+	# Que los buscadores no lo indexen: es una demostración, no el club.
+	header X-Robots-Tag "noindex, nofollow"
+}
