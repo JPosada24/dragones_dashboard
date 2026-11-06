@@ -13,7 +13,7 @@ interface Caja { top: number; left: number; width: number; height: number; }
 
 /**
  * Recorrido guiado: oscurece el panel, resalta el elemento del paso (`data-tutorial="…"`) y muestra la burbuja de
- * Brasa al lado. Es un <dialog> modal: atrapa el foco, Escape lo salta y el resto del panel queda inerte.
+ * Kiira al lado. Es un <dialog> modal: atrapa el foco, Escape lo salta y el resto del panel queda inerte.
  * Si el elemento no está a la vista (p. ej. el menú lateral en el celular), la burbuja va al centro.
  */
 @Component({

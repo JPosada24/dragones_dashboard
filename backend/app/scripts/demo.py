@@ -5,7 +5,8 @@
 
 Los datos se crean usando la API real (en el mismo proceso) con un reloj simulado que avanza día a día durante seis
 semanas: inscripciones con abonos, entrenamientos con asistencia, avisos, multas al cierre de cada día, una rifa con
-talonarios y dos torneos. Así todo cumple las mismas reglas del club y el Resumen se ve como en un club de verdad.
+talonarios y dos torneos. Por ahora el demo es solo del staff: alumnos mayores de edad, sin acudientes ni cuentas
+de familia. Así todo cumple las mismas reglas del club y el Resumen se ve como en un club de verdad.
 Nombres, documentos y teléfonos son inventados (los teléfonos empiezan por 399, que no existe en Colombia, y los
 correos son de example.com, reservado para ejemplos).
 """
@@ -129,9 +130,8 @@ class Demo:
             "historia": "El club nació en 2019 con doce jugadoras en una cancha de barrio. Hoy entrena a niñas, niños "
                         "y jóvenes en las ramas femenina y masculina.",
         })
-        for nombre, cargo, orden in (("Julián Demo", "Entrenador principal", 0),
-                                     ("Carlos Demo", "Entrenador asistente · Iniciación", 1),
-                                     ("Andrea Demo", "Coordinación y administración", 2)):
+        for nombre, cargo, orden in (("Daniel Mejía", "Entrenador principal", 0),
+                                     ("Laura Restrepo", "Entrenadora asistente · Iniciación", 1)):
             self.pedir("POST", "/club/equipo", json={"nombre": nombre, "cargo": cargo, "orden": orden})
 
     def alumno(self, rama: str, edad: int, fecha_inscripcion: date) -> dict:
@@ -142,19 +142,9 @@ class Demo:
         datos: dict = {
             "nombres": nombre, "apellidos": f"{apellido1} {apellido2}", "tipo_documento": "CC" if edad >= 18 else "TI",
             "documento": self.doc(), "fecha_nacimiento": nacimiento.isoformat(), "rama": rama,
-            "nivel": "avanzado" if edad >= 15 and self.azar.random() < 0.5 else "iniciacion",
+            "nivel": "avanzado" if self.azar.random() < 0.5 else "iniciacion",
             "autorizacion": {"nombre": f"{nombre} {apellido1}", "imagen": self.azar.random() < 0.8},
         }
-        if edad < 18:
-            acudiente = self.pedir("POST", "/acudientes", json={
-                "nombres": self.azar.choice(NOMBRES_F + NOMBRES_M),
-                "apellidos": f"{apellido1} {self.azar.choice(APELLIDOS)}",
-                "tipo_documento": "CC", "documento": self.doc(), "telefono": self.telefono(),
-                "email": f"acudiente{len(self.alumnos) + 1}@example.com",
-            })
-            parentesco = self.azar.choice(["madre", "padre"])
-            datos["acudientes"] = [{"acudiente_id": acudiente["id"], "parentesco": parentesco}]
-            datos["autorizacion"]["nombre"] = f"{acudiente['nombres']} {acudiente['apellidos']}"
         a = self.pedir("POST", "/alumnos", json=datos)
         i = self.pedir("POST", "/inscripciones",
                        json={"alumno_id": a["id"], "fecha_inscripcion": fecha_inscripcion.isoformat()})
@@ -236,7 +226,7 @@ def generar(semilla: int | None = None) -> None:
     vaciar()
     with SessionLocal() as db:
         catalogos.sembrar_catalogos(db)
-        for rol, email, nombre in CUENTAS_DEMO[:3]:
+        for rol, email, nombre in CUENTAS_DEMO:
             usuarios.crear_usuario(db, email=email, nombre=nombre, password=CLAVE_DEMO, rol_codigo=rol)
         db.commit()
 
@@ -253,7 +243,7 @@ def generar(semilla: int | None = None) -> None:
         pendientes = []
         for n, dia in enumerate(llegadas):
             rama = "femenina" if n % 9 < 5 else "masculina"
-            pendientes.append((dia, rama, azar.choice([10, 11, 12, 13, 14, 15, 15, 16, 17, 18, 19, 21, 24])))
+            pendientes.append((dia, rama, azar.choice([19, 19, 20, 20, 21, 22, 23, 24, 25, 27, 29, 32])))
 
         def inscribir_hasta(dia: date) -> None:
             while pendientes and pendientes[0][0] <= dia:
@@ -297,17 +287,6 @@ def generar(semilla: int | None = None) -> None:
         d.pedir("PATCH", f"/club/torneos-realizados/{realizado['id']}", json={
             "resumen": "Campeón: Halcones VC. Subcampeón: Club Dragones. 9 clubes de 7 municipios.", "publicado": True})
 
-        # La cuenta de la familia: el acudiente de dos alumnos.
-        with SessionLocal() as db:
-            raiz = db.scalar(select(Usuario).where(Usuario.email == "superadmin@example.com"))
-            hermanos = [a for a in d.alumnos if a.get("acudientes")]
-            acudiente_id = d.pedir("GET", f"/alumnos/{hermanos[0]['id']}")["acudientes"][0]["acudiente_id"]
-            d.pedir("POST", f"/alumnos/{hermanos[1]['id']}/acudientes",
-                    json={"acudiente_id": acudiente_id, "parentesco": "madre"})
-            rol, email, nombre = CUENTAS_DEMO[3]
-            usuarios.crear_cuenta(db, {"email": email, "nombre": nombre, "password": CLAVE_DEMO, "rol": rol,
-                                       "vincular_acudiente_id": acudiente_id}, actor=raiz, ip=None)
-            db.commit()
     print(f"Demo listo: {len(d.alumnos)} alumnos, desde {inicio} hasta hoy.")
 
 

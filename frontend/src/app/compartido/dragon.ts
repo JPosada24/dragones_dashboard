@@ -10,7 +10,7 @@ const IMAGEN: Record<Pose, { src: string; ancho: number; alto: number }> = {
 };
 
 /**
- * Brasa, el dragón del club, en estilo de animación 3D. Tres poses: saluda, señala y remata.
+ * Kiira, el dragón del club, en estilo de animación 3D. Tres poses: saluda, señala y remata.
  * Es decorativo (alt vacío): el texto de la burbuja dice lo mismo. Se mueve suave y se queda quieto con
  * «reducir movimiento».
  */

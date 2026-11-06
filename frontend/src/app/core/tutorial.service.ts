@@ -17,11 +17,11 @@ export interface PasoTutorial {
   texto: string;
 }
 
-/** Brasa, el dragón del club, presenta el panel. Corto a propósito: menos de un minuto. */
+/** Kiira, el dragón del club, presenta el panel. Corto a propósito: menos de un minuto. */
 const PASOS: PasoTutorial[] = [
   {
     objetivo: null, pose: 'saluda', titulo: '¡Hola, {nombre}!',
-    texto: 'Soy Brasa, el dragón del club. Te muestro el panel en un minuto. Puedes saltarlo cuando quieras.',
+    texto: 'Soy Kiira, el dragón del club. Te muestro el panel en un minuto. Puedes saltarlo cuando quieras.',
   },
   {
     objetivo: 'seccion:', seccion: '', pose: 'senala', titulo: 'Resumen',

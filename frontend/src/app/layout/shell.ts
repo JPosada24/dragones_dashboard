@@ -34,7 +34,7 @@ export class Shell {
 
   constructor() {
     this.demo.cargar();
-    // La primera vez que una cuenta del staff entra, Brasa le presenta el panel (una sola vez por cuenta).
+    // La primera vez que una cuenta del staff entra, Kiira le presenta el panel (una sola vez por cuenta).
     effect(() => {
       if (this.usuario() && untracked(() => this.tutorial.debeMostrarse() && !this.tutorial.activo())) {
         untracked(() => this.tutorial.iniciar());

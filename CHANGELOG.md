@@ -5,12 +5,13 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
-- **Demo público** (`docker-compose.demo.yml`, `DEMO=true`): un club ficticio generado con la API real y un reloj
+- **Demo público** (`docker-compose.demo.yml`, `DEMO=true`; por ahora solo staff: SuperAdmin, Admin y Entrenador,
+  alumnos mayores de edad y sin acudientes): un club ficticio generado con la API real y un reloj
   simulado (`python -m app.scripts.demo`: seis semanas de inscripciones, asistencia, multas, rifa y torneos) que se
   regenera cada día a las 04:00, con base, archivos y claves propios. La entrada muestra las cuentas de prueba
   (`GET /demo`) y el panel una franja «datos ficticios»; no se pueden tocar las cuentas ni subir archivos
   (`core/demo.py`). Caddy: lo común del panel pasó a un bloque reutilizable y el demo agrega su sitio.
-- **Tutorial guiado del panel con Brasa, el dragón del club** (estilo animación 3D, imágenes WebP con
+- **Tutorial guiado del panel con Kiira, el dragón del club** (estilo animación 3D, imágenes WebP con
   transparencia en `frontend/public/brasa/`; tres poses): la primera
   vez que una cuenta del staff entra, recorre en menos de un minuto solo las secciones que esa persona tiene en su
   menú. Se puede saltar y volver a ver desde la ayuda «?». Lo guarda el servidor por cuenta

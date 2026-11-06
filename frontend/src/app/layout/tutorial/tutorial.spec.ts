@@ -62,7 +62,7 @@ describe('Tutorial', () => {
     expect(servicio.debeMostrarse()).toBe(false);
   });
 
-  it('recorre los pasos con Brasa y al terminar queda visto en el servidor', async () => {
+  it('recorre los pasos con Kiira y al terminar queda visto en el servidor', async () => {
     preparar(usuario(ADMIN));
     servicio.iniciar();
     await estable();

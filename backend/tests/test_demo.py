@@ -6,7 +6,8 @@ from sqlalchemy import func, select
 from app.core.config import get_settings
 from app.core.demo import CLAVE_DEMO, CUENTAS_DEMO, motivo_bloqueo
 from app.main import crear_app
-from app.models.alumnos import Alumno
+from app.models.acceso import Usuario
+from app.models.alumnos import Acudiente, Alumno
 from app.models.asistencia import Asistencia
 from app.models.torneos import Torneo
 from app.scripts import demo as script
@@ -59,10 +60,10 @@ def test_el_generador_arma_un_club_completo_con_las_reglas_reales(modo_demo, mon
     assert db.scalar(select(func.count()).select_from(Asistencia)) > 0
     assert db.scalar(select(func.count()).select_from(Torneo)) == 2
     cliente = TestClient(crear_app())
-    for _, email, _ in CUENTAS_DEMO:  # las cuatro cuentas de prueba entran con la clave pública
+    for _, email, _ in CUENTAS_DEMO:  # las cuentas de prueba entran con la clave pública
         r = cliente.post("/api/v1/auth/login", json={"email": email, "password": CLAVE_DEMO})
         assert r.status_code == 200, email
-    familia = r.json()["usuario"]
-    assert familia["rol"] == "MIEMBRO"
-    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
-    assert len(cliente.get("/api/v1/alumnos", headers=h).json()) == 2  # el acudiente ve a sus dos hijos
+    # Solo staff: sin cuentas de familia ni acudientes (alumnos mayores de edad).
+    assert {r for r, _, _ in CUENTAS_DEMO} == {"SUPERADMIN", "ADMIN", "ENTRENADOR"}
+    assert db.scalar(select(func.count()).select_from(Acudiente)) == 0
+    assert db.scalar(select(func.count()).select_from(Usuario).where(Usuario.nombre.ilike("%julian%"))) == 0

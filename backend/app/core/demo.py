@@ -10,10 +10,9 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 CLAVE_DEMO = "DemoDragones2026"  # pública a propósito: está en la pantalla de entrada del demo
 CUENTAS_DEMO = (
-    ("SUPERADMIN", "superadmin@example.com", "Julián Demo (dueño)"),
-    ("ADMIN", "admin@example.com", "Andrea Demo (administración)"),
-    ("ENTRENADOR", "entrenador@example.com", "Carlos Demo (entrenador asistente)"),
-    ("MIEMBRO", "familia@example.com", "Familia Demo (acudiente)"),
+    ("SUPERADMIN", "superadmin@example.com", "Administrador"),
+    ("ADMIN", "admin@example.com", "Daniel Mejía"),
+    ("ENTRENADOR", "entrenador@example.com", "Daniel Mejía"),
 )
 
 
