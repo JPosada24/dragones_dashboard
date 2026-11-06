@@ -8,6 +8,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 - `deploy/oracle/conseguir-vm.ps1`: reintenta crear la VM gratuita de Oracle Cloud hasta que haya cupo (crea la red
   si falta y abre 80/443); sección «Oracle Cloud gratis» en `docs/despliegue.md`.
 
+### Cambiado
+- Galería: las fotos suben de a 3 a la vez y se reducen en el navegador a 1920 px (lo que guarda el servidor)
+  desde 800 KB: menos datos por la subida del internet de hogar.
+
 ### Corregido
 - CORS del sitio público: `/api/v1/publico` ya no responde `Access-Control-Allow-Credentials: true` al dominio del
   sitio (lo agregaba el CORS del panel). No era explotable (esas rutas no usan sesión), pero contradecía el diseño.

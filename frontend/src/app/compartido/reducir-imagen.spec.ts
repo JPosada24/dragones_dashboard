@@ -7,7 +7,7 @@ const pesada = () => new File([new Uint8Array(3 * 1024 * 1024)], 'DSC0001.JPG', 
 describe('reducirImagen', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('una foto liviana se sube tal cual', async () => {
+  it('una foto liviana (menos de 800 KB) se sube tal cual', async () => {
     const f = new File(['x'], 'a.png', { type: 'image/png' });
     expect(await reducirImagen(f)).toBe(f);
   });
@@ -28,7 +28,7 @@ describe('reducirImagen', () => {
     };
     vi.spyOn(document, 'createElement').mockReturnValueOnce(lienzo as unknown as HTMLCanvasElement);
     const r = await reducirImagen(pesada());
-    expect([lienzo.width, lienzo.height]).toEqual([2560, 1707]);
+    expect([lienzo.width, lienzo.height]).toEqual([1920, 1280]);
     expect(r.name).toBe('DSC0001.jpg');
     expect(r.type).toBe('image/jpeg');
     expect(r.size).toBeLessThan(1024);

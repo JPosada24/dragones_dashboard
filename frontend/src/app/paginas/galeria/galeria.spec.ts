@@ -107,16 +107,43 @@ describe('GaleriaPage', () => {
     dialogo().querySelector<HTMLInputElement>('[formcontrolname="autorizacion"]')!.click();
     boton('Subir', dialogo().querySelector('.acciones')!)!.click();
     await estable();
-    backend.expectOne(`${C}/albumes/a2/fotos`).flush(
-      { detail: 'La foto supera el máximo de 12 MB.' }, { status: 422, statusText: 'Unprocessable Entity' },
-    );
+    const [uno, dos] = backend.match(`${C}/albumes/a2/fotos`); // las dos viajan a la vez
+    uno!.flush({ detail: 'La foto supera el máximo de 12 MB.' }, { status: 422, statusText: 'Unprocessable Entity' });
     await estable();
-    backend.expectOne(`${C}/albumes/a2/fotos`).flush({ id: 'f9', ancho: 10, alto: 10 });
+    dos!.flush({ id: 'f9', ancho: 10, alto: 10 });
     await estable();
     backend.expectOne(`${C}/fotos/f9?tam=mini`).flush(new Blob(['x']));
     await estable();
     expect(dialogo().textContent).toContain('Se subieron 1 de 2');
     expect(dialogo().textContent).toContain('uno.jpg (La foto supera el máximo de 12 MB.)');
+  });
+
+  it('sube de a 3 fotos a la vez y al terminar una entra la siguiente', async () => {
+    await cargar('a2');
+    boton('Subir fotos')!.click();
+    await estable();
+    const input = dialogo().querySelector<HTMLInputElement>('input[type="file"]')!;
+    const archivos = [1, 2, 3, 4, 5].map((n) => new File(['x'], `f${n}.jpg`, { type: 'image/jpeg' }));
+    Object.defineProperty(input, 'files', { value: archivos });
+    input.dispatchEvent(new Event('change'));
+    dialogo().querySelector<HTMLInputElement>('[formcontrolname="autorizacion"]')!.click();
+    boton('Subir', dialogo().querySelector('.acciones')!)!.click();
+    await estable();
+    const primeras = backend.match(`${C}/albumes/a2/fotos`);
+    expect(primeras).toHaveLength(3);
+    primeras[0]!.flush({ id: 'n1', ancho: 10, alto: 10 });
+    await estable();
+    backend.match(`${C}/fotos/n1?tam=mini`).forEach((r) => r.flush(new Blob(['x'])));
+    const cuarta = backend.match(`${C}/albumes/a2/fotos`);
+    expect(cuarta).toHaveLength(1);
+    expect(el().textContent).toContain('Subidas 1 de 5');
+    for (const r of [...primeras.slice(1), ...cuarta]) r.flush({ id: crypto.randomUUID(), ancho: 10, alto: 10 });
+    await estable();
+    backend.match(`${C}/albumes/a2/fotos`).forEach((r) => r.flush({ id: 'n5', ancho: 10, alto: 10 }));
+    await estable();
+    backend.match((r) => r.url.includes('tam=mini')).forEach((r) => r.flush(new Blob(['x'])));
+    await estable();
+    expect(el().textContent).toContain('5 fotos subidas');
   });
 
   it('elige una portada propia que no queda entre las fotos', async () => {

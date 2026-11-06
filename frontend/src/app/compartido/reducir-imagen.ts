@@ -1,14 +1,15 @@
 /** Por debajo de este peso la foto se sube tal cual (el servidor la vuelve a codificar de todos modos). */
-const PESO_SIN_REDUCIR = 2 * 1024 * 1024;
+const PESO_SIN_REDUCIR = 800 * 1024;
 
 /**
  * Reduce una foto en el navegador antes de subirla: lado mayor `maxLado` px, JPEG.
  *
- * Las fotos de cámara (20–60 MB, 24–60 Mpx) superan el máximo del servidor; reducidas pesan ~1–2 MB, suben
- * mucho más rápido y conservan más resolución de la que el servidor guarda (1920 px). El lienzo no copia los
- * metadatos (EXIF/ubicación). Si el navegador no puede leerla, se devuelve el original y decide el servidor.
+ * Las fotos de cámara (20–60 MB, 24–60 Mpx) superan el máximo del servidor. El servidor guarda como mucho 1920 px,
+ * así que subir más es ancho de banda perdido (la subida suele ser lo lento en internet de hogar): reducidas
+ * pesan ~0,5–1 MB. El lienzo no copia los metadatos (EXIF/ubicación). Si el navegador no puede leerla, se
+ * devuelve el original y decide el servidor.
  */
-export async function reducirImagen(archivo: File, maxLado = 2560, calidad = 0.9): Promise<File> {
+export async function reducirImagen(archivo: File, maxLado = 1920, calidad = 0.9): Promise<File> {
   if (archivo.size <= PESO_SIN_REDUCIR || typeof createImageBitmap !== 'function') return archivo;
   try {
     const imagen = await createImageBitmap(archivo, { imageOrientation: 'from-image' });

@@ -17,6 +17,8 @@ import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { API } from '../../core/modelos';
 
 const URL_CLUB = `${API}/club`;
+/** Fotos que viajan a la vez: aprovecha la conexión sin saturar la subida de un internet de hogar ni la API. */
+const SUBIDAS_SIMULTANEAS = 3;
 
 /** Galería del sitio: álbumes (cada uno con sus fotos) y videos de YouTube. */
 @Component({
@@ -243,7 +245,10 @@ export class GaleriaPage implements OnInit {
     this.archivos = archivos;
   }
 
-  /** Sube las fotos una por una (así una que falle no tumba las demás y se ve el avance). */
+  /**
+   * Sube las fotos de a SUBIDAS_SIMULTANEAS: mientras una viaja, el servidor procesa otra. Cada una va en su propia
+   * petición, así una que falle no tumba las demás y se ve el avance.
+   */
   protected subirFotos(): void {
     const a = this.abierto();
     if (!a) return;
@@ -255,40 +260,51 @@ export class GaleriaPage implements OnInit {
     const total = pendientes.length;
     const fallidas: string[] = [];
     let subidas = 0;
+    let enCurso = 0;
     this.ocupado.set(true);
     this.errorDialogo.set(null);
-    const siguiente = (): void => {
-      const archivo = pendientes.shift();
-      if (!archivo) {
-        this.ocupado.set(false);
-        this.progreso.set(null);
-        if (fallidas.length) {
-          this.errorDialogo.set(`Se subieron ${subidas} de ${total}. No se pudieron subir: ${fallidas.join('; ')}.`);
-        } else {
-          this.subiendo.set(false);
-          this.op.exito(`${subidas} ${subidas === 1 ? 'foto subida' : 'fotos subidas'} a «${a.nombre}».`);
-        }
-        return;
+    const avance = (): void => this.progreso.set(`Subidas ${subidas + fallidas.length} de ${total}…`);
+    const terminar = (): void => {
+      this.ocupado.set(false);
+      this.progreso.set(null);
+      if (fallidas.length) {
+        this.errorDialogo.set(`Se subieron ${subidas} de ${total}. No se pudieron subir: ${fallidas.join('; ')}.`);
+      } else {
+        this.subiendo.set(false);
+        this.op.exito(`${subidas} ${subidas === 1 ? 'foto subida' : 'fotos subidas'} a «${a.nombre}».`);
       }
-      this.progreso.set(`Subiendo ${total - pendientes.length} de ${total}…`);
-      void reducirImagen(archivo).then((reducida) => {
-        const datos = new FormData();
-        datos.append('archivo', reducida);
-        datos.append('autorizacion', 'true');
-        this.http.post<FotoClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/fotos`, datos).subscribe({
-          next: (foto) => {
-            subidas++;
-            this.albumes.update((l) => (l ?? []).map((x) => (x.id === a.id ? { ...x, fotos: [...x.fotos, foto] } : x)));
-            siguiente();
-          },
-          error: (e: unknown) => {
-            fallidas.push(`${archivo.name} (${mensajeError(e)})`);
-            siguiente();
-          },
-        });
-      });
     };
-    siguiente();
+    const listo = (): void => {
+      enCurso--;
+      avance();
+      if (enCurso === 0 && !pendientes.length) terminar();
+      else lanzar();
+    };
+    const lanzar = (): void => {
+      while (enCurso < SUBIDAS_SIMULTANEAS) {
+        const archivo = pendientes.shift();
+        if (!archivo) return;
+        enCurso++;
+        void reducirImagen(archivo).then((reducida) => {
+          const datos = new FormData();
+          datos.append('archivo', reducida);
+          datos.append('autorizacion', 'true');
+          this.http.post<FotoClub>(`${URL_CLUB}/albumes/${encodeURIComponent(a.id)}/fotos`, datos).subscribe({
+            next: (foto) => {
+              subidas++;
+              this.albumes.update((l) => (l ?? []).map((x) => (x.id === a.id ? { ...x, fotos: [...x.fotos, foto] } : x)));
+              listo();
+            },
+            error: (e: unknown) => {
+              fallidas.push(`${archivo.name} (${mensajeError(e)})`);
+              listo();
+            },
+          });
+        });
+      }
+    };
+    avance();
+    lanzar();
   }
 
   protected marcada(f: FotoClub): boolean {
