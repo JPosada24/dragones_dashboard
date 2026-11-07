@@ -3969,6 +3969,17 @@
             ],
             "title": "Sede"
           },
+          "tiktok": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tiktok"
+          },
           "vision": {
             "anyOf": [
               {
@@ -4130,6 +4141,17 @@
             ],
             "title": "Sede"
           },
+          "tiktok": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tiktok"
+          },
           "vision": {
             "anyOf": [
               {
@@ -4168,6 +4190,7 @@
           "correo",
           "instagram",
           "facebook",
+          "tiktok",
           "publicado"
         ],
         "title": "PerfilOut",

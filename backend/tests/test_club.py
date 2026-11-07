@@ -121,6 +121,9 @@ def test_enlaces_que_no_son_de_youtube(enlace):
 def test_redes_sociales_solo_el_usuario(client, h_admin):
     r = client.patch(f"{C}/perfil", json={"instagram": "@dragones"}, headers=h_admin)
     assert r.json()["instagram"] == "dragones"
+    r = client.patch(f"{C}/perfil", json={"tiktok": "https://www.tiktok.com/@dragones.vc?lang=es"}, headers=h_admin)
+    assert r.json()["tiktok"] == "dragones.vc"
+    assert client.patch(f"{C}/perfil", json={"tiktok": "@mal usuario"}, headers=h_admin).status_code == 422
     assert client.patch(f"{C}/perfil", json={"facebook": "https://evil.com/<script>"},
                         headers=h_admin).status_code == 422
     assert client.patch(f"{C}/perfil", json={"nombre": ""}, headers=h_admin).status_code == 422

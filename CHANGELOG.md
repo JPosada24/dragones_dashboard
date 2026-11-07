@@ -5,6 +5,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **TikTok del club** en el perfil (migración 0031): se escribe el usuario o se pega el enlace del perfil; el
+  sitio lo muestra en el pie junto a Instagram y Facebook.
 - **Demo público** (`docker-compose.demo.yml`, `DEMO=true`; por ahora solo staff: SuperAdmin, Admin y Entrenador,
   alumnos mayores de edad y sin acudientes): un club ficticio generado con la API real y un reloj
   simulado (`python -m app.scripts.demo`: seis semanas de inscripciones, asistencia, multas, rifa y torneos) que se

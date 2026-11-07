@@ -61,7 +61,8 @@ def test_el_generador_no_corre_fuera_del_demo():
 
 
 def test_el_generador_arma_un_club_completo_con_las_reglas_reales(modo_demo, monkeypatch, db):
-    monkeypatch.setattr(script, "SEMANAS", 1)
+    # Dos semanas: con una sola, un festivo y el día del torneo pueden dejarla sin entrenamientos.
+    monkeypatch.setattr(script, "SEMANAS", 2)
     script.generar(semilla=7)
     assert db.scalar(select(func.count()).select_from(Alumno)) >= 30  # los que llegan después de hoy no entran
     assert db.scalar(select(func.count()).select_from(Asistencia)) > 0

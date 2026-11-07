@@ -66,6 +66,7 @@ export class PerfilClubPage implements OnInit {
     correo: ['', Validators.email],
     instagram: [''],
     facebook: [''],
+    tiktok: [''],
   });
   protected readonly formFormacion = this.fb.group({
     intro: ['', Validators.maxLength(600)],
@@ -123,7 +124,7 @@ export class PerfilClubPage implements OnInit {
     this.formDatos.reset({
       nombre: p.nombre, sede: p.sede ?? '',
       fundado_en: p.fundado_en ? String(p.fundado_en) : '', whatsapp: p.whatsapp ?? '',
-      correo: p.correo ?? '', instagram: p.instagram ?? '', facebook: p.facebook ?? '',
+      correo: p.correo ?? '', instagram: p.instagram ?? '', facebook: p.facebook ?? '', tiktok: p.tiktok ?? '',
     });
     this.op.abrir(() => this.editandoDatos.set(true));
   }
@@ -136,6 +137,7 @@ export class PerfilClubPage implements OnInit {
       nombre: f.nombre.trim(), sede: vacio(f.sede),
       fundado_en: f.fundado_en.trim() ? Number(f.fundado_en) : null,
       whatsapp: vacio(f.whatsapp), correo: vacio(f.correo), instagram: vacio(f.instagram), facebook: vacio(f.facebook),
+      tiktok: vacio(f.tiktok),
     }, 'Datos del club actualizados.', true, () => this.editandoDatos.set(false));
   }
 

@@ -3395,6 +3395,8 @@ export interface components {
             publicado?: boolean | null;
             /** Sede */
             sede?: string | null;
+            /** Tiktok */
+            tiktok?: string | null;
             /** Vision */
             vision?: string | null;
             /** Whatsapp */
@@ -3428,6 +3430,8 @@ export interface components {
             publicado: boolean;
             /** Sede */
             sede: string | null;
+            /** Tiktok */
+            tiktok: string | null;
             /** Vision */
             vision: string | null;
             /** Whatsapp */

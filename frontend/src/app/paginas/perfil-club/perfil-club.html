@@ -81,6 +81,7 @@
           <dt>Correo</dt><dd>{{ p.perfil.correo || '—' }}</dd>
           <dt>Instagram</dt><dd>{{ p.perfil.instagram ? '@' + p.perfil.instagram : '—' }}</dd>
           <dt>Facebook</dt><dd>{{ p.perfil.facebook || '—' }}</dd>
+          <dt>TikTok</dt><dd>{{ p.perfil.tiktok ? '@' + p.perfil.tiktok : '—' }}</dd>
         </dl>
       </section>
 
@@ -123,6 +124,8 @@
           <input class="control" formControlName="instagram" placeholder="Ej.: dragones.voleibol" /></label>
         <label class="campo"><span class="etiqueta">Facebook (página)</span>
           <input class="control" formControlName="facebook" placeholder="Ej.: clubdragones" /></label>
+        <label class="campo"><span class="etiqueta">TikTok (usuario)</span>
+          <input class="control" formControlName="tiktok" placeholder="Ej.: dragones.voleibol" /></label>
       </div>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">

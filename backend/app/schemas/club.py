@@ -44,6 +44,7 @@ class PerfilIn(_Entrada):
     correo: str | None = None
     instagram: str | None = None
     facebook: str | None = None
+    tiktok: str | None = None
     publicado: bool | None = None
 
     @field_validator("lema", "ciudad", "sede", "mision", "vision", "historia", "formacion_intro")
@@ -61,13 +62,14 @@ class PerfilIn(_Entrada):
     def _correo(cls, v: str | None) -> str | None:
         return normalizar_email(v) if v else None
 
-    @field_validator("instagram", "facebook")
+    @field_validator("instagram", "facebook", "tiktok")
     @classmethod
     def _red(cls, v: str | None) -> str | None:
         """Solo el usuario de la red (sin @ ni enlace): el sitio arma el enlace, así no se cuela un dominio ajeno."""
         if not v:
             return None
-        v = v.removeprefix("@").rstrip("/").split("/")[-1]
+        # Acepta «@usuario» o el enlace del perfil (TikTok lo escribe como …/@usuario).
+        v = v.split("?")[0].rstrip("/").split("/")[-1].removeprefix("@")
         if not _USUARIO_RED.match(v):
             raise ValueError("Escribe solo el usuario de la red social (letras, números, punto, guion o _).")
         return v
@@ -90,6 +92,7 @@ class PerfilOut(BaseModel):
     correo: str | None
     instagram: str | None
     facebook: str | None
+    tiktok: str | None
     publicado: bool
 
 

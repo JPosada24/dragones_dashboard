@@ -39,6 +39,7 @@ class PerfilClub(Base):
     correo: Mapped[str | None] = mapped_column(String(254))
     instagram: Mapped[str | None] = mapped_column(String(60))  # usuario, sin @
     facebook: Mapped[str | None] = mapped_column(String(100))  # nombre de la página
+    tiktok: Mapped[str | None] = mapped_column(String(60))  # usuario, sin @
     publicado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     actualizado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), onupdate=text("now()"), nullable=False
