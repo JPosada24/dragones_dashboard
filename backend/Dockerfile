@@ -8,6 +8,9 @@ RUN pip wheel --wheel-dir /wheels -r requirements.txt
 # ---- Etapa 2: imagen final, minima y sin root ----
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+# Parches de seguridad de Debian publicados después de la imagen oficial de Python (p. ej. zlib): sin esperar a que
+# la reconstruyan. Trivy en el CI falla si queda alguno alto o crítico con arreglo.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 RUN useradd --create-home --uid 10001 app
 WORKDIR /app
 COPY --from=builder /wheels /wheels
