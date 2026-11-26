@@ -362,7 +362,7 @@ export interface paths {
         put?: never;
         /**
          * Tutorial Visto
-         * @description Marca que la cuenta ya vio (o saltó) el tutorial guiado: no vuelve a salir solo, en ningún dispositivo.
+         * @description Marca que la cuenta ya vio (o saltó) un recorrido: no vuelve a salir solo, en ningún dispositivo.
          */
         post: operations["tutorial_visto_api_v1_auth_tutorial_post"];
         delete?: never;
@@ -4144,6 +4144,17 @@ export interface components {
             /** Resumen */
             resumen: string | null;
         };
+        /**
+         * TutorialIn
+         * @description Qué recorrido terminó: «panel» (el general) o la ruta de una pestaña («alumnos», «rifas/sorteo»).
+         */
+        TutorialIn: {
+            /**
+             * Recorrido
+             * @default panel
+             */
+            recorrido: string;
+        };
         /** UsuarioActualizar */
         UsuarioActualizar: {
             /** Activo */
@@ -4197,6 +4208,8 @@ export interface components {
             rol: "SUPERADMIN" | "ADMIN" | "ENTRENADOR" | "MIEMBRO";
             /** Tutorial Visto */
             tutorial_visto: boolean;
+            /** Tutoriales Vistos */
+            tutoriales_vistos: string[];
             /** Vinculado A */
             vinculado_a?: string | null;
         };
@@ -4222,6 +4235,8 @@ export interface components {
             rol: "SUPERADMIN" | "ADMIN" | "ENTRENADOR" | "MIEMBRO";
             /** Tutorial Visto */
             tutorial_visto: boolean;
+            /** Tutoriales Vistos */
+            tutoriales_vistos: string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -5117,7 +5132,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TutorialIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             204: {
@@ -5125,6 +5144,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

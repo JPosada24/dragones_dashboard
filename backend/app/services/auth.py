@@ -141,8 +141,17 @@ def cerrar_sesion(db: Session, token_plano: str) -> None:
     db.commit()
 
 
-def marcar_tutorial_visto(db: Session, usuario: Usuario) -> None:
-    """Queda la primera vez: volver a verlo desde la ayuda no cambia la fecha."""
-    if usuario.tutorial_visto_en is None:
-        usuario.tutorial_visto_en = datetime.now(UTC)
+MAX_RECORRIDOS = 60  # tope de la lista: el cliente no puede hacerla crecer sin fin
+
+
+def marcar_tutorial_visto(db: Session, usuario: Usuario, recorrido: str = "panel") -> None:
+    """El general («panel») guarda la fecha de la primera vez; el de cada pestaña queda en la lista de vistos."""
+    if recorrido == "panel":
+        if usuario.tutorial_visto_en is None:
+            usuario.tutorial_visto_en = datetime.now(UTC)
+            db.flush()
+        return
+    vistos = list(usuario.tutoriales_vistos or [])
+    if recorrido not in vistos and len(vistos) < MAX_RECORRIDOS:
+        usuario.tutoriales_vistos = [*vistos, recorrido]  # lista nueva: SQLAlchemy detecta el cambio
         db.flush()

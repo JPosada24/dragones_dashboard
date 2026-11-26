@@ -49,7 +49,7 @@ export const routes: Routes = [
         pathMatch: 'full' as const,
         title: `${s.etiqueta} · Dragones`,
         data: {
-          permisos: s.permisos, titulo: s.titulo, subtitulo: s.subtitulo, descripcion: s.descripcion,
+          ruta: s.ruta, permisos: s.permisos, titulo: s.titulo, subtitulo: s.subtitulo, descripcion: s.descripcion,
           ayuda: AYUDAS[s.ruta],
         },
         loadComponent: PANTALLAS[s.ruta] ?? enConstruccion,

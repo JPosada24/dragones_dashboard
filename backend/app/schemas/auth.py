@@ -27,6 +27,14 @@ class UsuarioOut(BaseModel):
     activo: bool
     permisos: list[str]
     tutorial_visto: bool  # ya vio (o saltó) el tutorial guiado del panel
+    tutoriales_vistos: list[str]  # recorridos de pestañas ya vistos (la ruta de cada una)
+
+
+class TutorialIn(BaseModel):
+    """Qué recorrido terminó: «panel» (el general) o la ruta de una pestaña («alumnos», «rifas/sorteo»)."""
+    model_config = ConfigDict(extra="forbid")
+
+    recorrido: str = Field(default="panel", pattern=r"^[a-z0-9][a-z0-9/-]{0,59}$")
 
 
 class UsuarioListaOut(UsuarioOut):

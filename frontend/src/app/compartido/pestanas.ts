@@ -13,7 +13,7 @@ export interface Pestana {
   imports: [RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="pestanas" [attr.aria-label]="etiqueta()">
+    <nav class="pestanas" [attr.aria-label]="etiqueta()" data-tutorial="pestanas">
       @for (p of pestanas(); track p.ruta) {
         <a [routerLink]="p.ruta" routerLinkActive="activa" [routerLinkActiveOptions]="exacta" ariaCurrentWhenActive="page">
           <span class="icono" aria-hidden="true">{{ p.icono }}</span> {{ p.texto }}

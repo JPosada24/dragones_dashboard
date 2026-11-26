@@ -6105,6 +6105,20 @@
         "title": "TorneoRealizadoOut",
         "type": "object"
       },
+      "TutorialIn": {
+        "additionalProperties": false,
+        "description": "Qué recorrido terminó: «panel» (el general) o la ruta de una pestaña («alumnos», «rifas/sorteo»).",
+        "properties": {
+          "recorrido": {
+            "default": "panel",
+            "pattern": "^[a-z0-9][a-z0-9/-]{0,59}$",
+            "title": "Recorrido",
+            "type": "string"
+          }
+        },
+        "title": "TutorialIn",
+        "type": "object"
+      },
       "UsuarioActualizar": {
         "additionalProperties": false,
         "properties": {
@@ -6262,6 +6276,13 @@
             "title": "Tutorial Visto",
             "type": "boolean"
           },
+          "tutoriales_vistos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tutoriales Vistos",
+            "type": "array"
+          },
           "vinculado_a": {
             "anyOf": [
               {
@@ -6281,7 +6302,8 @@
           "rol",
           "activo",
           "permisos",
-          "tutorial_visto"
+          "tutorial_visto",
+          "tutoriales_vistos"
         ],
         "title": "UsuarioListaOut",
         "type": "object"
@@ -6325,6 +6347,13 @@
           "tutorial_visto": {
             "title": "Tutorial Visto",
             "type": "boolean"
+          },
+          "tutoriales_vistos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tutoriales Vistos",
+            "type": "array"
           }
         },
         "required": [
@@ -6334,7 +6363,8 @@
           "rol",
           "activo",
           "permisos",
-          "tutorial_visto"
+          "tutorial_visto",
+          "tutoriales_vistos"
         ],
         "title": "UsuarioOut",
         "type": "object"
@@ -7951,11 +7981,38 @@
     },
     "/api/v1/auth/tutorial": {
       "post": {
-        "description": "Marca que la cuenta ya vio (o saltó) el tutorial guiado: no vuelve a salir solo, en ningún dispositivo.",
+        "description": "Marca que la cuenta ya vio (o saltó) un recorrido: no vuelve a salir solo, en ningún dispositivo.",
         "operationId": "tutorial_visto_api_v1_auth_tutorial_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TutorialIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Datos"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

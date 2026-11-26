@@ -234,7 +234,7 @@ def generar(semilla: int | None = None) -> None:
     with reloj_simulado() as reloj, TestClient(app, base_url="https://demo.local") as client:
         d = Demo(client, reloj, azar)
         reloj.poner(inicio, 8)
-        d.entrar("superadmin@example.com")
+        d.entrar(CUENTAS_DEMO[0][1])
         d.club(inicio)
 
         # Alumnos: la mayoría ya inscritos al empezar; unos pocos llegan en las semanas siguientes.

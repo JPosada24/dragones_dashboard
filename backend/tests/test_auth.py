@@ -147,3 +147,22 @@ def test_el_tutorial_sale_una_vez_por_cuenta(client, crear_usuario, auth_header,
     # También llega al iniciar sesión, en cualquier dispositivo.
     r = client.post("/api/v1/auth/login", json={"email": "nuevo@club.com", "password": PASSWORD})
     assert r.status_code == 200 and r.json()["usuario"]["tutorial_visto"] is True
+
+
+def test_el_recorrido_de_cada_pestana_queda_visto_una_vez(client, crear_usuario, auth_header, monkeypatch):
+    crear_usuario("nuevo@club.com", "ADMIN")
+    h = auth_header("nuevo@club.com")
+    assert client.get("/api/v1/auth/me", headers=h).json()["tutoriales_vistos"] == []
+    for recorrido in ("alumnos", "rifas/sorteo", "alumnos"):  # repetido: no se duplica
+        assert client.post("/api/v1/auth/tutorial", json={"recorrido": recorrido}, headers=h).status_code == 204
+    yo = client.get("/api/v1/auth/me", headers=h).json()
+    assert yo["tutoriales_vistos"] == ["alumnos", "rifas/sorteo"]
+    assert yo["tutorial_visto"] is False  # el general es aparte
+    # Solo claves con forma de ruta; nada de campos ajenos.
+    for malo in ({"recorrido": "<script>"}, {"recorrido": ""}, {"recorrido": "x" * 61}, {"otro": 1}):
+        assert client.post("/api/v1/auth/tutorial", json=malo, headers=h).status_code == 422
+    # La lista tiene tope: no crece sin fin.
+    monkeypatch.setattr("app.services.auth.MAX_RECORRIDOS", 3)
+    client.post("/api/v1/auth/tutorial", json={"recorrido": "multas"}, headers=h)
+    client.post("/api/v1/auth/tutorial", json={"recorrido": "torneos"}, headers=h)
+    assert client.get("/api/v1/auth/me", headers=h).json()["tutoriales_vistos"] == ["alumnos", "rifas/sorteo", "multas"]

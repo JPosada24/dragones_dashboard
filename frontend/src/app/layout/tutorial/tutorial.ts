@@ -14,7 +14,8 @@ interface Caja { top: number; left: number; width: number; height: number; }
 /**
  * Recorrido guiado: oscurece el panel, resalta el elemento del paso (`data-tutorial="…"`) y muestra la burbuja de
  * Kiira al lado. Es un <dialog> modal: atrapa el foco, Escape lo salta y el resto del panel queda inerte.
- * Si el elemento no está a la vista (p. ej. el menú lateral en el celular), la burbuja va al centro.
+ * Si el elemento no está a la vista, la burbuja va al centro. Al final del recorrido de una pestaña ofrece volver a
+ * ver el del menú.
  */
 @Component({
   selector: 'app-tutorial',
@@ -45,6 +46,9 @@ interface Caja { top: number; left: number; width: number; height: number; }
                 <button type="button" class="saltar" (click)="tutorial.terminar()">Saltar</button>
               }
               <span class="crece"></span>
+              @if (tutorial.dePestana() && tutorial.indice() === tutorial.pasos().length - 1) {
+                <button type="button" class="boton secundario chico" (click)="verMenu()">Ver el menú</button>
+              }
               @if (tutorial.indice() > 0) {
                 <button type="button" class="boton secundario chico" (click)="tutorial.anterior()">Atrás</button>
               }
@@ -122,6 +126,12 @@ export class Tutorial {
       // Encima (las pestañas de abajo en el celular).
       this.posicion.set({ top: Math.max(MARGEN, r.top - 12 - alto), left: limitar(r.left, vw - ancho - MARGEN) });
     }
+  }
+
+  /** Desde el final del recorrido de una pestaña: lo da por visto y repite el del menú. */
+  protected verMenu(): void {
+    this.tutorial.terminar();
+    this.tutorial.iniciarPanel();
   }
 
   protected tecla(e: KeyboardEvent): void {

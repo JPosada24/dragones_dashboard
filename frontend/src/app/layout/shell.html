@@ -55,7 +55,7 @@
       <div class="barra-movil-textos">
         <div class="barra-movil-titulo">
           <span class="recorte">{{ encabezado().titulo }}</span>
-          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" data-tutorial="ayuda" /> }
+          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" [ruta]="encabezado().ruta" data-tutorial="ayuda" /> }
         </div>
         <div class="barra-movil-sub">{{ encabezado().subtitulo }}</div>
       </div>
@@ -67,7 +67,7 @@
       <div>
         <div class="titulo-fila">
           <h1 class="titulo">{{ encabezado().titulo }}</h1>
-          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" data-tutorial="ayuda" /> }
+          @if (encabezado().ayuda; as ayuda) { <app-ayuda [ayuda]="ayuda" [ruta]="encabezado().ruta" data-tutorial="ayuda" /> }
         </div>
         <p class="subtitulo">{{ encabezado().subtitulo }}</p>
       </div>
@@ -95,7 +95,7 @@
       </a>
     }
     <button type="button" class="pestana" [class.activo]="menuAbierto()" (click)="alternarMenu()"
-      [attr.aria-expanded]="menuAbierto()" aria-controls="menu-mas">
+      [attr.aria-expanded]="menuAbierto()" aria-controls="menu-mas" data-tutorial="mas">
       <span class="icono" aria-hidden="true">menu</span>
       <span>Más</span>
     </button>

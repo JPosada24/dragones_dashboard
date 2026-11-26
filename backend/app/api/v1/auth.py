@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.core.limites import limitador_login
 from app.db.session import get_db
 from app.models.acceso import Usuario
-from app.schemas.auth import LoginIn, TokenOut, UsuarioOut
+from app.schemas.auth import LoginIn, TokenOut, TutorialIn, UsuarioOut
 from app.services import auth as servicio
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -95,8 +95,10 @@ def me(usuario: Usuario = Depends(usuario_actual)) -> UsuarioOut:
 
 
 @router.post("/tutorial", status_code=status.HTTP_204_NO_CONTENT)
-def tutorial_visto(usuario: Usuario = Depends(usuario_actual), db: Session = Depends(get_db)) -> Response:
-    """Marca que la cuenta ya vio (o saltó) el tutorial guiado: no vuelve a salir solo, en ningún dispositivo."""
-    servicio.marcar_tutorial_visto(db, usuario)
+def tutorial_visto(
+    datos: TutorialIn | None = None, usuario: Usuario = Depends(usuario_actual), db: Session = Depends(get_db)
+) -> Response:
+    """Marca que la cuenta ya vio (o saltó) un recorrido: no vuelve a salir solo, en ningún dispositivo."""
+    servicio.marcar_tutorial_visto(db, usuario, (datos or TutorialIn()).recorrido)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

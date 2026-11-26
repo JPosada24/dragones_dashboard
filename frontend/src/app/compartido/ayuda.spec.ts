@@ -18,7 +18,7 @@ describe('AyudaBoton', () => {
   let fixture: ComponentFixture<AyudaBoton>;
 
   function crear(permisos: string[], rol: Rol = 'MIEMBRO') {
-    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol, activo: true, tutorial_visto: true, permisos };
+    const usuario: Usuario = { id: 'u', email: 'x@club.com', nombre: 'X', rol, activo: true, tutorial_visto: true, tutoriales_vistos: [], permisos };
     TestBed.inject(AuthService).usuario.set(usuario);
     fixture = TestBed.createComponent(AyudaBoton);
     fixture.componentRef.setInput('ayuda', AYUDA);
@@ -53,18 +53,20 @@ describe('AyudaBoton', () => {
     expect(el().querySelector('dialog')).toBeNull();
   });
 
-  it('el staff puede volver a ver el recorrido del panel; la familia no lo ve', async () => {
+  it('al staff el «?» le repite el recorrido de la pantalla; a la familia le abre la explicación', async () => {
     crear(['alumnos.ver_propios']);
+    fixture.componentRef.setInput('ruta', 'asistencia');
     await abrir();
-    expect(el().textContent).not.toContain('Ver el recorrido');
+    expect(el().querySelector('dialog')).not.toBeNull();
+    expect(TestBed.inject(TutorialService).activo()).toBe(false);
 
     TestBed.resetTestingModule();
     crear(['alumnos.ver_todos'], 'ADMIN');
+    fixture.componentRef.setInput('ruta', 'asistencia');
     await abrir();
-    [...el().querySelectorAll('button')].find((b) => b.textContent?.includes('Ver el recorrido'))!.click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(TestBed.inject(TutorialService).activo()).toBe(true);
-    expect(el().querySelector('dialog')).toBeNull(); // la ayuda se cierra para dar paso al recorrido
+    const tutorial = TestBed.inject(TutorialService);
+    expect(tutorial.activo()).toBe(true);
+    expect(tutorial.paso()?.titulo).toBe('Cómo funciona la asistencia');
+    expect(el().querySelector('dialog')).toBeNull(); // sin popup: explica Kiira
   });
 });

@@ -78,4 +78,5 @@ def usuario_a_out(usuario: Usuario) -> UsuarioOut:
         permisos=usuario.permisos_codigos,
         # En el demo público el recorrido sale en cada ingreso: quien lo prueba siempre llega por primera vez.
         tutorial_visto=usuario.tutorial_visto_en is not None and not get_settings().demo,
+        tutoriales_vistos=[] if get_settings().demo else list(usuario.tutoriales_vistos),
     )

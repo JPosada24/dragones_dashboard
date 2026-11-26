@@ -34,11 +34,16 @@ export class Shell {
 
   constructor() {
     this.demo.cargar();
-    // La primera vez que una cuenta del staff entra, Kiira le presenta el panel (una sola vez por cuenta).
+    // Kiira: la primera vez que una cuenta del staff entra, presenta el menú; después, la primera vez que entra a
+    // cada pestaña, explica cómo funciona. Se revisa al cambiar de pantalla y al terminar cada recorrido.
     effect(() => {
-      if (this.usuario() && untracked(() => this.tutorial.debeMostrarse() && !this.tutorial.activo())) {
-        untracked(() => this.tutorial.iniciar());
-      }
+      const usuario = this.usuario();
+      const ruta = this.encabezado().ruta;
+      if (!usuario || ruta === null || this.tutorial.activo()) return;
+      untracked(() => {
+        if (this.tutorial.debeMostrarse()) this.tutorial.iniciarPanel(ruta);
+        else if (this.tutorial.pestanaPendiente(ruta)) this.tutorial.iniciarPestana(ruta);
+      });
     });
   }
 
@@ -83,13 +88,14 @@ export class Shell {
         let r = this.ruta.snapshot;
         while (r.firstChild) r = r.firstChild;
         return {
+          ruta: (r.data['ruta'] as string | undefined) ?? null,
           titulo: (r.data['titulo'] as string) ?? '',
           subtitulo: (r.data['subtitulo'] as string) ?? '',
           ayuda: (r.data['ayuda'] as Ayuda | undefined) ?? null,
         };
       }),
     ),
-    { initialValue: { titulo: '', subtitulo: '', ayuda: null as Ayuda | null } },
+    { initialValue: { ruta: null as string | null, titulo: '', subtitulo: '', ayuda: null as Ayuda | null } },
   );
 
   protected enlace(s: Seccion): string {

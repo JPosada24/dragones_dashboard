@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Uuid, text
+from sqlalchemy import ARRAY, Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.permissions import ROLES_PERSONALIZABLES
@@ -62,6 +62,10 @@ class Usuario(UUIDMixin, TiempoMixin, Base):
     ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Cuándo vio (o saltó) el tutorial guiado del panel; vacío = se le muestra al entrar.
     tutorial_visto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Recorridos de cada pestaña que ya vio (la ruta: «alumnos», «rifas/sorteo»…): salen solos la primera vez.
+    tutoriales_vistos: Mapped[list[str]] = mapped_column(
+        ARRAY(String(60)), default=list, server_default=text("'{}'"), nullable=False
+    )
     # Va dentro del token de acceso; sube al cambiar la contraseña o el rol y los tokens anteriores dejan de valer.
     credenciales_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     # Eliminado por el SuperAdmin: sin acceso, sin correo (se libera) y fuera de la lista; la fila queda porque

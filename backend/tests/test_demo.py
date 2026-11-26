@@ -52,7 +52,9 @@ def test_en_el_demo_el_tutorial_sale_en_cada_ingreso(modo_demo, client, crear_us
     crear_usuario("admin@club.com", "ADMIN")
     h = auth_header("admin@club.com")
     assert client.post("/api/v1/auth/tutorial", headers=h).status_code == 204
-    assert client.get("/api/v1/auth/me", headers=h).json()["tutorial_visto"] is False
+    assert client.post("/api/v1/auth/tutorial", json={"recorrido": "alumnos"}, headers=h).status_code == 204
+    yo = client.get("/api/v1/auth/me", headers=h).json()
+    assert yo["tutorial_visto"] is False and yo["tutoriales_vistos"] == []
 
 
 def test_el_generador_no_corre_fuera_del_demo():
@@ -72,6 +74,6 @@ def test_el_generador_arma_un_club_completo_con_las_reglas_reales(modo_demo, mon
         r = cliente.post("/api/v1/auth/login", json={"email": email, "password": CLAVE_DEMO})
         assert r.status_code == 200, email
     # Solo staff: sin cuentas de familia ni acudientes (alumnos mayores de edad).
-    assert {r for r, _, _ in CUENTAS_DEMO} == {"SUPERADMIN", "ADMIN", "ENTRENADOR"}
+    assert [r for r, _, _ in CUENTAS_DEMO] == ["SUPERADMIN"]  # una sola cuenta: Daniel Mejía
     assert db.scalar(select(func.count()).select_from(Acudiente)) == 0
     assert db.scalar(select(func.count()).select_from(Usuario).where(Usuario.nombre.ilike("%julian%"))) == 0

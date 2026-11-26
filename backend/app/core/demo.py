@@ -9,11 +9,8 @@ import json
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 CLAVE_DEMO = "DemoDragones2026"  # pública a propósito: está en la pantalla de entrada del demo
-CUENTAS_DEMO = (
-    ("SUPERADMIN", "superadmin@example.com", "Administrador"),
-    ("ADMIN", "admin@example.com", "Daniel Mejía"),
-    ("ENTRENADOR", "entrenador@example.com", "Daniel Mejía"),
-)
+# Una sola cuenta: el entrenador principal del club ficticio, con acceso total.
+CUENTAS_DEMO = (("SUPERADMIN", "daniel.mejia@example.com", "Daniel Mejía"),)
 
 
 def motivo_bloqueo(metodo: str, ruta: str, tipo_contenido: str) -> str | None:

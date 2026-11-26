@@ -13,15 +13,15 @@ export interface Ayuda {
 }
 
 /**
- * Botón "?" que abre la explicación de la pantalla en un popup. Lo pone el marco junto al título de cada
- * vista; el contenido sale de `core/secciones.ts`.
+ * Botón "?" junto al título de cada vista (lo pone el marco; el contenido sale de `core/ayudas.ts`).
+ * Al staff le repite el recorrido de Kiira por esa pantalla; a la familia le abre la explicación en un popup.
  */
 @Component({
   selector: 'app-ayuda',
   imports: [Dialogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <button type="button" class="ayuda" (click)="abierta.set(true)" [attr.aria-label]="ayuda().titulo"
+    <button type="button" class="ayuda" (click)="abrir()" [attr.aria-label]="ayuda().titulo"
             title="Cómo funciona">
       <span class="icono" aria-hidden="true">help</span>
     </button>
@@ -37,11 +37,6 @@ export interface Ayuda {
             <p class="nota-ayuda">{{ ayuda().nota }}</p>
           }
           <div class="acciones">
-            @if (conTutorial()) {
-              <button type="button" class="boton secundario chico" (click)="verTutorial()">
-                <span class="icono" aria-hidden="true">tour</span> Ver el recorrido del panel
-              </button>
-            }
             <button type="button" class="boton chico" (click)="abierta.set(false)">Entendido</button>
           </div>
         </div>
@@ -105,13 +100,16 @@ export class AyudaBoton {
   private readonly tutorial = inject(TutorialService);
 
   readonly ayuda = input.required<Ayuda>();
+  /** Ruta de la pantalla (la de `core/secciones.ts`): de ella sale su recorrido. */
+  readonly ruta = input<string | null>(null);
   protected readonly abierta = signal(false);
-  /** El recorrido es del panel del staff (las familias tienen otro, más simple). */
-  protected readonly conTutorial = computed(() => !!this.auth.usuario() && this.auth.usuario()?.rol !== 'MIEMBRO');
 
-  protected verTutorial(): void {
-    this.abierta.set(false);
-    this.tutorial.iniciar();
+  protected abrir(): void {
+    const ruta = this.ruta();
+    // El recorrido es del panel del staff (las familias tienen otro, más simple): a ellas, el popup.
+    const staff = !!this.auth.usuario() && this.auth.usuario()?.rol !== 'MIEMBRO';
+    if (staff && ruta !== null && this.tutorial.iniciarPestana(ruta)) return;
+    this.abierta.set(true);
   }
 
   protected readonly pasos = computed(() =>

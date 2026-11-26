@@ -5,14 +5,16 @@ import { provideRouter } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { API, Usuario } from '../../core/modelos';
-import { TutorialService } from '../../core/tutorial.service';
+import { SECCIONES } from '../../core/secciones';
+import { QUE_HACE, TutorialService } from '../../core/tutorial.service';
 import { Tutorial } from './tutorial';
 
 const ADMIN = ['alumnos.ver_todos', 'eventos.gestionar', 'club.editar'];
 const ENTRENADOR = ['alumnos.ver_todos', 'asistencia.marcar_grupo'];
 
 const usuario = (permisos: string[], extra: Partial<Usuario> = {}): Usuario => ({
-  id: 'u', email: 'ana@club.com', nombre: 'Ana Ruiz', rol: 'ADMIN', activo: true, tutorial_visto: false, permisos, ...extra,
+  id: 'u', email: 'ana@club.com', nombre: 'Ana Ruiz', rol: 'ADMIN', activo: true, tutorial_visto: false,
+  tutoriales_vistos: [], permisos, ...extra,
 });
 
 describe('Tutorial', () => {
@@ -44,6 +46,7 @@ describe('Tutorial', () => {
 
   it('solo enseña las secciones que la persona tiene en su menú', () => {
     preparar(usuario(ENTRENADOR, { rol: 'ENTRENADOR' }));
+    servicio.iniciarPanel();
     const titulos = servicio.pasos().map((p) => p.titulo);
     expect(titulos[0]).toBe('¡Hola, Ana!');
     expect(titulos).toContain('Alumnos');
@@ -64,7 +67,7 @@ describe('Tutorial', () => {
 
   it('recorre los pasos con Kiira y al terminar queda visto en el servidor', async () => {
     preparar(usuario(ADMIN));
-    servicio.iniciar();
+    servicio.iniciarPanel();
     await estable();
     expect(el().querySelector('dialog h2')?.textContent).toBe('¡Hola, Ana!');
     expect(el().querySelector('app-dragon')?.getAttribute('data-pose')).toBe('saluda');
@@ -95,14 +98,14 @@ describe('Tutorial', () => {
 
   it('«Saltar» también lo deja visto, y verlo otra vez no vuelve a avisar al servidor', async () => {
     preparar(usuario(ADMIN));
-    servicio.iniciar();
+    servicio.iniciarPanel();
     await estable();
     boton('Saltar')!.click();
     backend.expectOne(`${API}/auth/tutorial`).flush(null, { status: 204, statusText: 'No Content' });
     await estable();
     expect(el().querySelector('dialog')).toBeNull();
 
-    servicio.iniciar(); // desde la ayuda
+    servicio.iniciarPanel(); // desde la ayuda
     await estable();
     boton('Saltar')!.click();
     backend.expectNone(`${API}/auth/tutorial`);
@@ -114,7 +117,7 @@ describe('Tutorial', () => {
     enlace.dataset['tutorial'] = 'seccion:';
     enlace.getBoundingClientRect = () => ({ top: 100, left: 10, right: 210, bottom: 140, width: 200, height: 40 }) as DOMRect;
     document.body.appendChild(enlace);
-    servicio.iniciar();
+    servicio.iniciarPanel();
     await estable();
     expect(el().querySelector('.foco')).toBeNull(); // la bienvenida va al centro
     boton('Siguiente')!.click();
@@ -123,5 +126,70 @@ describe('Tutorial', () => {
     expect(foco.style.top).toBe('94px');
     expect(foco.style.width).toBe('212px');
     enlace.remove();
+  });
+
+  it('presenta cada sección del menú con lo que hace', () => {
+    preparar(usuario(ADMIN));
+    servicio.iniciarPanel();
+    const paso = servicio.pasos().find((p) => p.titulo === 'Torneos');
+    expect(paso?.objetivo).toBe('seccion:torneos');
+    expect(paso?.texto).toBe(QUE_HACE['torneos']);
+    // Ninguna sección del menú queda sin su explicación.
+    for (const s of SECCIONES.filter((x) => x.enMenu !== false)) expect(QUE_HACE[s.ruta]).toBeTruthy();
+  });
+
+  it('en el celular solo explica lo que se ve: las pestañas de abajo y «Más»', () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: q.includes('max-width') }) as MediaQueryList);
+    try {
+      preparar(usuario(ADMIN));
+      servicio.iniciarPanel();
+      const titulos = servicio.pasos().map((p) => p.titulo);
+      expect(titulos).toContain('Asistencia');
+      expect(titulos).not.toContain('Torneos'); // va dentro de «Más»: no se señala algo oculto
+      const mas = servicio.pasos().find((p) => p.objetivo === 'mas')!;
+      expect(mas.texto).toContain('Torneos');
+      expect(mas.texto).toContain('Perfil del club');
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('cada pestaña se explica la primera vez que se entra, después del recorrido general', async () => {
+    preparar(usuario(ADMIN));
+    expect(servicio.pestanaPendiente('alumnos')).toBe(false); // primero el general
+    auth.usuario.set(usuario(ADMIN, { tutorial_visto: true }));
+    expect(servicio.pestanaPendiente('alumnos')).toBe(true);
+    expect(servicio.iniciarPestana('alumnos')).toBe(true);
+    await estable();
+    expect(el().querySelector('dialog h2')?.textContent).toBe('Cómo funcionan las fichas');
+    expect(servicio.pasos().some((p) => p.objetivo === 'pestanas')).toBe(true); // Alumnos tiene pestañas
+    boton('Saltar')!.click();
+    const r = backend.expectOne(`${API}/auth/tutorial`);
+    expect(r.request.body).toEqual({ recorrido: 'alumnos' });
+    r.flush(null, { status: 204, statusText: 'No Content' });
+    expect(servicio.pestanaPendiente('alumnos')).toBe(false);
+    expect(auth.usuario()?.tutoriales_vistos).toEqual(['alumnos']);
+    // El Resumen (ruta vacía) se guarda como «resumen»; la familia no tiene recorridos.
+    expect(servicio.pestanaPendiente('')).toBe(true);
+    auth.usuario.set(usuario([], { rol: 'MIEMBRO', tutorial_visto: true }));
+    expect(servicio.pestanaPendiente('')).toBe(false);
+  });
+
+  it('al final del recorrido de una pestaña ofrece volver a ver el del menú', async () => {
+    preparar(usuario(ADMIN, { tutorial_visto: true }));
+    servicio.iniciarPestana('rifas/sorteo');
+    await estable();
+    expect(boton('Ver el menú')).toBeUndefined();
+    while (boton('Siguiente')) {
+      boton('Siguiente')!.click();
+      await estable();
+    }
+    boton('Ver el menú')!.click();
+    backend.expectOne(`${API}/auth/tutorial`).flush(null, { status: 204, statusText: 'No Content' });
+    await estable();
+    expect(auth.usuario()?.tutoriales_vistos).toEqual(['rifas/sorteo']);
+    expect(servicio.dePestana()).toBe(false);
+    expect(el().querySelector('dialog h2')?.textContent).toBe('¡Hola, Ana!');
   });
 });

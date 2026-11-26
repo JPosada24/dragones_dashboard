@@ -5,10 +5,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Kiira explica cada pestaña** la primera vez que se entra a ella (con el contenido de su ayuda, y señalando las
+  pestañas de la sección si tiene varias); el botón «?» repite ese recorrido. El servidor guarda cuáles vio cada
+  cuenta (`usuarios.tutoriales_vistos`, migración 0032; `POST /auth/tutorial` con `{"recorrido": "<ruta>"}`).
+  El recorrido general ahora presenta **todas** las secciones del menú, y en el celular solo lo que se ve (las
+  pestañas de abajo y «Más»).
 - **TikTok del club** en el perfil (migración 0031): se escribe el usuario o se pega el enlace del perfil; el
   sitio lo muestra en el pie junto a Instagram y Facebook.
 - **Demo público** (`docker-compose.demo.yml`, `DEMO=true`; por ahora solo staff: SuperAdmin, Admin y Entrenador,
-  alumnos mayores de edad y sin acudientes): un club ficticio generado con la API real y un reloj
+  alumnos mayores de edad y sin acudientes; una sola cuenta, Daniel Mejía como SuperAdmin): un club ficticio generado con la API real y un reloj
   simulado (`python -m app.scripts.demo`: seis semanas de inscripciones, asistencia, multas, rifa y torneos) que se
   regenera cada día a las 04:00, con base, archivos y claves propios. La entrada muestra las cuentas de prueba
   (`GET /demo`) y el panel una franja «datos ficticios»; no se pueden tocar las cuentas ni subir archivos
