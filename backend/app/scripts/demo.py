@@ -44,7 +44,11 @@ APELLIDOS = ["Restrepo", "Giraldo", "Ospina", "Cardona", "Zapata", "Arango", "Mo
 CLUBES = [("Halcones VC", "Medellín"), ("Titanes Voley", "Envigado"), ("Club Cóndor", "Bello"),
           ("Águilas del Sur", "Itagüí"), ("Tiburones VC", "Rionegro"), ("Club Pumas", "Sabaneta"),
           ("Fénix Voleibol", "La Estrella"), ("Linces VC", "Caldas"), ("Club Jaguares", "Copacabana"),
-          ("Delfines Voley", "Girardota"), ("Club Centauros", "Marinilla"), ("Osos VC", "Guarne")]
+          ("Delfines Voley", "Girardota"), ("Club Centauros", "Marinilla"), ("Osos VC", "Guarne"),
+          ("Panteras VC", "La Ceja"), ("Club Gavilanes", "El Retiro"), ("Toros Voley", "Santa Fe de Antioquia"),
+          ("Club Zafiro", "Barbosa"), ("Leones VC", "Apartadó"), ("Club Huracán", "Sonsón"),
+          ("Tigres del Norte", "Yarumal"), ("Club Volcán", "Urrao"), ("Pegasos VC", "Andes"),
+          ("Club Relámpago", "Caucasia"), ("Búhos Voley", "Jericó"), ("Club Arrecife", "Turbo")]
 
 
 class Reloj:
@@ -204,7 +208,7 @@ class Demo:
         cuerpo = {
             "nombre": nombre, "fecha_inicio": inicio.isoformat(), "fecha_fin": fin.isoformat(),
             "fecha_limite_inscripcion": (inicio - timedelta(days=4)).isoformat(),
-            "lugar": "Coliseo del barrio", "cupo_equipos": 12, "valor_inscripcion": 150_000,
+            "lugar": "Coliseo del barrio", "cupo_equipos": 12 if rama else 24, "valor_inscripcion": 150_000,
         }
         sedes = ["Coliseo Mayor", "Coliseo Barrio Sur"]
         if rama is None:
@@ -228,7 +232,7 @@ class Demo:
                 self.pedir("POST", f"/torneos/{t['id']}/equipos/{e['id']}/pagos",
                            json={"monto": monto, "fecha": fechas.hoy().isoformat()})
         if rama is None:  # grupos de la femenina ya sorteados y publicados; la masculina queda para probar
-            sorteo = self.pedir("POST", f"/torneos/{t['id']}/grupos/femenina/sortear", json={"grupos": 2})
+            sorteo = self.pedir("POST", f"/torneos/{t['id']}/grupos/femenina/sortear", json={"grupos": 3})
             for g, sede in zip(sorteo["grupos"], sedes, strict=False):
                 self.pedir("PUT", f"/torneos/{t['id']}/grupos/{g['id']}/sede", json={"sede": sede})
             self.pedir("POST", f"/torneos/{t['id']}/grupos/femenina/confirmar")
@@ -302,7 +306,7 @@ def generar(semilla: int | None = None) -> None:
         # Hoy, con la hora real: el próximo torneo (inscripciones abiertas) y el pasado, a «Torneos realizados».
         reloj.soltar()
         d.tareas_del_worker()
-        d.torneo("Torneo Relámpago Dragones", None, hoy + timedelta(days=24), 10, 0.5)
+        d.torneo("Torneo Relámpago Dragones", None, hoy + timedelta(days=24), 22, 0.5)  # 11 por rama
         realizado = d.pedir("POST", f"/torneos/{torneo_pasado['id']}/realizado")
         d.pedir("PATCH", f"/club/torneos-realizados/{realizado['id']}", json={
             "resumen": "Campeón: Halcones VC. Subcampeón: Club Dragones. 9 clubes de 7 municipios.", "publicado": True})
