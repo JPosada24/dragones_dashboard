@@ -7,12 +7,13 @@ import { AuthService } from './auth.service';
  * Los guards solo ordenan la navegación. La autorización real la hace SIEMPRE el servidor:
  * ocultar una pantalla aquí no da ni quita permisos.
  */
-export const requiereSesion: CanActivateFn = (_ruta, estado) => {
+/** Sin sesión va al login; al entrar, siempre al Resumen (no a la pantalla que se intentó abrir). */
+export const requiereSesion: CanActivateFn = () => {
   const auth = inject(AuthService);
   if (auth.autenticado()) {
     return true;
   }
-  return inject(Router).createUrlTree(['/login'], { queryParams: { volver: estado.url } });
+  return inject(Router).createUrlTree(['/login']);
 };
 
 export const soloInvitado: CanActivateFn = () => {

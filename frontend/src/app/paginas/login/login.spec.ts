@@ -1,9 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
-import { API } from '../../core/modelos';
+import { API, TokenOut } from '../../core/modelos';
 import { LoginPage } from './login';
 
 const DEMO = {
@@ -53,5 +53,19 @@ describe('LoginPage', () => {
     r.flush({ detail: 'x' }, { status: 401, statusText: 'Unauthorized' });
     await estable();
     expect(el().textContent).toContain('Correo o contraseña incorrectos.');
+  });
+
+  it('al entrar siempre va al Resumen', async () => {
+    backend.expectOne(`${API}/demo`).flush(DEMO);
+    await estable();
+    const ir = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    el().querySelector<HTMLButtonElement>('.cuenta')!.click();
+    const token: TokenOut = {
+      access_token: 't', token_type: 'bearer', expires_in: 900,
+      usuario: { id: 'u', email: 'superadmin@example.com', nombre: 'X', rol: 'SUPERADMIN', activo: true, tutorial_visto: true, tutoriales_vistos: [], permisos: [] },
+    };
+    backend.expectOne(`${API}/auth/login`).flush(token);
+    await estable();
+    expect(ir).toHaveBeenCalledWith('/');
   });
 });

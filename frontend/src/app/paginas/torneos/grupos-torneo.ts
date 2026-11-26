@@ -44,6 +44,8 @@ export class GruposTorneo implements OnInit {
   protected readonly cantidades = signal<Partial<Record<RamaTorneo, number>>>({});
   /** Rama cuyo sorteo ya publicado se quiere repetir: se pide confirmación. */
   protected readonly porRepetir = signal<RamaTorneo | null>(null);
+  /** Rama cuyos grupos se están ajustando (sedes, mover equipos, cabezas de serie). */
+  protected readonly ajuste = signal<RamaTorneo | null>(null);
 
   private get url(): string {
     return `${API}/torneos/${encodeURIComponent(this.torneo().id)}`;
@@ -78,6 +80,10 @@ export class GruposTorneo implements OnInit {
       },
       error: (e) => this.op.errorDialogo.set(mensajeError(e)),
     });
+  }
+
+  protected alternarAjuste(rama: RamaTorneo): void {
+    this.ajuste.update((a) => (a === rama ? null : rama));
   }
 
   protected cantidad(r: VistaRama): number {

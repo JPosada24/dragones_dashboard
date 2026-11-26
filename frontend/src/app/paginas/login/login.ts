@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { AuthService, rutaSegura } from '../../core/auth/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { DemoService, InfoDemo } from '../../core/demo.service';
 import { NOMBRE_ROL } from '../../core/modelos';
 
@@ -50,9 +50,8 @@ export class LoginPage {
     this.error.set(null);
     const { email, password } = this.form.getRawValue();
     this.auth.login(email, password).subscribe({
-      next: () => {
-        void this.router.navigateByUrl(rutaSegura(this.ruta.snapshot.queryParamMap.get('volver')));
-      },
+      // Siempre entra al Resumen, aunque el enlace que abrió apuntara a otra pantalla.
+      next: () => void this.router.navigateByUrl('/'),
       error: (e: unknown) => {
         this.enviando.set(false);
         this.form.controls.password.reset();

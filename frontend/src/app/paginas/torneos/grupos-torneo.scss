@@ -1,9 +1,29 @@
-// Sorteo de grupos: una sección por rama, con sus grupos en tarjetas.
-.rama-grupos {
+// Sorteo de grupos: una sección por rama; cada grupo es una tarjeta con sus equipos.
+.nota-chica {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--texto-3);
+}
+
+.mono {
+  font-family: var(--f-mono);
+}
+
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.rama {
   display: grid;
-  gap: 10px;
-  padding: 12px 0;
-  border-top: 1px solid var(--borde-suave);
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--borde);
 
   &:first-of-type {
     border-top: 0;
@@ -15,12 +35,21 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.rama-titulo {
+  flex: 1;
+  min-width: 0;
 
   h3 {
     margin: 0;
-    font: 600 14px var(--f-titulo);
+    font: 600 15px var(--f-titulo);
     color: var(--texto);
+
+    &::first-letter {
+      text-transform: uppercase;
+    }
   }
 }
 
@@ -28,6 +57,7 @@
   padding: 3px 8px;
   border-radius: 4px;
   font: 600 10px var(--f-texto);
+  letter-spacing: 0.02em;
   background: var(--oro-tenue);
   color: var(--oro);
 
@@ -39,102 +69,154 @@
 
 .grupos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
   gap: 10px;
 }
 
 .grupo {
+  min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 10px;
   align-content: start;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--borde);
-  border-radius: var(--radio-sm);
+  border-radius: var(--radio);
   background: var(--panel-hundido);
 }
 
 .grupo-cabecera {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+}
+
+.letra {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radio-sm);
+  background: var(--degradado);
+  color: var(--texto-blanco);
+  font: 700 15px var(--f-titulo);
+}
+
+.grupo-titulo {
+  min-width: 0;
 
   h4 {
     margin: 0;
     font: 600 13px var(--f-titulo);
-    color: var(--oro);
+    color: var(--texto);
+  }
+
+  .nota-chica {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 // Selectores compactos: dejan espacio a la derecha para la flecha (la pone styles.scss).
-select.chico {
-  width: auto;
-  max-width: 180px;
+select.compacto {
+  width: 100%;
   min-height: 30px;
   padding: 5px 28px 5px 10px;
   font-size: 12px;
 }
 
-.equipos-grupo,
-.sin-grupo ul,
+.equipos,
 .cabezas {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 
   li {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12.5px;
-    color: var(--texto);
+    gap: 8px;
+    min-height: 34px;
+    padding: 2px 4px;
+    border-radius: var(--radio-sm);
+
+    &:hover {
+      background: var(--panel-elevado);
+    }
   }
 }
 
 .cabezas {
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  font-size: 12.5px;
 }
 
-.nombre {
+.club {
   flex: 1;
   min-width: 0;
+  display: grid;
+}
+
+.club-nombre {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--texto);
+}
+
+.club-ciudad {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--texto-3);
 }
 
 select.mover {
   flex-shrink: 0;
-  min-width: 64px;
-  max-width: 112px;
+  width: 64px;
 }
 
 .debe {
-  padding: 1px 5px;
+  flex-shrink: 0;
+  padding: 2px 6px;
   border-radius: 4px;
   font: 600 10px var(--f-texto);
   background: var(--oro-tenue);
   color: var(--oro);
 }
 
-// Estrella de cabeza de serie: apagada (gris) o encendida (oro).
+// Estrella de cabeza de serie: botón (apagada o encendida) o marca fija.
 .estrella {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
   padding: 0;
   border: 0;
   border-radius: var(--radio-sm);
   background: transparent;
   color: var(--texto-3);
-  cursor: pointer;
 
   .icono {
-    font-size: 18px;
+    font-size: 17px;
   }
+
+  &.fija {
+    color: var(--oro);
+  }
+
+  &.vacia {
+    visibility: hidden;
+  }
+}
+
+button.estrella {
+  cursor: pointer;
 
   &[aria-pressed='true'] {
     color: var(--oro);
@@ -142,6 +224,7 @@ select.mover {
 
   &:hover:not(:disabled) {
     background: var(--panel-elevado);
+    color: var(--oro);
   }
 
   &:focus-visible {
@@ -153,57 +236,83 @@ select.mover {
 .sin-grupo {
   display: grid;
   gap: 6px;
-  padding: 10px;
+  padding: 12px;
   border: 1px dashed var(--borde-fuerte);
-  border-radius: var(--radio-sm);
+  border-radius: var(--radio);
+
+  .etiqueta {
+    margin: 0;
+  }
+
+  select.compacto {
+    width: 130px;
+    flex-shrink: 0;
+  }
 }
 
-.sorteo-acciones {
+.sorteo {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radio);
+  background: var(--panel-elevado);
 }
 
-.campo-linea {
+.cantidad {
   display: flex;
   align-items: center;
   gap: 8px;
 
+  .etiqueta {
+    margin: 0;
+  }
+
   select {
-    min-width: 72px;
+    width: 72px;
     font-family: var(--f-mono);
   }
 }
 
+.separador {
+  flex: 1;
+}
+
 .repetir {
-  padding: 10px;
-  border-radius: var(--radio-sm);
+  padding: 12px;
+  border-radius: var(--radio);
   background: var(--rojo-tenue);
   font-size: 12.5px;
   color: var(--texto);
 
   p {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
   }
 }
 
 .actas {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--texto-2);
 
   summary {
     cursor: pointer;
-    color: var(--texto);
+    color: var(--texto-2);
+
+    &:hover {
+      color: var(--texto);
+    }
   }
 
   .acta {
-    padding: 6px 0;
+    padding: 8px 0;
     border-bottom: 1px solid var(--borde-suave);
   }
 
-  .acta-grupos {
-    margin: 2px 0 0;
+  ul {
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
     display: grid;
     gap: 2px;
   }

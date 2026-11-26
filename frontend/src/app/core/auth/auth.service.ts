@@ -89,11 +89,3 @@ export class AuthService {
     this.usuario.set(null);
   }
 }
-
-/** Solo se aceptan rutas internas para volver tras el login (evita redirecciones abiertas a otros sitios). */
-export function rutaSegura(volver: string | null | undefined): string {
-  if (!volver || !volver.startsWith('/') || volver.startsWith('//') || volver.startsWith('/\\')) {
-    return '/';
-  }
-  return volver;
-}

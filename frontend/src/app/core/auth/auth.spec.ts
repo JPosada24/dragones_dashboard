@@ -6,7 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { API, TokenOut, Usuario } from '../modelos';
 import { seccionesVisibles } from '../secciones';
 import { authInterceptor } from './auth.interceptor';
-import { AuthService, rutaSegura } from './auth.service';
+import { AuthService } from './auth.service';
 
 const usuario = (permisos: string[] = []): Usuario => ({
   id: 'u1', email: 'root@club.com', nombre: 'Julian Posada', rol: 'SUPERADMIN', activo: true, tutorial_visto: true, tutoriales_vistos: [], permisos,
@@ -110,17 +110,5 @@ describe('Sesión (AuthService + interceptor)', () => {
     expect(rutas).not.toContain('torneos');
     expect(rutas).not.toContain('usuarios');
     expect(rutas).not.toContain('alumnos/inscripciones'); // es una pestaña de Alumnos, no un ítem del menú
-  });
-});
-
-describe('rutaSegura (volver tras el login)', () => {
-  it('acepta rutas internas', () => {
-    expect(rutaSegura('/alumnos?x=1')).toBe('/alumnos?x=1');
-  });
-
-  it('rechaza redirecciones a otros sitios', () => {
-    for (const malo of ['https://malo.com', '//malo.com', '/\\malo.com', 'javascript:alert(1)', '', null]) {
-      expect(rutaSegura(malo)).toBe('/');
-    }
   });
 });

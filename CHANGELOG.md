@@ -21,6 +21,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 - **Demo:** el sorteo se puede jugar en cualquier momento, para que se vea cómo funciona.
 
 ### Cambiado
+- Al iniciar sesión siempre se entra al **Resumen**, aunque el enlace abierto apuntara a otra pantalla (ya no se usa
+  `?volver=`).
+- Ventana de **Grupos** más limpia: tarjetas por grupo y los controles (sede, mover, cabezas de serie) solo al pulsar
+  «Ajustar».
 - **Fecha límite de inscripción opcional** (0035): es solo para el sitio (vacía = hasta el día de inicio). El staff
   inscribe hasta el último día del torneo, porque hay clubes que llegan y pagan ese día. El sitio muestra el torneo
   (con sus grupos) hasta que termina, con la inscripción cerrada cuando corresponde.

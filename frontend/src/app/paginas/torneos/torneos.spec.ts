@@ -285,6 +285,11 @@ describe('TorneosPage', () => {
     expect(ultimo().querySelectorAll('.grupo').length).toBe(2);
     expect(ultimo().querySelector('.debe')).not.toBeNull(); // Club a aún debe
 
+    // Los controles para ajustar aparecen con «Ajustar».
+    expect(ultimo().querySelector('select[aria-label="Sede del grupo A"]')).toBeNull();
+    boton('tune Ajustar', ultimo())!.click();
+    await estable();
+
     // Sede del grupo A.
     const sede = ultimo().querySelector<HTMLSelectElement>('select[aria-label="Sede del grupo A"]')!;
     sede.value = 'Coliseo Sur';
