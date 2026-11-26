@@ -228,6 +228,21 @@ def test_en_el_sitio_se_ven_las_jornadas_y_el_club_elige_la_rama(client, h_admin
     assert client.post(url, json={**DATOS_CLUB, "rama": "masculina"}).status_code == 201
 
 
+def test_desde_el_sitio_se_inscribe_hasta_la_fecha_limite_o_el_dia_de_inicio(client, h_admin, reloj):
+    from tests.fabrica import INICIO, en_hora
+
+    con_limite = crear_torneo(client, h_admin).json()  # límite: 5 días antes del inicio
+    sin_limite = crear_torneo(client, h_admin, nombre="Copa abierta", fecha_limite_inscripcion=None).json()
+    publicar(client, h_admin)
+    reloj(en_hora(INICIO, 9))
+    r = client.post(f"{P}/torneos/{con_limite['id']}/inscripcion", json=DATOS_CLUB)
+    assert r.status_code == 422 and "cerraron" in r.json()["detail"]
+    assert client.post(f"{P}/torneos/{sin_limite['id']}/inscripcion", json=DATOS_CLUB).status_code == 201
+    reloj(en_hora(INICIO + timedelta(days=1), 9))
+    r = client.post(f"{P}/torneos/{sin_limite['id']}/inscripcion", json={**DATOS_CLUB, "nombre_club": "Otro VC"})
+    assert r.status_code == 422 and "cerraron" in r.json()["detail"]
+
+
 def test_trampa_de_bots_y_limite_por_ip(client, h_admin, reloj, db):
     torneo = crear_torneo(client, h_admin).json()
     publicar(client, h_admin)

@@ -75,8 +75,10 @@ def test_el_sitio_muestra_el_flyer_solo_mientras_las_inscripciones_estan_abierta
     assert len(abierto["anuncio"]) == 8 and abierto["anuncio_alto"] == 1350 and "anuncio_clave" not in abierto
     r = client.get(f"{url}?tam=grande")
     assert r.status_code == 200 and "public" in r.headers["cache-control"]
-    # Cerradas las inscripciones, el flyer deja de ser público.
+    # Cerradas las inscripciones sigue en el sitio (con sus grupos) hasta que el torneo termina.
     reloj(en_hora(INICIO - timedelta(days=4), 9))
+    assert client.get(url).status_code == 200
+    reloj(en_hora(INICIO + timedelta(days=2), 9))
     assert client.get(url).status_code == 404
 
 

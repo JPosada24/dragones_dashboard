@@ -180,18 +180,13 @@ h2 {
   }
 }
 
-// Rama y sede de cada equipo en la lista de clubes.
+// Rama, grupo y cabeza de serie de cada equipo en la lista de clubes.
 .equipo-sede {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 4px;
-
-  select {
-    max-width: 220px;
-    padding: 4px 8px;
-    font-size: 12px;
-  }
 }
 
 .chip-cancelado {

@@ -1,6 +1,38 @@
 {
   "components": {
     "schemas": {
+      "ActaGruposOut": {
+        "properties": {
+          "creado_en": {
+            "format": "date-time",
+            "title": "Creado En",
+            "type": "string"
+          },
+          "grupos": {
+            "items": {
+              "$ref": "#/components/schemas/GrupoActaOut"
+            },
+            "title": "Grupos",
+            "type": "array"
+          },
+          "huella": {
+            "title": "Huella",
+            "type": "string"
+          },
+          "orden": {
+            "title": "Orden",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "orden",
+          "grupos",
+          "huella",
+          "creado_en"
+        ],
+        "title": "ActaGruposOut",
+        "type": "object"
+      },
       "ActaOut": {
         "properties": {
           "alumno_id": {
@@ -1298,6 +1330,20 @@
         "title": "Body_subir_portada_api_v1_club_albumes__album_id__portada_post",
         "type": "object"
       },
+      "CabezaSerieIn": {
+        "additionalProperties": false,
+        "properties": {
+          "cabeza_serie": {
+            "title": "Cabeza Serie",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cabeza_serie"
+        ],
+        "title": "CabezaSerieIn",
+        "type": "object"
+      },
       "CancelarIn": {
         "additionalProperties": false,
         "properties": {
@@ -1876,6 +1922,40 @@
         "title": "EliminarFotosIn",
         "type": "object"
       },
+      "EquipoActaOut": {
+        "properties": {
+          "cabeza_serie": {
+            "title": "Cabeza Serie",
+            "type": "boolean"
+          },
+          "ciudad": {
+            "title": "Ciudad",
+            "type": "string"
+          },
+          "club": {
+            "title": "Club",
+            "type": "string"
+          },
+          "estado": {
+            "enum": [
+              "pendiente_pago",
+              "confirmado",
+              "en_espera",
+              "retirado"
+            ],
+            "title": "Estado",
+            "type": "string"
+          }
+        },
+        "required": [
+          "club",
+          "ciudad",
+          "cabeza_serie",
+          "estado"
+        ],
+        "title": "EquipoActaOut",
+        "type": "object"
+      },
       "EquipoCrear": {
         "additionalProperties": false,
         "properties": {
@@ -1937,8 +2017,52 @@
         "title": "EquipoCrear",
         "type": "object"
       },
+      "EquipoGrupoOut": {
+        "properties": {
+          "cabeza_serie": {
+            "title": "Cabeza Serie",
+            "type": "boolean"
+          },
+          "ciudad": {
+            "title": "Ciudad",
+            "type": "string"
+          },
+          "estado": {
+            "enum": [
+              "pendiente_pago",
+              "confirmado",
+              "en_espera",
+              "retirado"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nombre_club": {
+            "title": "Nombre Club",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre_club",
+          "ciudad",
+          "estado",
+          "cabeza_serie"
+        ],
+        "title": "EquipoGrupoOut",
+        "type": "object"
+      },
       "EquipoOut": {
         "properties": {
+          "cabeza_serie": {
+            "title": "Cabeza Serie",
+            "type": "boolean"
+          },
           "ciudad": {
             "title": "Ciudad",
             "type": "string"
@@ -1971,6 +2095,27 @@
             ],
             "title": "Estado",
             "type": "string"
+          },
+          "grupo": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E",
+                  "F",
+                  "G",
+                  "H"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grupo"
           },
           "id": {
             "format": "uuid",
@@ -2023,17 +2168,6 @@
             "title": "Saldo",
             "type": "integer"
           },
-          "sede": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sede"
-          },
           "valor": {
             "title": "Valor",
             "type": "integer"
@@ -2043,7 +2177,8 @@
           "id",
           "nombre_club",
           "rama",
-          "sede",
+          "grupo",
+          "cabeza_serie",
           "ciudad",
           "delegado_nombre",
           "delegado_telefono",
@@ -2057,6 +2192,24 @@
           "pagos"
         ],
         "title": "EquipoOut",
+        "type": "object"
+      },
+      "EquipoPublicoOut": {
+        "properties": {
+          "ciudad": {
+            "title": "Ciudad",
+            "type": "string"
+          },
+          "nombre_club": {
+            "title": "Nombre Club",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre_club",
+          "ciudad"
+        ],
+        "title": "EquipoPublicoOut",
         "type": "object"
       },
       "EstadoAgenteOut": {
@@ -2330,6 +2483,189 @@
           "alto"
         ],
         "title": "FotoOut",
+        "type": "object"
+      },
+      "GrupoActaOut": {
+        "properties": {
+          "equipos": {
+            "items": {
+              "$ref": "#/components/schemas/EquipoActaOut"
+            },
+            "title": "Equipos",
+            "type": "array"
+          },
+          "letra": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H"
+            ],
+            "title": "Letra",
+            "type": "string"
+          },
+          "sede": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sede"
+          }
+        },
+        "required": [
+          "letra",
+          "sede",
+          "equipos"
+        ],
+        "title": "GrupoActaOut",
+        "type": "object"
+      },
+      "GrupoEquipoIn": {
+        "additionalProperties": false,
+        "description": "Mueve el equipo a otro grupo de su rama. Vacío = lo saca de los grupos.",
+        "properties": {
+          "grupo_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grupo Id"
+          }
+        },
+        "required": [
+          "grupo_id"
+        ],
+        "title": "GrupoEquipoIn",
+        "type": "object"
+      },
+      "GrupoOut": {
+        "properties": {
+          "equipos": {
+            "items": {
+              "$ref": "#/components/schemas/EquipoGrupoOut"
+            },
+            "title": "Equipos",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "letra": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H"
+            ],
+            "title": "Letra",
+            "type": "string"
+          },
+          "sede": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sede"
+          }
+        },
+        "required": [
+          "id",
+          "letra",
+          "sede",
+          "equipos"
+        ],
+        "title": "GrupoOut",
+        "type": "object"
+      },
+      "GrupoPublicoOut": {
+        "properties": {
+          "equipos": {
+            "items": {
+              "$ref": "#/components/schemas/EquipoPublicoOut"
+            },
+            "title": "Equipos",
+            "type": "array"
+          },
+          "letra": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H"
+            ],
+            "title": "Letra",
+            "type": "string"
+          },
+          "sede": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sede"
+          }
+        },
+        "required": [
+          "letra",
+          "sede",
+          "equipos"
+        ],
+        "title": "GrupoPublicoOut",
+        "type": "object"
+      },
+      "GruposPublicoOut": {
+        "properties": {
+          "grupos": {
+            "items": {
+              "$ref": "#/components/schemas/GrupoPublicoOut"
+            },
+            "title": "Grupos",
+            "type": "array"
+          },
+          "rama": {
+            "enum": [
+              "masculina",
+              "femenina"
+            ],
+            "title": "Rama",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rama",
+          "grupos"
+        ],
+        "title": "GruposPublicoOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -4919,9 +5255,9 @@
         "title": "RolesOut",
         "type": "object"
       },
-      "SedeEquipoIn": {
+      "SedeGrupoIn": {
         "additionalProperties": false,
-        "description": "La sede que el organizador le asigna al equipo (una de las de su rama). Vacía = sin asignar.",
+        "description": "Dónde juega el grupo (una de las sedes de la jornada de su rama). Vacía = sin sede.",
         "properties": {
           "sede": {
             "anyOf": [
@@ -4937,7 +5273,7 @@
             "title": "Sede"
           }
         },
-        "title": "SedeEquipoIn",
+        "title": "SedeGrupoIn",
         "type": "object"
       },
       "SesionCrear": {
@@ -5404,6 +5740,91 @@
         "title": "SolicitudOut",
         "type": "object"
       },
+      "SortearGruposIn": {
+        "additionalProperties": false,
+        "properties": {
+          "grupos": {
+            "maximum": 8.0,
+            "minimum": 2.0,
+            "title": "Grupos",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grupos"
+        ],
+        "title": "SortearGruposIn",
+        "type": "object"
+      },
+      "SorteoGruposOut": {
+        "description": "Los grupos de una rama. `confirmado_en` vacío = borrador (se puede volver a sortear y no se publica).",
+        "properties": {
+          "actas": {
+            "items": {
+              "$ref": "#/components/schemas/ActaGruposOut"
+            },
+            "title": "Actas",
+            "type": "array"
+          },
+          "confirmado_en": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmado En"
+          },
+          "grupos": {
+            "items": {
+              "$ref": "#/components/schemas/GrupoOut"
+            },
+            "title": "Grupos",
+            "type": "array"
+          },
+          "rama": {
+            "enum": [
+              "masculina",
+              "femenina"
+            ],
+            "title": "Rama",
+            "type": "string"
+          },
+          "sedes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sedes",
+            "type": "array"
+          },
+          "sin_grupo": {
+            "items": {
+              "$ref": "#/components/schemas/EquipoGrupoOut"
+            },
+            "title": "Sin Grupo",
+            "type": "array"
+          },
+          "sorteado_en": {
+            "format": "date-time",
+            "title": "Sorteado En",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rama",
+          "sorteado_en",
+          "confirmado_en",
+          "grupos",
+          "sin_grupo",
+          "sedes",
+          "actas"
+        ],
+        "title": "SorteoGruposOut",
+        "type": "object"
+      },
       "TalonarioOut": {
         "properties": {
           "alumno_id": {
@@ -5652,9 +6073,16 @@
             "type": "string"
           },
           "fecha_limite_inscripcion": {
-            "format": "date",
-            "title": "Fecha Limite Inscripcion",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Limite Inscripcion"
           },
           "jornadas": {
             "anyOf": [
@@ -5716,7 +6144,6 @@
           "nombre",
           "fecha_inicio",
           "fecha_fin",
-          "fecha_limite_inscripcion",
           "valor_inscripcion"
         ],
         "title": "TorneoCrear",
@@ -5789,13 +6216,25 @@
             "type": "string"
           },
           "fecha_limite_inscripcion": {
-            "format": "date",
-            "title": "Fecha Limite Inscripcion",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Limite Inscripcion"
           },
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "inscripcion_hasta": {
+            "format": "date",
+            "title": "Inscripcion Hasta",
             "type": "string"
           },
           "jornadas": {
@@ -5879,6 +6318,7 @@
           "fecha_inicio",
           "fecha_fin",
           "fecha_limite_inscripcion",
+          "inscripcion_hasta",
           "lugar",
           "cupo_equipos",
           "valor_inscripcion",
@@ -6010,13 +6450,37 @@
             "type": "string"
           },
           "fecha_limite_inscripcion": {
-            "format": "date",
-            "title": "Fecha Limite Inscripcion",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Limite Inscripcion"
+          },
+          "grupos": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GruposPublicoOut"
+            },
+            "title": "Grupos",
+            "type": "array"
           },
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "inscripcion_abierta": {
+            "title": "Inscripcion Abierta",
+            "type": "boolean"
+          },
+          "inscripcion_hasta": {
+            "format": "date",
+            "title": "Inscripcion Hasta",
             "type": "string"
           },
           "jornadas": {
@@ -6069,6 +6533,8 @@
           "fecha_inicio",
           "fecha_fin",
           "fecha_limite_inscripcion",
+          "inscripcion_hasta",
+          "inscripcion_abierta",
           "lugar",
           "valor_inscripcion",
           "cupos_libres"
@@ -13817,6 +14283,144 @@
         ]
       }
     },
+    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/cabeza-serie": {
+      "put": {
+        "description": "Marca o desmarca al equipo como cabeza de serie (en el sorteo de grupos va una por grupo).",
+        "operationId": "cabeza_serie_api_v1_torneos__torneo_id__equipos__equipo_id__cabeza_serie_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "equipo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CabezaSerieIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cabeza Serie",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
+    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/grupo": {
+      "put": {
+        "description": "Pasa el equipo a otro grupo de su rama, o lo saca de los grupos (queda en la auditoría).",
+        "operationId": "mover_a_grupo_api_v1_torneos__torneo_id__equipos__equipo_id__grupo_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "equipo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrupoEquipoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mover A Grupo",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
     "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/pagos": {
       "post": {
         "operationId": "pagar_api_v1_torneos__torneo_id__equipos__equipo_id__pagos_post",
@@ -14031,10 +14635,10 @@
         ]
       }
     },
-    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/sede": {
-      "put": {
-        "description": "El organizador asigna la sede donde juega el equipo (una de las de la jornada de su rama).",
-        "operationId": "asignar_sede_api_v1_torneos__torneo_id__equipos__equipo_id__sede_put",
+    "/api/v1/torneos/{torneo_id}/grupos": {
+      "get": {
+        "description": "Los grupos de cada rama que ya se sorteó (en borrador o confirmados).",
+        "operationId": "grupos_api_v1_torneos__torneo_id__grupos_get",
         "parameters": [
           {
             "in": "path",
@@ -14045,34 +14649,18 @@
               "title": "Torneo Id",
               "type": "string"
             }
-          },
-          {
-            "in": "path",
-            "name": "equipo_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Equipo Id",
-              "type": "string"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SedeEquipoIn"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EquipoOut"
+                  "items": {
+                    "$ref": "#/components/schemas/SorteoGruposOut"
+                  },
+                  "title": "Response Grupos Api V1 Torneos  Torneo Id  Grupos Get",
+                  "type": "array"
                 }
               }
             },
@@ -14094,7 +14682,209 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Asignar Sede",
+        "summary": "Grupos",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
+    "/api/v1/torneos/{torneo_id}/grupos/{grupo_id}/sede": {
+      "put": {
+        "operationId": "sede_de_grupo_api_v1_torneos__torneo_id__grupos__grupo_id__sede_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grupo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grupo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SedeGrupoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SorteoGruposOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sede De Grupo",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
+    "/api/v1/torneos/{torneo_id}/grupos/{rama}/confirmar": {
+      "post": {
+        "description": "Publica los grupos en el sitio y guarda el acta del sorteo.",
+        "operationId": "confirmar_grupos_api_v1_torneos__torneo_id__grupos__rama__confirmar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rama",
+            "required": true,
+            "schema": {
+              "enum": [
+                "masculina",
+                "femenina"
+              ],
+              "title": "Rama",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SorteoGruposOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirmar Grupos",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
+    "/api/v1/torneos/{torneo_id}/grupos/{rama}/sortear": {
+      "post": {
+        "description": "Reparte al azar los equipos con cupo de la rama en grupos parejos (queda en borrador).",
+        "operationId": "sortear_grupos_api_v1_torneos__torneo_id__grupos__rama__sortear_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rama",
+            "required": true,
+            "schema": {
+              "enum": [
+                "masculina",
+                "femenina"
+              ],
+              "title": "Rama",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SortearGruposIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SorteoGruposOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sortear Grupos",
         "tags": [
           "torneos"
         ]

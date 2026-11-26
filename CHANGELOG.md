@@ -5,17 +5,27 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Sorteo de grupos por rama** (migración 0035): «Grupos» en cada torneo reparte al azar (CSPRNG) a los equipos con
+  cupo, hayan pagado o no, en 2 a 8 grupos parejos; las **cabezas de serie** quedan una por grupo. En borrador se
+  repite cuantas veces se quiera; al **confirmar** se publica en el sitio y queda un **acta inmutable** (con el pago
+  de cada equipo y su huella SHA-256). Después: quien llega o entra desde la lista de espera va al grupo con menos
+  equipos, quien se retira sale de su grupo y el staff puede mover equipos a mano (todo en la auditoría). Cada grupo
+  puede tener su sede (una de las de su jornada).
 - **Torneos por jornadas y sedes** (migración 0034): un torneo tiene una o varias jornadas, cada una con su rama, su
   día y sus sedes (p. ej. sábado femenina y domingo masculina, cada día en dos coliseos). Un solo cupo y un valor
-  para todo el torneo; cada club inscribe su equipo **por rama** y el organizador le **asigna la sede**
-  (`PUT /torneos/{id}/equipos/{id}/sede`). El sitio muestra las jornadas y pide la rama al inscribirse. Los torneos
-  que ya existían quedan con una jornada (su rama, el día de inicio).
+  para todo el torneo; cada club inscribe su equipo **por rama**. El sitio muestra las jornadas y pide la rama al
+  inscribirse. Los torneos que ya existían quedan con una jornada (su rama, el día de inicio).
 - **Videos de TikTok e Instagram** en la galería, además de YouTube (migración 0033: `videos.plataforma` y
   `videos.ruta`). Se acepta el enlace completo o el corto que da «Compartir» en TikTok; el sitio muestra el logo de
   la red y abre el video allí.
 - **Demo:** el sorteo se puede jugar en cualquier momento, para que se vea cómo funciona.
 
 ### Cambiado
+- **Fecha límite de inscripción opcional** (0035): es solo para el sitio (vacía = hasta el día de inicio). El staff
+  inscribe hasta el último día del torneo, porque hay clubes que llegan y pagan ese día. El sitio muestra el torneo
+  (con sus grupos) hasta que termina, con la inscripción cerrada cuando corresponde.
+- La sede ya no se asigna a cada equipo (se quitó `PUT /torneos/{id}/equipos/{id}/sede`): las sedes de la jornada
+  son para todos y, si hace falta, se asignan por grupo.
 - La plataforma es solo del staff: ya no se crean cuentas de Miembro (acudientes o deportistas).
 - El Asistente queda como «Pronto» en el menú (sin pantalla ni recorrido de Kiira).
 - Explicaciones de cada pantalla más cortas, sin detalles técnicos ni pasos de familias.

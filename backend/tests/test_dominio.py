@@ -9,7 +9,7 @@ from app.models import dominio
 from app.models.club import Video
 from app.models.notificaciones import Notificacion
 from app.models.rifas import Rifa
-from app.models.torneos import ESTADOS_EQUIPO, Torneo
+from app.models.torneos import ESTADOS_EQUIPO, LETRAS_GRUPO, Torneo
 from app.schemas import comunes
 
 
@@ -31,6 +31,7 @@ def _check(modelo: type, nombre: str) -> tuple[str, ...]:
     (comunes.EstadoJustificacion, dominio.ESTADOS_JUSTIFICACION),
     (comunes.EstadoMulta, dominio.ESTADOS_MULTA),
     (comunes.EstadoEquipo, ESTADOS_EQUIPO),
+    (comunes.LetraGrupo, LETRAS_GRUPO),
 ])
 def test_literal_igual_al_dominio(literal, valores):
     assert set(get_args(literal)) == set(valores)

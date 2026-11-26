@@ -16,6 +16,7 @@ import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { numeroWhatsApp } from '../../compartido/whatsapp';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
+import { GruposTorneo } from './grupos-torneo';
 import { Equipo, EstadoEquipo, Jornada, PagoEquipo, RamaTorneo, Retiro, Torneo } from './torneos.modelos';
 
 type Filtro = 'proximos' | 'pasados' | 'cancelados';
@@ -31,7 +32,7 @@ const torneoUrl = (id: string) => `${API}/torneos/${encodeURIComponent(id)}`;
 
 @Component({
   selector: 'app-torneos',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, PesosPipe, ZonaArchivos],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, Aviso, Dialogo, GruposTorneo, PesosPipe, ZonaArchivos],
   templateUrl: './torneos.html',
   styleUrl: './torneos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,6 +65,8 @@ export class TorneosPage implements OnInit {
   /** Torneo cuyos clubes se están viendo, con su lista. */
   protected readonly abierto = signal<Torneo | null>(null);
   protected readonly equipos = signal<Equipo[] | null>(null);
+  /** Torneo cuyos grupos se están viendo (sorteo por rama). */
+  protected readonly viendoGrupos = signal<Torneo | null>(null);
   protected readonly inscribiendo = signal(false);
   protected readonly pagando = signal<Equipo | null>(null);
   protected readonly retirando = signal<Equipo | null>(null);
@@ -75,7 +78,7 @@ export class TorneosPage implements OnInit {
 
   protected readonly formTorneo = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-    fecha_limite_inscripcion: ['', Validators.required],
+    fecha_limite_inscripcion: [''], // vacía = el sitio inscribe hasta el día de inicio
     lugar: ['', Validators.maxLength(120)],
     cupo_equipos: this.fb.control<number | null>(null, [Validators.min(2), Validators.max(200)]),
     valor_inscripcion: this.fb.control<number | null>(null, [Validators.required, Validators.min(0), Validators.max(100_000_000)]),
@@ -150,14 +153,20 @@ export class TorneosPage implements OnInit {
     return total ? `${Math.min(100, Math.round((parte / total) * 100))}%` : '0%';
   }
 
+  /** Desde el panel se inscribe hasta el último día del torneo (hay clubes que llegan y pagan ese día). */
   protected inscripcionAbierta(t: Torneo): boolean {
-    return t.estado === 'programado' && t.fecha_limite_inscripcion >= this.hoy;
+    return t.estado === 'programado' && t.fecha_fin >= this.hoy;
+  }
+
+  /** Inscripción desde el sitio: hasta la fecha límite o, si no hay, el día de inicio. */
+  protected sitioAbierto(t: Torneo): boolean {
+    return t.estado === 'programado' && t.inscripcion_hasta >= this.hoy;
   }
 
   protected cierre(t: Torneo): string {
-    const d = diasEntre(this.hoy, t.fecha_limite_inscripcion);
-    if (d < 0) return 'inscripciones cerradas';
-    return d === 0 ? 'cierra hoy' : `cierra en ${d} d`;
+    const d = diasEntre(this.hoy, t.inscripcion_hasta);
+    if (d < 0) return 'sitio: inscripción cerrada';
+    return d === 0 ? 'sitio: cierra hoy' : `sitio: cierra en ${d} d`;
   }
 
   protected whatsapp(e: Equipo): string | null {
@@ -209,27 +218,12 @@ export class TorneosPage implements OnInit {
     return r.length > 1 ? 'Femenina y masculina' : (r[0] ?? '');
   }
 
-  /** Sedes donde puede jugar un equipo de esa rama (las de sus jornadas). */
-  protected sedesDe(t: Torneo, rama: string): string[] {
-    return [...new Set(t.jornadas.filter((j) => j.rama === rama).flatMap((j) => j.sedes))];
-  }
-
   protected conDetalleDeJornadas(t: Torneo): boolean {
     return t.jornadas.length > 1 || t.jornadas.some((j) => j.sedes.length > 0);
   }
 
-  protected alElegirSede(e: Equipo, ev: Event): void {
-    this.asignarSede(e, (ev.target as HTMLSelectElement).value);
-  }
-
-  protected asignarSede(e: Equipo, sede: string): void {
-    const t = this.abierto();
-    if (!t) return;
-    const url = `${torneoUrl(t.id)}/equipos/${encodeURIComponent(e.id)}/sede`;
-    this.op.ejecutar(this.http.put<Equipo>(url, { sede: sede || null }), (nuevo) => {
-      this.equipos.update((l) => l?.map((x) => (x.id === nuevo.id ? nuevo : x)) ?? l);
-      this.op.exito(sede ? `${nuevo.nombre_club} juega en ${sede}.` : `${nuevo.nombre_club} quedó sin sede asignada.`);
-    });
+  protected verGrupos(t: Torneo): void {
+    this.op.abrir(() => this.viendoGrupos.set(t));
   }
 
   // ---------- Torneo: crear / editar ----------
@@ -277,7 +271,7 @@ export class TorneosPage implements OnInit {
 
   protected abrirEditar(t: Torneo): void {
     this.formTorneo.reset({
-      nombre: t.nombre, fecha_limite_inscripcion: t.fecha_limite_inscripcion, lugar: t.lugar ?? '',
+      nombre: t.nombre, fecha_limite_inscripcion: t.fecha_limite_inscripcion ?? '', lugar: t.lugar ?? '',
       cupo_equipos: t.cupo_equipos, valor_inscripcion: t.valor_inscripcion,
     });
     this.ponerJornadas(t.jornadas);
@@ -289,7 +283,7 @@ export class TorneosPage implements OnInit {
     const modo = this.editando();
     if (!modo) return;
     if (this.formTorneo.invalid) {
-      return this.errorDialogo.set('Completa el nombre, la rama y el día de cada jornada, la fecha límite y el valor.');
+      return this.errorDialogo.set('Completa el nombre, la rama y el día de cada jornada y el valor.');
     }
     const f = this.formTorneo.getRawValue();
     const jornadas = f.jornadas.map((j) => ({
@@ -297,7 +291,7 @@ export class TorneosPage implements OnInit {
     }));
     const dias = jornadas.map((j) => j.fecha).sort();
     const cuerpo = {
-      nombre: f.nombre, lugar: f.lugar.trim() || null, fecha_limite_inscripcion: f.fecha_limite_inscripcion,
+      nombre: f.nombre, lugar: f.lugar.trim() || null, fecha_limite_inscripcion: f.fecha_limite_inscripcion || null,
       cupo_equipos: f.cupo_equipos ?? undefined, valor_inscripcion: f.valor_inscripcion, jornadas,
       fecha_inicio: dias[0], fecha_fin: dias.at(-1),
     };
@@ -407,7 +401,7 @@ export class TorneosPage implements OnInit {
       this.refrescar(t);
       this.op.exito(e.estado === 'en_espera'
         ? `${e.nombre_club} quedó en lista de espera: el cupo está lleno.`
-        : `${e.nombre_club} inscrito.`);
+        : `${e.nombre_club} inscrito${e.grupo ? ` en el grupo ${e.grupo}` : ''}.`);
     });
   }
 
@@ -472,8 +466,5 @@ export class TorneosPage implements OnInit {
       this.op.exito('Pago anulado: queda en el historial como un movimiento en negativo.');
     });
   }
-
-  // ---------- Utilidades ----------
-
 
 }

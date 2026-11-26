@@ -5,7 +5,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.comunes import EstadoEquipo, PlataformaVideo, Rama, normalizar_email, normalizar_telefono
+from app.schemas.comunes import (
+    EstadoEquipo,
+    LetraGrupo,
+    PlataformaVideo,
+    Rama,
+    normalizar_email,
+    normalizar_telefono,
+)
 from app.schemas.torneos import EquipoCrear, JornadaOut
 
 _USUARIO_RED = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
@@ -283,13 +290,32 @@ class TorneoPublicoOut(BaseModel):
     jornadas: list[JornadaOut]  # rama, día y sedes
     fecha_inicio: date
     fecha_fin: date
-    fecha_limite_inscripcion: date
+    fecha_limite_inscripcion: date | None
+    inscripcion_hasta: date  # último día para inscribirse desde el sitio
+    inscripcion_abierta: bool  # el torneo se sigue mostrando hasta que termina (con sus grupos)
     lugar: str | None
     valor_inscripcion: int
     cupos_libres: int
+    grupos: list["GruposPublicoOut"] = []  # solo los sorteos confirmados
     anuncio: str | None = None  # versión del flyer; None = sin anuncio
     anuncio_ancho: int | None = None
     anuncio_alto: int | None = None
+
+
+class EquipoPublicoOut(BaseModel):
+    nombre_club: str
+    ciudad: str
+
+
+class GrupoPublicoOut(BaseModel):
+    letra: LetraGrupo
+    sede: str | None
+    equipos: list[EquipoPublicoOut]
+
+
+class GruposPublicoOut(BaseModel):
+    rama: Rama
+    grupos: list[GrupoPublicoOut]
 
 
 class CifrasOut(BaseModel):

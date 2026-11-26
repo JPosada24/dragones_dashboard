@@ -35,7 +35,7 @@ export const QUE_HACE: Record<string, string> = {
   rifas: 'Las rifas del año: un talonario por alumno, sus pagos y el sorteo con su acta.',
   reportes: 'Cuánto entró al club cada mes y por qué concepto. Desde aquí descargas los movimientos para la contabilidad.',
   multas: 'Las deudas por cobrar: multas, sus pagos y quién está cerca de entrar en mora.',
-  torneos: 'Los torneos del club: clubes inscritos, cupos, pagos y el flyer que se ve en el sitio.',
+  torneos: 'Los torneos del club: clubes inscritos, cupos, pagos, sorteo de grupos y el flyer del sitio.',
   'perfil-club': 'Todo lo que se ve en el sitio público: textos, galería, entrenadores y torneos realizados.',
   avisos: 'Mensajes listos para enviar por WhatsApp con un clic, desde el número del club.',
   configuracion: 'Los valores del club: multa, plazos, valor de la inscripción y reglas de mora.',

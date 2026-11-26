@@ -1,0 +1,201 @@
+// Sorteo de grupos: una sección por rama, con sus grupos en tarjetas.
+.rama-grupos {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--borde-suave);
+
+  &:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+}
+
+.rama-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  h3 {
+    margin: 0;
+    font: 600 14px var(--f-titulo);
+    color: var(--texto);
+  }
+}
+
+.chip-sorteo {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font: 600 10px var(--f-texto);
+  background: var(--oro-tenue);
+  color: var(--oro);
+
+  &.publicado {
+    background: var(--naranja-tenue);
+    color: var(--naranja);
+  }
+}
+
+.grupos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.grupo {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--panel-hundido);
+}
+
+.grupo-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  h4 {
+    margin: 0;
+    font: 600 13px var(--f-titulo);
+    color: var(--oro);
+  }
+}
+
+select.chico {
+  max-width: 160px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.equipos-grupo,
+.sin-grupo ul,
+.cabezas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--texto);
+  }
+}
+
+.cabezas {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+select.mover {
+  width: auto;
+  max-width: 96px;
+}
+
+.debe {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font: 600 10px var(--f-texto);
+  background: var(--oro-tenue);
+  color: var(--oro);
+}
+
+// Estrella de cabeza de serie: apagada (gris) o encendida (oro).
+.estrella {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-sm);
+  background: transparent;
+  color: var(--texto-3);
+  cursor: pointer;
+
+  .icono {
+    font-size: 18px;
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--oro);
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--panel-elevado);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--naranja);
+    outline-offset: 1px;
+  }
+}
+
+.sin-grupo {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed var(--borde-fuerte);
+  border-radius: var(--radio-sm);
+}
+
+.sorteo-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.campo-linea {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.repetir {
+  padding: 10px;
+  border-radius: var(--radio-sm);
+  background: var(--rojo-tenue);
+  font-size: 12.5px;
+  color: var(--texto);
+
+  p {
+    margin: 0 0 8px;
+  }
+}
+
+.actas {
+  font-size: 12.5px;
+  color: var(--texto-2);
+
+  summary {
+    cursor: pointer;
+    color: var(--texto);
+  }
+
+  .acta {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--borde-suave);
+  }
+
+  .acta-grupos {
+    margin: 2px 0 0;
+    display: grid;
+    gap: 2px;
+  }
+}

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 from app.schemas.comunes import (
     EstadoEquipo,
     EstadoTorneo,
+    LetraGrupo,
     MotivoOpcional,
     OrigenEquipo,
     Rama,
@@ -59,7 +60,7 @@ class TorneoCrear(_Entrada):
     jornadas: list[JornadaIn] | None = Field(default=None, min_length=1, max_length=4)
     fecha_inicio: date
     fecha_fin: date
-    fecha_limite_inscripcion: date
+    fecha_limite_inscripcion: date | None = None  # para el sitio; vacía = hasta el día de inicio
     lugar: str | None = Field(default=None, max_length=120)
     cupo_equipos: int | None = Field(default=None, ge=2, le=200)  # vacío = "cupo_equipos_sugerido"
     valor_inscripcion: int = Field(ge=0, le=100_000_000)
@@ -80,7 +81,7 @@ class TorneoActualizar(_Entrada):
     jornadas: list[JornadaIn] | None = Field(default=None, min_length=1, max_length=4)  # reemplaza las que hay
     fecha_inicio: date | None = None
     fecha_fin: date | None = None
-    fecha_limite_inscripcion: date | None = None
+    fecha_limite_inscripcion: date | None = None  # enviarla vacía la quita (el sitio recibe hasta el inicio)
     lugar: str | None = Field(default=None, max_length=120)
     cupo_equipos: int | None = Field(default=None, ge=2, le=200)
     valor_inscripcion: int | None = Field(default=None, ge=0, le=100_000_000)
@@ -100,7 +101,8 @@ class TorneoOut(BaseModel):
     jornadas: list[JornadaOut]
     fecha_inicio: date
     fecha_fin: date
-    fecha_limite_inscripcion: date
+    fecha_limite_inscripcion: date | None
+    inscripcion_hasta: date  # último día de inscripción desde el sitio (la fecha límite o el día de inicio)
     lugar: str | None
     cupo_equipos: int
     valor_inscripcion: int
@@ -139,10 +141,24 @@ class EquipoCrear(_Entrada):
         return None if not v else normalizar_email(v)
 
 
-class SedeEquipoIn(_Entrada):
-    """La sede que el organizador le asigna al equipo (una de las de su rama). Vacía = sin asignar."""
+class CabezaSerieIn(_Entrada):
+    cabeza_serie: bool
+
+
+class GrupoEquipoIn(_Entrada):
+    """Mueve el equipo a otro grupo de su rama. Vacío = lo saca de los grupos."""
+
+    grupo_id: uuid.UUID | None
+
+
+class SedeGrupoIn(_Entrada):
+    """Dónde juega el grupo (una de las sedes de la jornada de su rama). Vacía = sin sede."""
 
     sede: Sede | None = None
+
+
+class SortearGruposIn(_Entrada):
+    grupos: int = Field(ge=2, le=8)  # cuántos grupos (A, B, C…)
 
 
 class PagoEquipoIn(_Entrada):
@@ -171,7 +187,8 @@ class EquipoOut(BaseModel):
     id: uuid.UUID
     nombre_club: str
     rama: Rama
-    sede: str | None
+    grupo: LetraGrupo | None  # letra de su grupo, si ya lo tiene
+    cabeza_serie: bool
     ciudad: str
     delegado_nombre: str
     delegado_telefono: str
@@ -188,3 +205,55 @@ class EquipoOut(BaseModel):
 class RetiroOut(BaseModel):
     retirado: EquipoOut
     promovido: EquipoOut | None
+
+
+# ---------- Grupos ----------
+class EquipoGrupoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    nombre_club: str
+    ciudad: str
+    estado: EstadoEquipo
+    cabeza_serie: bool
+
+
+class GrupoOut(BaseModel):
+    id: uuid.UUID
+    letra: LetraGrupo
+    sede: str | None
+    equipos: list[EquipoGrupoOut]
+
+
+class EquipoActaOut(BaseModel):
+    club: str
+    ciudad: str
+    cabeza_serie: bool
+    estado: EstadoEquipo  # cómo estaba su pago cuando se confirmó
+
+
+class GrupoActaOut(BaseModel):
+    letra: LetraGrupo
+    sede: str | None
+    equipos: list[EquipoActaOut]
+
+
+class ActaGruposOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    orden: int
+    grupos: list[GrupoActaOut]
+    huella: str
+    creado_en: datetime
+
+
+class SorteoGruposOut(BaseModel):
+    """Los grupos de una rama. `confirmado_en` vacío = borrador (se puede volver a sortear y no se publica)."""
+
+    rama: Rama
+    sorteado_en: datetime
+    confirmado_en: datetime | None
+    grupos: list[GrupoOut]
+    sin_grupo: list[EquipoGrupoOut]  # equipos con cupo que no están en ningún grupo
+    sedes: list[str]  # las sedes de la jornada de la rama (para asignarlas a los grupos)
+    actas: list[ActaGruposOut]

@@ -1,8 +1,10 @@
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     ARRAY,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -15,6 +17,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -24,6 +27,8 @@ from app.models.mixins import TiempoMixin, UUIDMixin
 ESTADOS_EQUIPO = ("pendiente_pago", "confirmado", "en_espera", "retirado")
 # Estados que ocupan un lugar del cupo.
 OCUPAN_CUPO = ("pendiente_pago", "confirmado")
+# Letras de los grupos (máximo 8 por rama).
+LETRAS_GRUPO = ("A", "B", "C", "D", "E", "F", "G", "H")
 
 
 class Torneo(UUIDMixin, TiempoMixin, Base):
@@ -44,7 +49,9 @@ class Torneo(UUIDMixin, TiempoMixin, Base):
     rama: Mapped[str | None] = mapped_column(String(10))
     fecha_inicio: Mapped[date] = mapped_column(Date, index=True)
     fecha_fin: Mapped[date] = mapped_column(Date)
-    fecha_limite_inscripcion: Mapped[date] = mapped_column(Date)
+    # Hasta cuándo se inscriben los clubes desde el sitio; vacía = hasta el día de inicio. El staff inscribe hasta
+    # el último día del torneo (hay equipos que llegan y pagan el mismo día).
+    fecha_limite_inscripcion: Mapped[date | None] = mapped_column(Date)
     lugar: Mapped[str | None] = mapped_column(String(120))
     cupo_equipos: Mapped[int] = mapped_column(Integer)
     valor_inscripcion: Mapped[int] = mapped_column(Integer)  # por equipo; se fija en cada torneo
@@ -66,8 +73,13 @@ class Torneo(UUIDMixin, TiempoMixin, Base):
         return sorted({j.rama for j in self.jornadas})
 
     def sedes_de(self, rama: str) -> list[str]:
-        """Sedes de las jornadas de esa rama (donde puede jugar un equipo de esa rama)."""
+        """Sedes de las jornadas de esa rama."""
         return list(dict.fromkeys(s for j in self.jornadas if j.rama == rama for s in j.sedes))
+
+    @property
+    def inscripcion_hasta(self) -> date:
+        """Último día en que un club se inscribe desde el sitio."""
+        return self.fecha_limite_inscripcion or self.fecha_inicio
 
 
 class JornadaTorneo(UUIDMixin, Base):
@@ -102,7 +114,6 @@ class EquipoTorneo(UUIDMixin, TiempoMixin, Base):
     torneo_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("torneos.id"), index=True)
     nombre_club: Mapped[str] = mapped_column(String(120))
     rama: Mapped[str] = mapped_column(String(10))
-    sede: Mapped[str | None] = mapped_column(String(120))  # la asigna el organizador (una de su jornada)
     ciudad: Mapped[str] = mapped_column(String(80))
     delegado_nombre: Mapped[str] = mapped_column(String(120))
     delegado_telefono: Mapped[str] = mapped_column(String(20))
@@ -116,13 +127,81 @@ class EquipoTorneo(UUIDMixin, TiempoMixin, Base):
     origen: Mapped[str] = mapped_column(String(10), default="staff", server_default=text("'staff'"))
     # Autorización de tratamiento de datos del delegado (Ley 1581 de 2012), cuando se inscribe desde el sitio.
     autoriza_datos_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Grupo en el que quedó (sorteo de su rama) y si es cabeza de serie (en el sorteo va uno por grupo).
+    grupo_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("grupos_torneo.id", ondelete="SET NULL"), index=True,
+    )
+    cabeza_serie: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
     torneo: Mapped[Torneo] = relationship(lazy="joined")
+    grupo_torneo: Mapped["GrupoTorneo | None"] = relationship(lazy="joined")
     pagos: Mapped[list["PagoEquipo"]] = relationship(lazy="selectin", order_by="PagoEquipo.creado_en")
 
     @property
     def saldo(self) -> int:
         return self.valor - self.monto_pagado
+
+    @property
+    def grupo(self) -> str | None:
+        """Letra de su grupo, si ya lo tiene."""
+        return self.grupo_torneo.letra if self.grupo_torneo else None
+
+
+class SorteoGrupos(UUIDMixin, Base):
+    """Grupos de una rama del torneo. En borrador se vuelve a sortear cuantas veces se quiera; al confirmarlo se
+    publica en el sitio y queda un acta. Después se ajusta a mano (llega un equipo, se retira otro)."""
+
+    __tablename__ = "sorteos_grupos"
+    __table_args__ = (
+        CheckConstraint(en("rama", RAMAS), name="ck_sorteos_grupos_rama"),
+        UniqueConstraint("torneo_id", "rama", name="uq_sorteos_grupos_rama"),
+    )
+
+    torneo_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("torneos.id", ondelete="CASCADE"), index=True)
+    rama: Mapped[str] = mapped_column(String(10))
+    sorteado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    sorteado_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
+    confirmado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmado_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
+
+    grupos: Mapped[list["GrupoTorneo"]] = relationship(
+        lazy="selectin", order_by="GrupoTorneo.letra", cascade="all, delete-orphan", back_populates="sorteo",
+    )
+
+
+class GrupoTorneo(UUIDMixin, Base):
+    __tablename__ = "grupos_torneo"
+    __table_args__ = (
+        CheckConstraint(en("letra", LETRAS_GRUPO), name="ck_grupos_torneo_letra"),
+        UniqueConstraint("sorteo_id", "letra", name="uq_grupos_torneo_letra"),
+    )
+
+    sorteo_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("sorteos_grupos.id", ondelete="CASCADE"), index=True,
+    )
+    letra: Mapped[str] = mapped_column(String(1))
+    sede: Mapped[str | None] = mapped_column(String(120))  # opcional: una de las sedes de la jornada de la rama
+
+    sorteo: Mapped[SorteoGrupos] = relationship(back_populates="grupos")
+
+
+class ActaGrupos(UUIDMixin, Base):
+    """Constancia de cada sorteo de grupos confirmado: cómo quedaron los grupos en ese momento (con el estado de
+    pago de cada equipo). De solo agregar (trigger)."""
+
+    __tablename__ = "actas_grupos"
+    __table_args__ = (
+        CheckConstraint(en("rama", RAMAS), name="ck_actas_grupos_rama"),
+        UniqueConstraint("torneo_id", "rama", "orden", name="uq_actas_grupos_orden"),
+    )
+
+    torneo_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("torneos.id"), index=True)
+    rama: Mapped[str] = mapped_column(String(10))
+    orden: Mapped[int] = mapped_column(Integer)  # 1.ª, 2.ª… confirmación de esa rama
+    grupos: Mapped[Any] = mapped_column(JSONB)  # [{letra, sede, equipos: [{club, ciudad, cabeza_serie, estado}]}]
+    huella: Mapped[str] = mapped_column(String(64))  # SHA-256 del contenido: permite verificarlo después
+    confirmado_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class PagoEquipo(UUIDMixin, Base):

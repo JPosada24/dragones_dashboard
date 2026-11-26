@@ -53,11 +53,27 @@ def test_un_club_no_se_inscribe_dos_veces(client, h_admin):
     assert r.status_code == 409 and "ya tiene equipo" in r.json()["detail"]
 
 
-def test_despues_de_la_fecha_limite_no_entran_equipos(client, h_admin, reloj):
+def test_el_staff_inscribe_hasta_el_ultimo_dia_del_torneo(client, h_admin, reloj):
+    """La fecha límite es para el sitio: hay equipos que llegan (y pagan) el mismo día del torneo."""
     torneo = crear_torneo(client, h_admin).json()
-    reloj(en_hora(INICIO - timedelta(days=4), 9))
-    r = inscribir_equipo(client, h_admin, torneo["id"])
-    assert r.status_code == 422 and "cerraron" in r.json()["detail"]
+    reloj(en_hora(INICIO + timedelta(days=1), 9))  # último día del torneo, pasada la fecha límite
+    assert inscribir_equipo(client, h_admin, torneo["id"]).status_code == 201
+    reloj(en_hora(INICIO + timedelta(days=2), 9))
+    r = inscribir_equipo(client, h_admin, torneo["id"], club="Club tardío")
+    assert r.status_code == 422 and "ya terminó" in r.json()["detail"]
+
+
+def test_la_fecha_limite_es_opcional(client, h_admin):
+    t = crear_torneo(client, h_admin, fecha_limite_inscripcion=None).json()
+    assert t["fecha_limite_inscripcion"] is None and t["inscripcion_hasta"] == INICIO.isoformat()
+    con = crear_torneo(client, h_admin, nombre="Copa con límite").json()
+    assert con["inscripcion_hasta"] == con["fecha_limite_inscripcion"]
+    r = client.patch(f"{T}/{con['id']}", json={"fecha_limite_inscripcion": None}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["fecha_limite_inscripcion"] is None
+    # Sin enviarla, se conserva.
+    client.patch(f"{T}/{t['id']}", json={"fecha_limite_inscripcion": LUNES.isoformat()}, headers=h_admin)
+    assert client.patch(f"{T}/{t['id']}", json={"nombre": "Copa nueva"}, headers=h_admin).json()[
+        "fecha_limite_inscripcion"] == LUNES.isoformat()
 
 
 def test_torneo_cancelado_no_recibe_equipos_ni_pagos(client, h_admin):
@@ -195,10 +211,10 @@ SEDES = ["Coliseo Mayor", "Coliseo Barrio Sur"]
 
 def torneo_fin_de_semana(client, h, **extra):
     """Sábado femenina y domingo masculina, cada día en dos coliseos; un solo cupo y valor para todo el torneo."""
-    return crear_torneo(client, h, rama=None, cupo_equipos=3, jornadas=[
+    return crear_torneo(client, h, rama=None, jornadas=[
         {"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": SEDES},
         {"rama": "masculina", "fecha": DOMINGO.isoformat(), "sedes": SEDES},
-    ], **extra)
+    ], **{"cupo_equipos": 3, **extra})
 
 
 def test_torneo_con_dos_jornadas_y_sus_sedes(client, h_admin):
@@ -255,41 +271,24 @@ def test_cada_club_se_inscribe_por_rama_con_un_solo_cupo(client, h_admin):
     assert r.status_code == 422 and "no tiene rama masculina" in r.json()["detail"]
 
 
-def test_el_organizador_asigna_la_sede_de_cada_equipo(client, h_admin, h_entrenador):
-    t = torneo_fin_de_semana(client, h_admin).json()
-    e = inscribir_equipo(client, h_admin, t["id"], rama="femenina").json()
-    assert e["sede"] is None
-    url = f"{T}/{t['id']}/equipos/{e['id']}/sede"
-    r = client.put(url, json={"sede": "Coliseo Barrio Sur"}, headers=h_admin)
-    assert r.status_code == 200 and r.json()["sede"] == "Coliseo Barrio Sur"
-    r = client.put(url, json={"sede": "Coliseo de otro lado"}, headers=h_admin)
-    assert r.status_code == 422 and "no es una sede" in r.json()["detail"]
-    assert client.put(url, json={"sede": "Coliseo Mayor", "otro": 1}, headers=h_admin).status_code == 422
-    assert client.put(url, json={"sede": "Coliseo Mayor"}, headers=h_entrenador).status_code == 403
-    assert client.put(url, json={"sede": None}, headers=h_admin).json()["sede"] is None
-    # Un equipo retirado ya no recibe sede, ni un equipo de otro torneo (404).
-    client.post(f"{T}/{t['id']}/equipos/{e['id']}/retirar", json={}, headers=h_admin)
-    assert client.put(url, json={"sede": "Coliseo Mayor"}, headers=h_admin).status_code == 409
-    otro = torneo_fin_de_semana(client, h_admin, nombre="Otra copa").json()
-    ajeno = f"{T}/{otro['id']}/equipos/{e['id']}/sede"
-    assert client.put(ajeno, json={"sede": None}, headers=h_admin).status_code == 404
-
-
-def test_editar_jornadas_cuida_a_los_equipos(client, h_admin):
-    t = torneo_fin_de_semana(client, h_admin).json()
-    e = inscribir_equipo(client, h_admin, t["id"], rama="masculina").json()
-    client.put(f"{T}/{t['id']}/equipos/{e['id']}/sede", json={"sede": "Coliseo Mayor"}, headers=h_admin)
-    # Sin la jornada masculina no se puede: hay un equipo inscrito en esa rama.
+def test_editar_jornadas_cuida_a_los_equipos_y_a_los_grupos(client, h_admin):
+    t = torneo_fin_de_semana(client, h_admin, cupo_equipos=20).json()
+    for n in range(4):
+        inscribir_equipo(client, h_admin, t["id"], club=f"Club {n}", rama="masculina")
+    sorteo = _sortear(client, h_admin, t["id"], "masculina", 2).json()
+    client.put(f"{T}/{t['id']}/grupos/{sorteo['grupos'][0]['id']}/sede", json={"sede": "Coliseo Mayor"},
+               headers=h_admin)
+    # Sin la jornada masculina no se puede: hay equipos inscritos en esa rama.
     solo_sabado = [{"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": SEDES}]
     r = client.patch(f"{T}/{t['id']}", json={"jornadas": solo_sabado}, headers=h_admin)
     assert r.status_code == 422 and "rama masculina" in r.json()["detail"]
-    # Si su sede deja de estar en la jornada, el equipo queda sin sede asignada.
+    # Si la sede del grupo deja de estar en la jornada, el grupo queda sin sede.
     r = client.patch(f"{T}/{t['id']}", json={"jornadas": [
         solo_sabado[0], {"rama": "masculina", "fecha": DOMINGO.isoformat(), "sedes": ["Coliseo Barrio Sur"]},
     ]}, headers=h_admin)
     assert r.status_code == 200, r.text
-    [equipo] = client.get(f"{T}/{t['id']}/equipos", headers=h_admin).json()
-    assert equipo["sede"] is None
+    [masc] = client.get(f"{T}/{t['id']}/grupos", headers=h_admin).json()
+    assert [g["sede"] for g in masc["grupos"]] == [None, None] and masc["sedes"] == ["Coliseo Barrio Sur"]
     # Mover el inicio de un torneo de una sola jornada mueve también su jornada.
     corto = crear_torneo(client, h_admin, nombre="Copa corta").json()
     nuevo_inicio = INICIO + timedelta(days=1)
@@ -302,3 +301,220 @@ def test_editar_jornadas_cuida_a_los_equipos(client, h_admin):
     assert client.patch(f"{T}/{corto['id']}", json={"rama": "femenina", "jornadas": solo_sabado},
                         headers=h_admin).status_code == 422
 
+
+def test_quitar_una_rama_sin_equipos_borra_su_sorteo_y_conserva_el_acta(client, h_admin, db):
+    t = torneo_fin_de_semana(client, h_admin, cupo_equipos=20).json()
+    equipos = [inscribir_equipo(client, h_admin, t["id"], club=f"Club {n}", rama="masculina").json()
+               for n in range(4)]
+    _sortear(client, h_admin, t["id"], "masculina", 2)
+    client.post(f"{T}/{t['id']}/grupos/masculina/confirmar", headers=h_admin)
+    for e in equipos:
+        client.post(f"{T}/{t['id']}/equipos/{e['id']}/retirar", json={}, headers=h_admin)
+    solo_sabado = [{"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": SEDES}]
+    assert client.patch(f"{T}/{t['id']}", json={"jornadas": solo_sabado}, headers=h_admin).status_code == 200
+    assert client.get(f"{T}/{t['id']}/grupos", headers=h_admin).json() == []
+    assert db.scalar(text("SELECT count(*) FROM actas_grupos")) == 1
+
+
+# ---------- Sorteo de grupos ----------
+def _sortear(client, h, torneo_id, rama, grupos):
+    return client.post(f"{T}/{torneo_id}/grupos/{rama}/sortear", json={"grupos": grupos}, headers=h)
+
+
+def _torneo_con_equipos(client, h, n, *, pagan=0, **extra):
+    """Torneo femenino con `n` equipos con cupo; los primeros `pagan` ya pagaron todo."""
+    t = crear_torneo(client, h, cupo_equipos=max(n, 2), **extra).json()
+    equipos = [inscribir_equipo(client, h, t["id"], club=f"Club {i:02d}").json() for i in range(n)]
+    for e in equipos[:pagan]:
+        _pagar(client, h, t["id"], e["id"], 150000)
+    return t, equipos
+
+
+def _tamanos(sorteo):
+    return sorted(len(g["equipos"]) for g in sorteo["grupos"])
+
+
+def test_sorteo_reparte_parejo_a_los_equipos_con_cupo_pagados_o_no(client, h_admin):
+    t, equipos = _torneo_con_equipos(client, h_admin, 11, pagan=4)
+    espera = inscribir_equipo(client, h_admin, t["id"], club="Club en espera").json()
+    assert espera["estado"] == "en_espera"
+    r = _sortear(client, h_admin, t["id"], "femenina", 3)
+    assert r.status_code == 200, r.text
+    s = r.json()
+    assert [g["letra"] for g in s["grupos"]] == ["A", "B", "C"]
+    assert _tamanos(s) == [3, 4, 4] and s["sin_grupo"] == [] and s["confirmado_en"] is None
+    en_grupos = {e["id"] for g in s["grupos"] for e in g["equipos"]}
+    assert en_grupos == {e["id"] for e in equipos}  # los de lista de espera no entran
+    assert {e["estado"] for g in s["grupos"] for e in g["equipos"]} == {"confirmado", "pendiente_pago"}
+    # Cada equipo sabe su grupo.
+    letras = {e["id"]: e["grupo"] for e in client.get(f"{T}/{t['id']}/equipos", headers=h_admin).json()}
+    assert letras[espera["id"]] is None and {letras[e["id"]] for e in equipos} == {"A", "B", "C"}
+
+
+def test_cabezas_de_serie_quedan_una_por_grupo(client, h_admin):
+    t, equipos = _torneo_con_equipos(client, h_admin, 9)
+    cabezas = {e["id"] for e in equipos[:3]}
+    for eid in cabezas:
+        r = client.put(f"{T}/{t['id']}/equipos/{eid}/cabeza-serie", json={"cabeza_serie": True}, headers=h_admin)
+        assert r.status_code == 200 and r.json()["cabeza_serie"] is True
+    for _ in range(5):  # al azar, pero siempre una por grupo
+        s = _sortear(client, h_admin, t["id"], "femenina", 3).json()
+        assert [sum(e["id"] in cabezas for e in g["equipos"]) for g in s["grupos"]] == [1, 1, 1]
+    r = _sortear(client, h_admin, t["id"], "femenina", 2)
+    assert r.status_code == 422 and "3 cabezas de serie y solo 2 grupos" in r.json()["detail"]
+
+
+@pytest.mark.parametrize(("equipos", "grupos", "mensaje"), [
+    (3, 2, "al menos 4"),
+    (7, 4, "máximo 3 grupos"),
+])
+def test_sorteo_necesita_al_menos_dos_equipos_por_grupo(client, h_admin, equipos, grupos, mensaje):
+    t, _ = _torneo_con_equipos(client, h_admin, equipos)
+    r = _sortear(client, h_admin, t["id"], "femenina", grupos)
+    assert r.status_code == 422 and mensaje in r.json()["detail"]
+
+
+@pytest.mark.parametrize("cuerpo", [{"grupos": 1}, {"grupos": 9}, {"grupos": 2, "otro": 1}, {}])
+def test_sorteo_valida_la_cantidad_de_grupos(client, h_admin, cuerpo):
+    t, _ = _torneo_con_equipos(client, h_admin, 4)
+    assert client.post(f"{T}/{t['id']}/grupos/femenina/sortear", json=cuerpo, headers=h_admin).status_code == 422
+
+
+def test_sorteo_solo_en_ramas_del_torneo_y_torneos_vigentes(client, h_admin):
+    t, _ = _torneo_con_equipos(client, h_admin, 4)
+    r = _sortear(client, h_admin, t["id"], "masculina", 2)
+    assert r.status_code == 422 and "no tiene rama masculina" in r.json()["detail"]
+    assert _sortear(client, h_admin, t["id"], "mixta", 2).status_code == 422
+    assert client.post(f"{T}/{t['id']}/grupos/femenina/confirmar", headers=h_admin).status_code == 404  # sin sorteo
+    client.post(f"{T}/{t['id']}/cancelar", json={}, headers=h_admin)
+    assert _sortear(client, h_admin, t["id"], "femenina", 2).status_code == 422
+
+
+def test_solo_quien_gestiona_torneos_sortea_grupos(client, h_admin, h_entrenador):
+    t, equipos = _torneo_con_equipos(client, h_admin, 4)
+    s = _sortear(client, h_admin, t["id"], "femenina", 2).json()
+    url = f"{T}/{t['id']}"
+    assert _sortear(client, h_entrenador, t["id"], "femenina", 2).status_code == 403
+    assert client.get(f"{url}/grupos", headers=h_entrenador).status_code == 403
+    assert client.post(f"{url}/grupos/femenina/confirmar", headers=h_entrenador).status_code == 403
+    assert client.put(f"{url}/grupos/{s['grupos'][0]['id']}/sede", json={"sede": None},
+                      headers=h_entrenador).status_code == 403
+    assert client.put(f"{url}/equipos/{equipos[0]['id']}/grupo", json={"grupo_id": None},
+                      headers=h_entrenador).status_code == 403
+    assert client.put(f"{url}/equipos/{equipos[0]['id']}/cabeza-serie", json={"cabeza_serie": True},
+                      headers=h_entrenador).status_code == 403
+
+
+def test_confirmar_publica_los_grupos_y_deja_un_acta_inmutable(client, h_admin, db):
+    t, _ = _torneo_con_equipos(client, h_admin, 4, pagan=1)
+    _sortear(client, h_admin, t["id"], "femenina", 2)
+    r = client.post(f"{T}/{t['id']}/grupos/femenina/confirmar", headers=h_admin)
+    assert r.status_code == 200, r.text
+    s = r.json()
+    assert s["confirmado_en"] is not None
+    [acta] = s["actas"]
+    assert acta["orden"] == 1 and len(acta["huella"]) == 64
+    assert sorted(e["estado"] for g in acta["grupos"] for e in g["equipos"]) == [
+        "confirmado", "pendiente_pago", "pendiente_pago", "pendiente_pago",
+    ]
+    assert client.post(f"{T}/{t['id']}/grupos/femenina/confirmar", headers=h_admin).status_code == 409
+    for sentencia in ("UPDATE actas_grupos SET orden = 9", "DELETE FROM actas_grupos"):
+        with pytest.raises(DBAPIError, match="solo agregar"):
+            db.execute(text(sentencia))
+        db.rollback()
+    # Volver a sortear deja los grupos en borrador; al confirmar de nuevo queda una segunda acta.
+    assert _sortear(client, h_admin, t["id"], "femenina", 2).json()["confirmado_en"] is None
+    s = client.post(f"{T}/{t['id']}/grupos/femenina/confirmar", headers=h_admin).json()
+    assert [a["orden"] for a in s["actas"]] == [1, 2]
+
+
+def test_el_que_llega_despues_del_sorteo_va_al_grupo_con_menos_equipos(client, h_admin):
+    t, equipos = _torneo_con_equipos(client, h_admin, 5)
+    client.patch(f"{T}/{t['id']}", json={"cupo_equipos": 7}, headers=h_admin)
+    s = _sortear(client, h_admin, t["id"], "femenina", 2).json()
+    chico = next(g for g in s["grupos"] if len(g["equipos"]) == 2)
+    client.post(f"{T}/{t['id']}/grupos/femenina/confirmar", headers=h_admin)
+    tarde = inscribir_equipo(client, h_admin, t["id"], club="Club tardío").json()
+    assert tarde["grupo"] == chico["letra"]
+    # Con los grupos parejos (3 y 3), el siguiente cae en cualquiera de los dos.
+    otro = inscribir_equipo(client, h_admin, t["id"], club="Club más tardío").json()
+    assert otro["grupo"] in ("A", "B")
+    # El que entra desde la lista de espera también recibe grupo.
+    espera = inscribir_equipo(client, h_admin, t["id"], club="Club en espera").json()
+    assert espera["estado"] == "en_espera" and espera["grupo"] is None
+    r = client.post(f"{T}/{t['id']}/equipos/{equipos[0]['id']}/retirar", json={}, headers=h_admin).json()
+    assert r["retirado"]["grupo"] is None  # sale de su grupo
+    assert r["promovido"]["id"] == espera["id"] and r["promovido"]["grupo"] in ("A", "B")
+    [s] = client.get(f"{T}/{t['id']}/grupos", headers=h_admin).json()
+    assert _tamanos(s) == [3, 4] and len(s["actas"]) == 1  # el acta conserva el sorteo original
+    # Subir el cupo también ubica a los que esperaban.
+    espera2 = inscribir_equipo(client, h_admin, t["id"], club="Club espera 2").json()
+    client.patch(f"{T}/{t['id']}", json={"cupo_equipos": 10}, headers=h_admin)
+    letras = {e["id"]: e["grupo"] for e in client.get(f"{T}/{t['id']}/equipos", headers=h_admin).json()}
+    assert letras[espera2["id"]] in ("A", "B")
+
+
+def test_mover_equipos_entre_grupos_y_asignar_sedes(client, h_admin):
+    t = torneo_fin_de_semana(client, h_admin, cupo_equipos=20).json()
+    fem = [inscribir_equipo(client, h_admin, t["id"], club=f"Club {n}", rama="femenina").json() for n in range(4)]
+    masc = [inscribir_equipo(client, h_admin, t["id"], club=f"Club {n}", rama="masculina").json() for n in range(4)]
+    s_fem = _sortear(client, h_admin, t["id"], "femenina", 2).json()
+    s_masc = _sortear(client, h_admin, t["id"], "masculina", 2).json()
+    assert s_fem["sedes"] == SEDES
+    a, b = s_fem["grupos"]
+    e = a["equipos"][0]
+    url = f"{T}/{t['id']}/equipos/{e['id']}/grupo"
+    r = client.put(url, json={"grupo_id": b["id"]}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["grupo"] == "B"
+    # No a un grupo de la otra rama, ni de otro torneo.
+    r = client.put(url, json={"grupo_id": s_masc["grupos"][0]["id"]}, headers=h_admin)
+    assert r.status_code == 422 and "rama masculina" in r.json()["detail"]
+    otro = torneo_fin_de_semana(client, h_admin, nombre="Otra copa", cupo_equipos=20).json()
+    for n in range(4):
+        inscribir_equipo(client, h_admin, otro["id"], club=f"Club {n}", rama="femenina")
+    ajeno = _sortear(client, h_admin, otro["id"], "femenina", 2).json()["grupos"][0]["id"]
+    assert client.put(url, json={"grupo_id": ajeno}, headers=h_admin).status_code == 404
+    # Sacarlo de los grupos lo deja en «sin grupo».
+    client.put(url, json={"grupo_id": None}, headers=h_admin)
+    [s, _] = client.get(f"{T}/{t['id']}/grupos", headers=h_admin).json()
+    assert [x["id"] for x in s["sin_grupo"]] == [e["id"]]
+    # Sedes: una de las de la jornada de su rama.
+    sede = f"{T}/{t['id']}/grupos/{a['id']}/sede"
+    r = client.put(sede, json={"sede": "Coliseo Barrio Sur"}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["grupos"][0]["sede"] == "Coliseo Barrio Sur"
+    r = client.put(sede, json={"sede": "Coliseo de otro lado"}, headers=h_admin)
+    assert r.status_code == 422 and "no es una sede" in r.json()["detail"]
+    assert client.put(f"{T}/{otro['id']}/grupos/{a['id']}/sede", json={"sede": None},
+                      headers=h_admin).status_code == 404
+    # Un equipo retirado o en espera no va en un grupo.
+    client.post(f"{T}/{t['id']}/equipos/{fem[1]['id']}/retirar", json={}, headers=h_admin)
+    assert client.put(f"{T}/{t['id']}/equipos/{fem[1]['id']}/grupo", json={"grupo_id": b["id"]},
+                      headers=h_admin).status_code == 409
+    assert client.put(f"{T}/{t['id']}/equipos/{fem[1]['id']}/cabeza-serie", json={"cabeza_serie": True},
+                      headers=h_admin).status_code == 409
+    assert masc  # (la rama masculina tiene su propio sorteo)
+
+
+def test_el_sitio_muestra_solo_los_grupos_confirmados(client, h_admin, reloj):
+    t, _ = _torneo_con_equipos(client, h_admin, 4, fecha_limite_inscripcion=None)
+    client.patch("/api/v1/club/perfil", json={"publicado": True}, headers=h_admin)
+    _sortear(client, h_admin, t["id"], "femenina", 2)
+
+    def publico():
+        return next(x for x in client.get("/api/v1/publico/club").json()["torneos"] if x["id"] == t["id"])
+
+    assert publico()["grupos"] == []  # en borrador no se publica
+    client.post(f"{T}/{t['id']}/grupos/femenina/confirmar", headers=h_admin)
+    [fem] = publico()["grupos"]
+    assert fem["rama"] == "femenina" and [g["letra"] for g in fem["grupos"]] == ["A", "B"]
+    assert sorted(e["nombre_club"] for g in fem["grupos"] for e in g["equipos"]) == [
+        "Club 00", "Club 01", "Club 02", "Club 03",
+    ]
+    assert "delegado" not in str(fem) and "3101234567" not in str(fem)
+    # Cerrada la inscripción del sitio, el torneo se sigue viendo (con sus grupos) hasta que termina.
+    reloj(en_hora(INICIO, 9))
+    assert publico()["inscripcion_abierta"] is True  # sin fecha límite, el sitio inscribe hasta el día de inicio
+    reloj(en_hora(INICIO + timedelta(days=1), 9))
+    assert publico()["inscripcion_abierta"] is False and publico()["grupos"]
+    reloj(en_hora(INICIO + timedelta(days=2), 9))
+    assert all(x["id"] != t["id"] for x in client.get("/api/v1/publico/club").json()["torneos"])

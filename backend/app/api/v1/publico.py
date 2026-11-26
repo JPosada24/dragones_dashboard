@@ -5,12 +5,14 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import ip_cliente
+from app.core import fechas
 from app.core.almacen import Almacen, get_almacen
 from app.core.limites import limitador_sitio
 from app.db.session import get_db
 from app.schemas.club import (
     AlbumOut,
     CifrasOut,
+    GruposPublicoOut,
     HorarioPublicoOut,
     InscripcionSitioIn,
     InscripcionSitioOut,
@@ -49,8 +51,10 @@ def sitio(db: Session = Depends(get_db)) -> SitioOut:
                 id=t.id, nombre=t.nombre, rama=t.rama,
                 jornadas=[JornadaOut.model_validate(j) for j in t.jornadas],
                 fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
-                fecha_limite_inscripcion=t.fecha_limite_inscripcion, lugar=t.lugar,
+                fecha_limite_inscripcion=t.fecha_limite_inscripcion, inscripcion_hasta=t.inscripcion_hasta,
+                inscripcion_abierta=fechas.hoy() <= t.inscripcion_hasta, lugar=t.lugar,
                 valor_inscripcion=t.valor_inscripcion, cupos_libres=libres,
+                grupos=[GruposPublicoOut(**g) for g in servicio.grupos_publicos(db, t)],
                 anuncio=t.anuncio_clave[:8] if t.anuncio_clave else None,
                 anuncio_ancho=t.anuncio_ancho, anuncio_alto=t.anuncio_alto,
             )

@@ -1,0 +1,143 @@
+<app-dialogo [titulo]="'Grupos · ' + torneo().nombre" ancho="ancho"
+             descripcion="Entran todos los equipos con cupo, hayan pagado o no. Las cabezas de serie quedan una por grupo."
+             (cerrar)="cerrar.emit()">
+  <div class="formulario">
+    @if (op.mensaje(); as m) {
+      <app-aviso [texto]="m.texto" [error]="m.error" (cerrar)="op.mensaje.set(null)" />
+    }
+    @if (sorteos() === null || equipos() === null) {
+      @if (!op.errorDialogo()) { <p class="nota-chica">Cargando…</p> }
+    } @else {
+      @for (r of ramas(); track r.rama) {
+        <section class="rama-grupos" [attr.aria-label]="'Grupos de la rama ' + r.rama">
+          <header class="rama-cabecera">
+            <h3 class="capital">{{ r.rama }}</h3>
+            @if (r.sorteo; as s) {
+              <span class="chip-sorteo" [class.publicado]="s.confirmado_en">{{ s.confirmado_en ? 'Publicado' : 'Borrador' }}</span>
+            }
+            <span class="nota-chica">{{ r.conCupo.length }} equipos con cupo@if (cabezas(r)) { · {{ cabezas(r) }} cabezas de serie }</span>
+          </header>
+
+          @if (r.sorteo; as s) {
+            <div class="grupos">
+              @for (g of s.grupos; track g.id) {
+                <article class="grupo">
+                  <header class="grupo-cabecera">
+                    <h4>Grupo {{ g.letra }}</h4>
+                    @if (s.sedes.length) {
+                      <select class="control chico" [attr.aria-label]="'Sede del grupo ' + g.letra" [disabled]="op.ocupado()"
+                              (change)="alElegirSede(g.id, $event)">
+                        <option value="" [selected]="!g.sede">Sin sede</option>
+                        @for (sede of s.sedes; track sede) { <option [value]="sede" [selected]="sede === g.sede">{{ sede }}</option> }
+                      </select>
+                    }
+                  </header>
+                  <ol class="equipos-grupo">
+                    @for (e of g.equipos; track e.id) {
+                      <li>
+                        <button type="button" class="estrella" [attr.aria-pressed]="e.cabeza_serie" [disabled]="op.ocupado()"
+                                [attr.aria-label]="(e.cabeza_serie ? 'Quitar cabeza de serie a ' : 'Marcar cabeza de serie a ') + e.nombre_club"
+                                [title]="e.cabeza_serie ? 'Cabeza de serie' : 'Marcar como cabeza de serie (cuenta en el próximo sorteo)'"
+                                (click)="alternarCabeza(e)"><span class="icono" aria-hidden="true">star</span></button>
+                        <span class="nombre">{{ e.nombre_club }} <span class="nota-chica">· {{ e.ciudad }}</span></span>
+                        @if (e.estado === 'pendiente_pago') { <span class="debe" title="Aún no paga completo">Debe</span> }
+                        <select class="control chico mover" [attr.aria-label]="'Grupo de ' + e.nombre_club" [disabled]="op.ocupado()"
+                                (change)="alMover(e, $event)">
+                          @for (otro of s.grupos; track otro.id) {
+                            <option [value]="otro.id" [selected]="otro.id === g.id">{{ otro.letra }}</option>
+                          }
+                          <option value="">Sin grupo</option>
+                        </select>
+                      </li>
+                    } @empty {
+                      <li class="nota-chica">Sin equipos.</li>
+                    }
+                  </ol>
+                </article>
+              }
+            </div>
+            @if (s.sin_grupo.length) {
+              <div class="sin-grupo">
+                <span class="etiqueta">Sin grupo</span>
+                <ul>
+                  @for (e of s.sin_grupo; track e.id) {
+                    <li>
+                      <span class="nombre">{{ e.nombre_club }} <span class="nota-chica">· {{ e.ciudad }}</span></span>
+                      <select class="control chico" [attr.aria-label]="'Grupo de ' + e.nombre_club" [disabled]="op.ocupado()"
+                              (change)="alMover(e, $event)">
+                        <option value="" selected>Agregar a…</option>
+                        @for (g of s.grupos; track g.id) { <option [value]="g.id">Grupo {{ g.letra }}</option> }
+                      </select>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+            @if (s.confirmado_en) {
+              <p class="nota-chica">Un club que se inscriba ahora (o entre desde la lista de espera) va solo al grupo con menos equipos.</p>
+            }
+            @if (s.actas.length) {
+              <details class="actas">
+                <summary>Actas del sorteo ({{ s.actas.length }})</summary>
+                @for (a of s.actas; track a.orden) {
+                  <div class="acta">
+                    <p class="nota-chica">N.º {{ a.orden }} · {{ a.creado_en | date: 'd MMM y, h:mm a' }} · huella <span class="mono">{{ a.huella.slice(0, 12) }}</span></p>
+                    <p class="acta-grupos">
+                      @for (g of a.grupos; track g.letra) {
+                        <span><b>{{ g.letra }}</b>{{ g.sede ? ' (' + g.sede + ')' : '' }}: {{ clubesActa(g) }}</span>
+                      }
+                    </p>
+                  </div>
+                }
+                <p class="nota-chica">* Debía la inscripción al confirmar.</p>
+              </details>
+            }
+          } @else if (r.conCupo.length) {
+            <p class="nota-chica">Marca con la estrella las cabezas de serie (opcional) y sortea.</p>
+            <ul class="cabezas">
+              @for (e of r.conCupo; track e.id) {
+                <li>
+                  <button type="button" class="estrella" [attr.aria-pressed]="e.cabeza_serie" [disabled]="op.ocupado()"
+                          [attr.aria-label]="(e.cabeza_serie ? 'Quitar cabeza de serie a ' : 'Marcar cabeza de serie a ') + e.nombre_club"
+                          (click)="alternarCabeza(e)"><span class="icono" aria-hidden="true">star</span></button>
+                  {{ e.nombre_club }}
+                </li>
+              }
+            </ul>
+          }
+
+          @if (r.opciones.length) {
+            <div class="sorteo-acciones">
+              <label class="campo-linea"><span class="etiqueta">Grupos</span>
+                <select class="control chico" [attr.aria-label]="'Cuántos grupos en la rama ' + r.rama" (change)="elegirCantidad(r.rama, $event)">
+                  @for (n of r.opciones; track n) { <option [value]="n" [selected]="n === cantidad(r)">{{ n }}</option> }
+                </select>
+              </label>
+              <span class="nota-chica">{{ tamanos(r.conCupo.length, cantidad(r)) }} equipos</span>
+              <button type="button" class="boton chico" [class.secundario]="r.sorteo" [disabled]="op.ocupado()" (click)="sortear(r)">
+                <span class="icono" aria-hidden="true">shuffle</span> {{ r.sorteo ? 'Volver a sortear' : 'Sortear grupos' }}
+              </button>
+              @if (r.sorteo && !r.sorteo.confirmado_en) {
+                <button type="button" class="boton chico" [disabled]="op.ocupado()" (click)="confirmar(r.rama)">
+                  <span class="icono" aria-hidden="true">verified</span> Confirmar y publicar
+                </button>
+              }
+            </div>
+            @if (porRepetir() === r.rama) {
+              <div class="repetir" role="alert">
+                <p>Estos grupos ya están publicados. Si vuelves a sortear quedan en borrador y dejan de verse en el sitio hasta que confirmes. El acta anterior se conserva.</p>
+                <div class="acciones izquierda">
+                  <button type="button" class="boton chico peligro" [disabled]="op.ocupado()" (click)="sortear(r)">Sí, volver a sortear</button>
+                  <button type="button" class="boton chico secundario" (click)="porRepetir.set(null)">No</button>
+                </div>
+              </div>
+            }
+          } @else if (!r.sorteo) {
+            <p class="nota-chica">Hacen falta al menos 4 equipos con cupo en esta rama para sortear grupos.</p>
+          }
+        </section>
+      }
+    }
+    @if (op.errorDialogo()) { <p class="mensaje error" role="alert">{{ op.errorDialogo() }}</p> }
+  </div>
+</app-dialogo>

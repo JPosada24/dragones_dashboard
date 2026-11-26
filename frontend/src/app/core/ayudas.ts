@@ -90,7 +90,9 @@ export const AYUDAS: Record<string, Ayuda> = {
     pasos: [
       { titulo: 'Cupo', texto: 'Cada torneo tiene un cupo de equipos. Si se llena, los nuevos quedan en lista de espera y entran solos cuando alguien se retira.' },
       { titulo: 'Pagos', texto: 'Cada equipo paga la inscripción del torneo; se aceptan abonos y queda confirmado al completar.' },
-      { titulo: 'Anuncio', texto: 'Adjunta el flyer: el sitio lo muestra mientras las inscripciones estén abiertas.' },
+      { titulo: 'Inscripción', texto: 'Desde el sitio, los clubes se inscriben hasta la fecha límite (o el día de inicio si no hay). Desde aquí puedes inscribir hasta el último día del torneo.' },
+      { titulo: 'Grupos', texto: 'Con «Grupos» sorteas cada rama: entran todos los equipos con cupo, hayan pagado o no, y las cabezas de serie (estrella) quedan una por grupo. Al confirmar se publican en el sitio; quien llegue después va al grupo con menos equipos.' },
+      { titulo: 'Anuncio', texto: 'Adjunta el flyer: el sitio lo muestra hasta que termine el torneo.' },
       { titulo: 'Al terminar', texto: '«Pasar a realizados» lo lleva a Perfil del club → Torneos realizados para agregarle los resultados.' },
     ],
     nota: 'Los días de torneo se cancelan los entrenamientos; si el torneo se cancela, vuelven.',

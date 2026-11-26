@@ -229,14 +229,30 @@ def video_de(enlace: str) -> tuple[str, str]:
 
 
 # ---------- Vista pública ----------
-def _abiertos():
-    return select(Torneo).where(Torneo.estado == "programado", Torneo.fecha_limite_inscripcion >= fechas.hoy())
+def _vigentes():
+    return select(Torneo).where(Torneo.estado == "programado", Torneo.fecha_fin >= fechas.hoy())
 
 
 def torneos_abiertos(db: Session) -> list[tuple[Torneo, int]]:
-    """Torneos con inscripciones abiertas y cuántos cupos les quedan."""
-    filas = db.scalars(_abiertos().order_by(Torneo.fecha_inicio)).all()
+    """Torneos que aún no terminan (con inscripción abierta o ya con sus grupos) y cuántos cupos les quedan."""
+    filas = db.scalars(_vigentes().order_by(Torneo.fecha_inicio)).all()
     return [(t, max(0, t.cupo_equipos - torneos.resumen(db, t)["ocupados"])) for t in filas]
+
+
+def grupos_publicos(db: Session, torneo: Torneo) -> list[dict[str, Any]]:
+    """Solo los grupos confirmados, con el nombre y la ciudad de cada club (nada del delegado)."""
+    salida = []
+    for s in torneos.sorteos(db, torneo):
+        if s.confirmado_en is None:
+            continue
+        equipos = torneos.equipos_con_cupo(db, torneo, s.rama)
+        salida.append({"rama": s.rama, "grupos": [
+            {"letra": g.letra, "sede": g.sede, "equipos": [
+                {"nombre_club": e.nombre_club, "ciudad": e.ciudad} for e in equipos if e.grupo_id == g.id
+            ]}
+            for g in s.grupos
+        ]})
+    return salida
 
 
 def cifras(db: Session, p: PerfilClub) -> dict[str, Any]:
@@ -335,11 +351,11 @@ def anuncio_publico(db: Session, torneo_id: uuid.UUID) -> TorneoRealizado:
 
 
 def anuncio_torneo_abierto(db: Session, torneo_id: uuid.UUID) -> Torneo:
-    """Flyer de un torneo que el sitio muestra: con inscripciones abiertas, con anuncio y con el sitio publicado.
+    """Flyer de un torneo que el sitio muestra: que aún no termina, con anuncio y con el sitio publicado.
 
-    Un torneo cancelado, eliminado o ya cerrado deja de exponer su anuncio.
+    Un torneo cancelado, eliminado o ya terminado deja de exponer su anuncio.
     """
-    t = db.scalar(_abiertos().where(Torneo.id == torneo_id))
+    t = db.scalar(_vigentes().where(Torneo.id == torneo_id))
     if t is None or not t.anuncio_clave or not perfil(db).publicado:
         raise NoEncontrado("Anuncio no encontrado.")
     return t

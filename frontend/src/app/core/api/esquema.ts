@@ -1839,6 +1839,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/cabeza-serie": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Cabeza Serie
+         * @description Marca o desmarca al equipo como cabeza de serie (en el sorteo de grupos va una por grupo).
+         */
+        put: operations["cabeza_serie_api_v1_torneos__torneo_id__equipos__equipo_id__cabeza_serie_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/grupo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mover A Grupo
+         * @description Pasa el equipo a otro grupo de su rama, o lo saca de los grupos (queda en la auditoría).
+         */
+        put: operations["mover_a_grupo_api_v1_torneos__torneo_id__equipos__equipo_id__grupo_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/pagos": {
         parameters: {
             query?: never;
@@ -1890,7 +1930,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/sede": {
+    "/api/v1/torneos/{torneo_id}/grupos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Grupos
+         * @description Los grupos de cada rama que ya se sorteó (en borrador o confirmados).
+         */
+        get: operations["grupos_api_v1_torneos__torneo_id__grupos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torneos/{torneo_id}/grupos/{grupo_id}/sede": {
         parameters: {
             query?: never;
             header?: never;
@@ -1898,12 +1958,49 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Asignar Sede
-         * @description El organizador asigna la sede donde juega el equipo (una de las de la jornada de su rama).
-         */
-        put: operations["asignar_sede_api_v1_torneos__torneo_id__equipos__equipo_id__sede_put"];
+        /** Sede De Grupo */
+        put: operations["sede_de_grupo_api_v1_torneos__torneo_id__grupos__grupo_id__sede_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torneos/{torneo_id}/grupos/{rama}/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar Grupos
+         * @description Publica los grupos en el sitio y guarda el acta del sorteo.
+         */
+        post: operations["confirmar_grupos_api_v1_torneos__torneo_id__grupos__rama__confirmar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torneos/{torneo_id}/grupos/{rama}/sortear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sortear Grupos
+         * @description Reparte al azar los equipos con cupo de la rama en grupos parejos (queda en borrador).
+         */
+        post: operations["sortear_grupos_api_v1_torneos__torneo_id__grupos__rama__sortear_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2011,6 +2108,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActaGruposOut */
+        ActaGruposOut: {
+            /**
+             * Creado En
+             * Format: date-time
+             */
+            creado_en: string;
+            /** Grupos */
+            grupos: components["schemas"]["GrupoActaOut"][];
+            /** Huella */
+            huella: string;
+            /** Orden */
+            orden: number;
+        };
         /** ActaOut */
         ActaOut: {
             /**
@@ -2423,6 +2534,11 @@ export interface components {
             /** Autorizacion */
             autorizacion: boolean;
         };
+        /** CabezaSerieIn */
+        CabezaSerieIn: {
+            /** Cabeza Serie */
+            cabeza_serie: boolean;
+        };
         /** CancelarIn */
         CancelarIn: {
             /** Motivo */
@@ -2652,6 +2768,20 @@ export interface components {
             /** Ids */
             ids: string[];
         };
+        /** EquipoActaOut */
+        EquipoActaOut: {
+            /** Cabeza Serie */
+            cabeza_serie: boolean;
+            /** Ciudad */
+            ciudad: string;
+            /** Club */
+            club: string;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "pendiente_pago" | "confirmado" | "en_espera" | "retirado";
+        };
         /** EquipoCrear */
         EquipoCrear: {
             /** Ciudad */
@@ -2667,8 +2797,29 @@ export interface components {
             /** Rama */
             rama?: ("masculina" | "femenina") | null;
         };
+        /** EquipoGrupoOut */
+        EquipoGrupoOut: {
+            /** Cabeza Serie */
+            cabeza_serie: boolean;
+            /** Ciudad */
+            ciudad: string;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "pendiente_pago" | "confirmado" | "en_espera" | "retirado";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Nombre Club */
+            nombre_club: string;
+        };
         /** EquipoOut */
         EquipoOut: {
+            /** Cabeza Serie */
+            cabeza_serie: boolean;
             /** Ciudad */
             ciudad: string;
             /** Delegado Email */
@@ -2682,6 +2833,8 @@ export interface components {
              * @enum {string}
              */
             estado: "pendiente_pago" | "confirmado" | "en_espera" | "retirado";
+            /** Grupo */
+            grupo: ("A" | "B" | "C" | "D" | "E" | "F" | "G" | "H") | null;
             /**
              * Id
              * Format: uuid
@@ -2707,10 +2860,15 @@ export interface components {
             rama: "masculina" | "femenina";
             /** Saldo */
             saldo: number;
-            /** Sede */
-            sede: string | null;
             /** Valor */
             valor: number;
+        };
+        /** EquipoPublicoOut */
+        EquipoPublicoOut: {
+            /** Ciudad */
+            ciudad: string;
+            /** Nombre Club */
+            nombre_club: string;
         };
         /** EstadoAgenteOut */
         EstadoAgenteOut: {
@@ -2801,6 +2959,65 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /** GrupoActaOut */
+        GrupoActaOut: {
+            /** Equipos */
+            equipos: components["schemas"]["EquipoActaOut"][];
+            /**
+             * Letra
+             * @enum {string}
+             */
+            letra: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+            /** Sede */
+            sede: string | null;
+        };
+        /**
+         * GrupoEquipoIn
+         * @description Mueve el equipo a otro grupo de su rama. Vacío = lo saca de los grupos.
+         */
+        GrupoEquipoIn: {
+            /** Grupo Id */
+            grupo_id: string | null;
+        };
+        /** GrupoOut */
+        GrupoOut: {
+            /** Equipos */
+            equipos: components["schemas"]["EquipoGrupoOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Letra
+             * @enum {string}
+             */
+            letra: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+            /** Sede */
+            sede: string | null;
+        };
+        /** GrupoPublicoOut */
+        GrupoPublicoOut: {
+            /** Equipos */
+            equipos: components["schemas"]["EquipoPublicoOut"][];
+            /**
+             * Letra
+             * @enum {string}
+             */
+            letra: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+            /** Sede */
+            sede: string | null;
+        };
+        /** GruposPublicoOut */
+        GruposPublicoOut: {
+            /** Grupos */
+            grupos: components["schemas"]["GrupoPublicoOut"][];
+            /**
+             * Rama
+             * @enum {string}
+             */
+            rama: "masculina" | "femenina";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3730,10 +3947,10 @@ export interface components {
             roles: components["schemas"]["RolOut"][];
         };
         /**
-         * SedeEquipoIn
-         * @description La sede que el organizador le asigna al equipo (una de las de su rama). Vacía = sin asignar.
+         * SedeGrupoIn
+         * @description Dónde juega el grupo (una de las sedes de la jornada de su rama). Vacía = sin sede.
          */
-        SedeEquipoIn: {
+        SedeGrupoIn: {
             /** Sede */
             sede?: string | null;
         };
@@ -3921,6 +4138,37 @@ export interface components {
              */
             vence_el: string;
         };
+        /** SortearGruposIn */
+        SortearGruposIn: {
+            /** Grupos */
+            grupos: number;
+        };
+        /**
+         * SorteoGruposOut
+         * @description Los grupos de una rama. `confirmado_en` vacío = borrador (se puede volver a sortear y no se publica).
+         */
+        SorteoGruposOut: {
+            /** Actas */
+            actas: components["schemas"]["ActaGruposOut"][];
+            /** Confirmado En */
+            confirmado_en: string | null;
+            /** Grupos */
+            grupos: components["schemas"]["GrupoOut"][];
+            /**
+             * Rama
+             * @enum {string}
+             */
+            rama: "masculina" | "femenina";
+            /** Sedes */
+            sedes: string[];
+            /** Sin Grupo */
+            sin_grupo: components["schemas"]["EquipoGrupoOut"][];
+            /**
+             * Sorteado En
+             * Format: date-time
+             */
+            sorteado_en: string;
+        };
         /** TalonarioOut */
         TalonarioOut: {
             /**
@@ -4008,11 +4256,8 @@ export interface components {
              * Format: date
              */
             fecha_inicio: string;
-            /**
-             * Fecha Limite Inscripcion
-             * Format: date
-             */
-            fecha_limite_inscripcion: string;
+            /** Fecha Limite Inscripcion */
+            fecha_limite_inscripcion?: string | null;
             /** Jornadas */
             jornadas?: components["schemas"]["JornadaIn"][] | null;
             /** Lugar */
@@ -4053,16 +4298,18 @@ export interface components {
              * Format: date
              */
             fecha_inicio: string;
-            /**
-             * Fecha Limite Inscripcion
-             * Format: date
-             */
-            fecha_limite_inscripcion: string;
+            /** Fecha Limite Inscripcion */
+            fecha_limite_inscripcion: string | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * Inscripcion Hasta
+             * Format: date
+             */
+            inscripcion_hasta: string;
             /** Jornadas */
             jornadas: components["schemas"]["JornadaOut"][];
             /** Lugar */
@@ -4127,16 +4374,25 @@ export interface components {
              * Format: date
              */
             fecha_inicio: string;
+            /** Fecha Limite Inscripcion */
+            fecha_limite_inscripcion: string | null;
             /**
-             * Fecha Limite Inscripcion
-             * Format: date
+             * Grupos
+             * @default []
              */
-            fecha_limite_inscripcion: string;
+            grupos: components["schemas"]["GruposPublicoOut"][];
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Inscripcion Abierta */
+            inscripcion_abierta: boolean;
+            /**
+             * Inscripcion Hasta
+             * Format: date
+             */
+            inscripcion_hasta: string;
             /** Jornadas */
             jornadas: components["schemas"]["JornadaOut"][];
             /** Lugar */
@@ -8624,6 +8880,78 @@ export interface operations {
             };
         };
     };
+    cabeza_serie_api_v1_torneos__torneo_id__equipos__equipo_id__cabeza_serie_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+                equipo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CabezaSerieIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mover_a_grupo_api_v1_torneos__torneo_id__equipos__equipo_id__grupo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+                equipo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrupoEquipoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     pagar_api_v1_torneos__torneo_id__equipos__equipo_id__pagos_post: {
         parameters: {
             query?: never;
@@ -8733,19 +9061,50 @@ export interface operations {
             };
         };
     };
-    asignar_sede_api_v1_torneos__torneo_id__equipos__equipo_id__sede_put: {
+    grupos_api_v1_torneos__torneo_id__grupos_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 torneo_id: string;
-                equipo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SorteoGruposOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sede_de_grupo_api_v1_torneos__torneo_id__grupos__grupo_id__sede_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+                grupo_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SedeEquipoIn"];
+                "application/json": components["schemas"]["SedeGrupoIn"];
             };
         };
         responses: {
@@ -8755,7 +9114,75 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EquipoOut"];
+                    "application/json": components["schemas"]["SorteoGruposOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirmar_grupos_api_v1_torneos__torneo_id__grupos__rama__confirmar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+                rama: "masculina" | "femenina";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SorteoGruposOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sortear_grupos_api_v1_torneos__torneo_id__grupos__rama__sortear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+                rama: "masculina" | "femenina";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SortearGruposIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SorteoGruposOut"];
                 };
             };
             /** @description Validation Error */

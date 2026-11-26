@@ -9,17 +9,25 @@ from app.api.deps import ip_cliente, requiere
 from app.core.almacen import Almacen, get_almacen
 from app.db.session import get_db
 from app.models.acceso import Usuario
-from app.models.torneos import Torneo
+from app.models.torneos import SorteoGrupos, Torneo
 from app.schemas.club import TorneoRealizadoOut
+from app.schemas.comunes import Rama
 from app.schemas.torneos import (
+    ActaGruposOut,
     AnularPagoEquipoIn,
+    CabezaSerieIn,
     EquipoCrear,
+    EquipoGrupoOut,
     EquipoOut,
+    GrupoEquipoIn,
+    GrupoOut,
     JornadaOut,
     MotivoIn,
     PagoEquipoIn,
     RetiroOut,
-    SedeEquipoIn,
+    SedeGrupoIn,
+    SortearGruposIn,
+    SorteoGruposOut,
     TorneoActualizar,
     TorneoCrear,
     TorneoOut,
@@ -37,7 +45,8 @@ def torneo_a_out(db: Session, t: Torneo) -> TorneoOut:
     return TorneoOut(
         id=t.id, nombre=t.nombre, rama=t.rama, jornadas=[JornadaOut.model_validate(j) for j in t.jornadas],
         fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
-        fecha_limite_inscripcion=t.fecha_limite_inscripcion, lugar=t.lugar, cupo_equipos=t.cupo_equipos,
+        fecha_limite_inscripcion=t.fecha_limite_inscripcion, inscripcion_hasta=t.inscripcion_hasta, lugar=t.lugar,
+        cupo_equipos=t.cupo_equipos,
         valor_inscripcion=t.valor_inscripcion, estado=t.estado, motivo_cancelacion=t.motivo_cancelacion,
         anuncio=t.anuncio_clave[:8] if t.anuncio_clave else None, anuncio_ancho=t.anuncio_ancho,
         anuncio_alto=t.anuncio_alto, realizado_id=(r.id if (r := club_panel.realizado_de(db, t)) else None),
@@ -140,17 +149,93 @@ def retirar(
     )
 
 
-@router.put("/{torneo_id}/equipos/{equipo_id}/sede", response_model=EquipoOut)
-def asignar_sede(
-    torneo_id: uuid.UUID, equipo_id: uuid.UUID, datos: SedeEquipoIn, request: Request,
+@router.put("/{torneo_id}/equipos/{equipo_id}/cabeza-serie", response_model=EquipoOut)
+def cabeza_serie(
+    torneo_id: uuid.UUID, equipo_id: uuid.UUID, datos: CabezaSerieIn, request: Request,
     actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
 ) -> EquipoOut:
-    """El organizador asigna la sede donde juega el equipo (una de las de la jornada de su rama)."""
+    """Marca o desmarca al equipo como cabeza de serie (en el sorteo de grupos va una por grupo)."""
     torneo = servicio.obtener(db, torneo_id)
     equipo = servicio.obtener_equipo(db, torneo, equipo_id)
-    servicio.asignar_sede(db, torneo, equipo, sede=datos.sede, actor=actor, ip=ip_cliente(request))
+    servicio.marcar_cabeza_serie(db, torneo, equipo, cabeza=datos.cabeza_serie, actor=actor, ip=ip_cliente(request))
     db.commit()
     return EquipoOut.model_validate(equipo)
+
+
+@router.put("/{torneo_id}/equipos/{equipo_id}/grupo", response_model=EquipoOut)
+def mover_a_grupo(
+    torneo_id: uuid.UUID, equipo_id: uuid.UUID, datos: GrupoEquipoIn, request: Request,
+    actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> EquipoOut:
+    """Pasa el equipo a otro grupo de su rama, o lo saca de los grupos (queda en la auditoría)."""
+    torneo = servicio.obtener(db, torneo_id)
+    equipo = servicio.obtener_equipo(db, torneo, equipo_id)
+    grupo = servicio.obtener_grupo(db, torneo, datos.grupo_id) if datos.grupo_id else None
+    servicio.mover_a_grupo(db, torneo, equipo, grupo=grupo, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return EquipoOut.model_validate(equipo)
+
+
+# ---------- Grupos ----------
+def sorteo_a_out(db: Session, t: Torneo, s: SorteoGrupos) -> SorteoGruposOut:
+    equipos = servicio.equipos_con_cupo(db, t, s.rama)
+    ids = {g.id for g in s.grupos}
+    return SorteoGruposOut(
+        rama=s.rama, sorteado_en=s.sorteado_en, confirmado_en=s.confirmado_en,
+        grupos=[
+            GrupoOut(id=g.id, letra=g.letra, sede=g.sede,
+                     equipos=[EquipoGrupoOut.model_validate(e) for e in equipos if e.grupo_id == g.id])
+            for g in s.grupos
+        ],
+        sin_grupo=[EquipoGrupoOut.model_validate(e) for e in equipos if e.grupo_id not in ids],
+        sedes=t.sedes_de(s.rama),
+        actas=[ActaGruposOut.model_validate(a) for a in servicio.actas_grupos(db, t, s.rama)],
+    )
+
+
+@router.get("/{torneo_id}/grupos", response_model=list[SorteoGruposOut])
+def grupos(
+    torneo_id: uuid.UUID, _: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db)
+) -> list[SorteoGruposOut]:
+    """Los grupos de cada rama que ya se sorteó (en borrador o confirmados)."""
+    t = servicio.obtener(db, torneo_id)
+    return [sorteo_a_out(db, t, s) for s in servicio.sorteos(db, t)]
+
+
+@router.post("/{torneo_id}/grupos/{rama}/sortear", response_model=SorteoGruposOut)
+def sortear_grupos(
+    torneo_id: uuid.UUID, rama: Rama, datos: SortearGruposIn, request: Request,
+    actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> SorteoGruposOut:
+    """Reparte al azar los equipos con cupo de la rama en grupos parejos (queda en borrador)."""
+    t = servicio.obtener(db, torneo_id)
+    s = servicio.sortear_grupos(db, t, rama, cantidad=datos.grupos, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return sorteo_a_out(db, t, s)
+
+
+@router.post("/{torneo_id}/grupos/{rama}/confirmar", response_model=SorteoGruposOut)
+def confirmar_grupos(
+    torneo_id: uuid.UUID, rama: Rama, request: Request,
+    actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> SorteoGruposOut:
+    """Publica los grupos en el sitio y guarda el acta del sorteo."""
+    t = servicio.obtener(db, torneo_id)
+    s = servicio.confirmar_grupos(db, t, rama, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return sorteo_a_out(db, t, s)
+
+
+@router.put("/{torneo_id}/grupos/{grupo_id}/sede", response_model=SorteoGruposOut)
+def sede_de_grupo(
+    torneo_id: uuid.UUID, grupo_id: uuid.UUID, datos: SedeGrupoIn, request: Request,
+    actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> SorteoGruposOut:
+    t = servicio.obtener(db, torneo_id)
+    g = servicio.obtener_grupo(db, t, grupo_id)
+    servicio.sede_de_grupo(db, t, g, sede=datos.sede, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return sorteo_a_out(db, t, g.sorteo)
 
 
 @router.post("/{torneo_id}/equipos/{equipo_id}/pagos", response_model=EquipoOut)

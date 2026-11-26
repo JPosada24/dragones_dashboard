@@ -198,16 +198,17 @@ class Demo:
                                json={"monto": monto, "fecha": dia.isoformat()})
 
     def torneo(self, nombre: str, rama: str | None, inicio: date, clubes: int, pagan: float) -> dict:
-        """`rama` None = fin de semana: sábado femenina y domingo masculina, cada día en dos coliseos."""
+        """`rama` None = fin de semana: sábado femenina y domingo masculina, cada día en dos coliseos, sin fecha
+        límite (se inscriben hasta el día de inicio); la femenina ya tiene sus grupos sorteados."""
         fin = inicio + timedelta(days=1)
         cuerpo = {
             "nombre": nombre, "fecha_inicio": inicio.isoformat(), "fecha_fin": fin.isoformat(),
             "fecha_limite_inscripcion": (inicio - timedelta(days=4)).isoformat(),
             "lugar": "Coliseo del barrio", "cupo_equipos": 12, "valor_inscripcion": 150_000,
         }
+        sedes = ["Coliseo Mayor", "Coliseo Barrio Sur"]
         if rama is None:
-            sedes = ["Coliseo Mayor", "Coliseo Barrio Sur"]
-            cuerpo |= {"lugar": None, "jornadas": [
+            cuerpo |= {"lugar": None, "fecha_limite_inscripcion": None, "jornadas": [
                 {"rama": "femenina", "fecha": inicio.isoformat(), "sedes": sedes},
                 {"rama": "masculina", "fecha": fin.isoformat(), "sedes": sedes},
             ]}
@@ -220,12 +221,17 @@ class Demo:
                 "nombre_club": club, "rama": rama_equipo, "ciudad": ciudad,
                 "delegado_nombre": f"{self.azar.choice(NOMBRES_M + NOMBRES_F)} {self.azar.choice(APELLIDOS)}",
                 "delegado_telefono": self.telefono()})
-            if rama is None and self.azar.random() < 0.6:  # el organizador ya asignó sede a algunos
-                self.pedir("PUT", f"/torneos/{t['id']}/equipos/{e['id']}/sede", json={"sede": self.azar.choice(sedes)})
+            if rama is None and n == 0:  # el campeón anterior: cabeza de serie
+                self.pedir("PUT", f"/torneos/{t['id']}/equipos/{e['id']}/cabeza-serie", json={"cabeza_serie": True})
             if self.azar.random() < pagan:
                 monto = 150_000 if self.azar.random() < 0.7 else 75_000
                 self.pedir("POST", f"/torneos/{t['id']}/equipos/{e['id']}/pagos",
                            json={"monto": monto, "fecha": fechas.hoy().isoformat()})
+        if rama is None:  # grupos de la femenina ya sorteados y publicados; la masculina queda para probar
+            sorteo = self.pedir("POST", f"/torneos/{t['id']}/grupos/femenina/sortear", json={"grupos": 2})
+            for g, sede in zip(sorteo["grupos"], sedes, strict=False):
+                self.pedir("PUT", f"/torneos/{t['id']}/grupos/{g['id']}/sede", json={"sede": sede})
+            self.pedir("POST", f"/torneos/{t['id']}/grupos/femenina/confirmar")
         return t
 
 
@@ -296,7 +302,7 @@ def generar(semilla: int | None = None) -> None:
         # Hoy, con la hora real: el próximo torneo (inscripciones abiertas) y el pasado, a «Torneos realizados».
         reloj.soltar()
         d.tareas_del_worker()
-        d.torneo("Torneo Relámpago Dragones", None, hoy + timedelta(days=24), 6, 0.5)
+        d.torneo("Torneo Relámpago Dragones", None, hoy + timedelta(days=24), 10, 0.5)
         realizado = d.pedir("POST", f"/torneos/{torneo_pasado['id']}/realizado")
         d.pedir("PATCH", f"/club/torneos-realizados/{realizado['id']}", json={
             "resumen": "Campeón: Halcones VC. Subcampeón: Club Dragones. 9 clubes de 7 municipios.", "publicado": True})

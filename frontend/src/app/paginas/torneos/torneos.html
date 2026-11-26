@@ -64,7 +64,7 @@
           <p class="detalle">
             {{ t.fecha_inicio | date: 'EEE d MMM' }}@if (t.fecha_fin !== t.fecha_inicio) { – {{ t.fecha_fin | date: 'EEE d MMM' }} }
             @if (t.lugar) { · {{ t.lugar }} }
-            @if (t.estado === 'programado') { · <span [class.oro]="inscripcionAbierta(t)">{{ cierre(t) }}</span> }
+            @if (t.estado === 'programado' && t.fecha_fin >= hoy) { · <span [class.oro]="sitioAbierto(t)">{{ cierre(t) }}</span> }
           </p>
           @if (conDetalleDeJornadas(t)) {
             <ul class="jornadas">
@@ -92,6 +92,11 @@
             <button type="button" class="boton chico" (click)="verEquipos(t)">
               <span class="icono" aria-hidden="true">groups</span> Clubes
             </button>
+            @if (t.estado === 'programado') {
+              <button type="button" class="boton chico secundario" (click)="verGrupos(t)" title="Sorteo de grupos por rama">
+                <span class="icono" aria-hidden="true">grid_view</span> Grupos
+              </button>
+            }
             @if (puedePasar(t)) {
               <button type="button" class="boton chico secundario" [disabled]="ocupado()" (click)="pasarARealizados(t)"
                       title="Copia nombre, fecha, lugar y anuncio a la sección «Torneos realizados» del sitio">
@@ -131,7 +136,7 @@
           <input class="control" formControlName="nombre" placeholder="Ej.: Copa Dragones 2026" autocomplete="off" /></label>
         <label class="campo"><span class="etiqueta">Lugar general <span class="nota-campo">opcional</span></span>
           <input class="control" formControlName="lugar" placeholder="Ej.: Medellín" autocomplete="off" /></label>
-        <label class="campo"><span class="etiqueta">Inscripciones hasta</span>
+        <label class="campo"><span class="etiqueta">Inscripción por el sitio hasta <span class="nota-campo">vacía = hasta el inicio</span></span>
           <input class="control" type="date" formControlName="fecha_limite_inscripcion" [max]="primerDia()" /></label>
         <label class="campo"><span class="etiqueta">Cupo de equipos <span class="nota-campo">vacío = sugerido</span></span>
           <input class="control mono" type="number" min="2" max="200" step="1" formControlName="cupo_equipos" placeholder="Ej.: 18" /></label>
@@ -176,7 +181,7 @@
             <button type="button" class="enlace-rojo" (click)="quitarAnuncio.set(true)">Quitar anuncio</button>
           }
         </div>
-        <span class="nota-campo">El flyer del torneo. Se ve en el sitio mientras las inscripciones estén abiertas; se guarda entero y sin los datos ocultos del archivo.</span>
+        <span class="nota-campo">El flyer del torneo. Se ve en el sitio hasta que termine el torneo.</span>
       </div>
       @if (modo !== 'nuevo') {
         <p class="nota-chica">Un valor nuevo aplica a los clubes que se inscriban después. Si subes el cupo, entran los primeros de la lista de espera.</p>
@@ -230,7 +235,7 @@
       @if (inscripcionAbierta(t)) {
         <div class="acciones izquierda">
           <button type="button" class="boton chico" (click)="abrirInscribir()"><span class="icono" aria-hidden="true">add</span> Inscribir club</button>
-          <span class="nota-chica">Inscripciones hasta el {{ t.fecha_limite_inscripcion | date: 'd MMM y' }}. Si no hay cupo, queda en lista de espera.</span>
+          <span class="nota-chica">Aquí inscribes hasta el último día del torneo; desde el sitio, hasta el {{ t.inscripcion_hasta | date: 'd MMM' }}. Sin cupo, queda en lista de espera.</span>
         </div>
       }
       @if (equipos(); as lista) {
@@ -245,18 +250,11 @@
                     {{ e.delegado_nombre }} · <span class="mono">{{ e.delegado_telefono }}</span>
                     @if (whatsapp(e); as url) { · <a class="enlace" [href]="url" target="_blank" rel="noopener noreferrer">WhatsApp</a> }
                   </span>
-                  @if (ramasDe(t).length > 1 || sedesDe(t, e.rama).length) {
+                  @if (ramasDe(t).length > 1 || e.grupo || e.cabeza_serie) {
                     <span class="equipo-sede">
                       @if (ramasDe(t).length > 1) { <span class="chip-rama capital">{{ e.rama }}</span> }
-                      @if (sedesDe(t, e.rama).length && t.estado === 'programado' && e.estado !== 'retirado') {
-                        <select class="control chico" (change)="alElegirSede(e, $event)"
-                                [attr.aria-label]="'Sede de ' + e.nombre_club" [disabled]="ocupado()">
-                          <option value="" [selected]="!e.sede">Sede sin asignar</option>
-                          @for (s of sedesDe(t, e.rama); track s) { <option [value]="s" [selected]="s === e.sede">{{ s }}</option> }
-                        </select>
-                      } @else if (e.sede) {
-                        <span class="nota-chica">Sede: {{ e.sede }}</span>
-                      }
+                      @if (e.grupo) { <span class="chip-rama">Grupo {{ e.grupo }}</span> }
+                      @if (e.cabeza_serie) { <span class="chip-rama">Cabeza de serie</span> }
                     </span>
                   }
                 </div>
@@ -382,4 +380,8 @@
       </div>
     </form>
   </app-dialogo>
+}
+
+@if (viendoGrupos(); as t) {
+  <app-grupos-torneo [torneo]="t" (cerrar)="viendoGrupos.set(null)" />
 }
