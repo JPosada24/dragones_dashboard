@@ -1,4 +1,4 @@
-"""Torneos: inscripción de clubes externos con cupo, lista de espera y pagos."""
+"""Torneos: jornadas (rama, día y sedes), inscripción de clubes por rama con cupo, lista de espera, sedes y pagos."""
 import uuid
 from datetime import date
 from typing import Any
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core import fechas
 from app.core.fechas import formato_fecha, formato_pesos
 from app.models.acceso import Usuario
-from app.models.torneos import OCUPAN_CUPO, EquipoTorneo, PagoEquipo, Torneo
+from app.models.torneos import OCUPAN_CUPO, EquipoTorneo, JornadaTorneo, PagoEquipo, Torneo
 from app.services import auditoria, configuracion, programacion
 from app.services.errores import Conflicto, ErrorNegocio, NoEncontrado
 
@@ -55,18 +55,38 @@ def _validar_fechas(inicio: date, fin: date, limite: date, *, nuevo: bool) -> No
         raise ErrorNegocio("La fecha límite de inscripción debe estar entre hoy y el inicio del torneo.")
 
 
+def _aplicar_jornadas(torneo: Torneo, jornadas: list[dict[str, Any]]) -> None:
+    """Deja el torneo con esas jornadas (reutiliza las del mismo día y rama) y su rama, si es una sola."""
+    for j in jornadas:
+        if not torneo.fecha_inicio <= j["fecha"] <= torneo.fecha_fin:
+            raise ErrorNegocio("Cada jornada debe quedar entre la fecha de inicio y la de fin del torneo.")
+    actuales = {(j.rama, j.fecha): j for j in torneo.jornadas}
+    nuevas = []
+    for j in jornadas:
+        jornada = actuales.pop((j["rama"], j["fecha"]), None) or JornadaTorneo(rama=j["rama"], fecha=j["fecha"])
+        jornada.sedes = list(j.get("sedes") or [])
+        nuevas.append(jornada)
+    torneo.jornadas = nuevas  # las que sobran se borran
+    ramas = {j["rama"] for j in jornadas}
+    torneo.rama = ramas.pop() if len(ramas) == 1 else None
+
+
 def crear(db: Session, *, datos: dict[str, Any], actor: Usuario, ip: str | None) -> Torneo:
     _validar_fechas(datos["fecha_inicio"], datos["fecha_fin"], datos["fecha_limite_inscripcion"], nuevo=True)
     if datos.get("cupo_equipos") is None:
         datos["cupo_equipos"] = configuracion.obtener(db, "cupo_equipos_sugerido")
+    rama, jornadas = datos.pop("rama", None), datos.pop("jornadas", None)
+    # En corto (solo la rama): una jornada el día de inicio, sin sedes.
+    jornadas = jornadas or [{"rama": rama, "fecha": datos["fecha_inicio"], "sedes": []}]
     torneo = Torneo(**datos, estado="programado", creado_por=actor.id)
+    _aplicar_jornadas(torneo, jornadas)
     db.add(torneo)
     db.flush()
     _auditar(
         db, "torneo.crear", "torneo", torneo.id, actor.id, ip,
         despues={
-            "nombre": torneo.nombre, "rama": torneo.rama, "fecha_inicio": torneo.fecha_inicio.isoformat(),
-            "cupo": torneo.cupo_equipos, "valor": torneo.valor_inscripcion,
+            "nombre": torneo.nombre, "ramas": torneo.ramas, "fecha_inicio": torneo.fecha_inicio.isoformat(),
+            "cupo": torneo.cupo_equipos, "valor": torneo.valor_inscripcion, "jornadas": _jornadas_foto(torneo),
         },
     )
     programacion.generar(db)  # los entrenamientos de esos días se cancelan
@@ -84,10 +104,15 @@ def cancelar(db: Session, torneo: Torneo, *, motivo: str | None, actor: Usuario,
     return torneo
 
 
+def _jornadas_foto(t: Torneo) -> list[dict[str, Any]]:
+    return [{"rama": j.rama, "fecha": j.fecha.isoformat(), "sedes": list(j.sedes)} for j in t.jornadas]
+
+
 def _foto(t: Torneo) -> dict[str, Any]:
     return {
-        "nombre": t.nombre, "rama": t.rama, "fecha_inicio": t.fecha_inicio.isoformat(),
+        "nombre": t.nombre, "ramas": t.ramas, "fecha_inicio": t.fecha_inicio.isoformat(),
         "fecha_fin": t.fecha_fin.isoformat(), "lugar": t.lugar, "cupo": t.cupo_equipos, "valor": t.valor_inscripcion,
+        "jornadas": _jornadas_foto(t),
     }
 
 
@@ -106,8 +131,24 @@ def actualizar(db: Session, torneo: Torneo, *, cambios: dict[str, Any], actor: U
     if nuevos.get("cupo_equipos") is not None and nuevos["cupo_equipos"] < ocupados:
         raise ErrorNegocio(f"Ya hay {ocupados} equipos con cupo: el cupo no puede ser menor.")
     antes = _foto(torneo)
+    rama, jornadas = nuevos.pop("rama", None), nuevos.pop("jornadas", None)
+    inicio_anterior = torneo.fecha_inicio
     for campo, valor in nuevos.items():
         setattr(torneo, campo, valor)
+    if jornadas is None:
+        # Se conservan las jornadas (con la rama nueva, si se cambió); una sola que caía el día de inicio se mueve
+        # con él.
+        jornadas = [{"rama": rama or j.rama, "fecha": j.fecha, "sedes": list(j.sedes)} for j in torneo.jornadas]
+        if len(jornadas) == 1 and jornadas[0]["fecha"] == inicio_anterior:
+            jornadas[0]["fecha"] = torneo.fecha_inicio
+    _aplicar_jornadas(torneo, jornadas)
+    for e in db.scalars(select(EquipoTorneo).where(
+        EquipoTorneo.torneo_id == torneo.id, EquipoTorneo.estado != "retirado",
+    )):
+        if e.rama not in torneo.ramas:
+            raise ErrorNegocio(f"Hay equipos inscritos en la rama {e.rama}: retíralos antes de quitarla del torneo.")
+        if e.sede and e.sede not in torneo.sedes_de(e.rama):
+            e.sede = None  # su sede ya no está en la jornada: queda por asignar
     # Si hay más cupo, entran los que esperaban (en orden de llegada).
     libres = torneo.cupo_equipos - ocupados
     if libres > 0:
@@ -166,30 +207,55 @@ def _estado_con_cupo(torneo: Torneo) -> str:
 def inscribir(
     db: Session, torneo: Torneo, *, datos: dict[str, Any], actor: Usuario | None, ip: str | None
 ) -> EquipoTorneo:
-    """Inscribe un club. `actor` es None cuando el club se inscribe solo desde el sitio público."""
+    """Inscribe el equipo de un club en una rama. `actor` es None cuando el club se inscribe solo desde el sitio.
+    El cupo y el valor son uno para todo el torneo (las dos ramas)."""
     _bloquear(db, torneo)
     if torneo.estado != "programado":
         raise ErrorNegocio("El torneo fue cancelado.")
     if fechas.hoy() > torneo.fecha_limite_inscripcion:
         raise ErrorNegocio(f"Las inscripciones cerraron el {formato_fecha(torneo.fecha_limite_inscripcion)}.")
+    datos = dict(datos)
+    rama = datos.pop("rama", None)
+    if rama is None:
+        if len(torneo.ramas) != 1:
+            raise ErrorNegocio("Elige la rama en la que se inscribe el equipo (femenina o masculina).")
+        rama = torneo.ramas[0]
+    elif rama not in torneo.ramas:
+        raise ErrorNegocio(f"Este torneo no tiene rama {rama}.")
     # Con el torneo bloqueado esta consulta es segura; el índice único de la base queda como respaldo.
     repetido = db.scalar(select(EquipoTorneo.id).where(
-        EquipoTorneo.torneo_id == torneo.id, EquipoTorneo.estado != "retirado",
+        EquipoTorneo.torneo_id == torneo.id, EquipoTorneo.estado != "retirado", EquipoTorneo.rama == rama,
         func.lower(EquipoTorneo.nombre_club) == datos["nombre_club"].lower(),
     ))
     if repetido is not None:
-        raise Conflicto(f"El club «{datos['nombre_club']}» ya está inscrito en este torneo.")
+        raise Conflicto(f"El club «{datos['nombre_club']}» ya tiene equipo en la rama {rama} de este torneo.")
     hay_cupo = _ocupados(db, torneo) < torneo.cupo_equipos
     equipo = EquipoTorneo(
-        torneo_id=torneo.id, **datos, estado=_estado_con_cupo(torneo) if hay_cupo else "en_espera",
+        torneo_id=torneo.id, rama=rama, **datos, estado=_estado_con_cupo(torneo) if hay_cupo else "en_espera",
         valor=torneo.valor_inscripcion, monto_pagado=0, inscrito_por=actor.id if actor else None,
     )
     db.add(equipo)
     db.flush()
     _auditar(
         db, "torneo.inscribir_equipo", "equipo_torneo", equipo.id, actor.id if actor else None, ip,
-        despues={"torneo_id": str(torneo.id), "club": equipo.nombre_club, "estado": equipo.estado},
+        despues={"torneo_id": str(torneo.id), "club": equipo.nombre_club, "rama": rama, "estado": equipo.estado},
     )
+    return equipo
+
+
+def asignar_sede(
+    db: Session, torneo: Torneo, equipo: EquipoTorneo, *, sede: str | None, actor: Usuario, ip: str | None
+) -> EquipoTorneo:
+    """El organizador decide en qué sede juega cada equipo: una de las sedes de la jornada de su rama."""
+    if equipo.estado == "retirado":
+        raise Conflicto("El equipo se retiró del torneo.")
+    if sede is not None and sede not in torneo.sedes_de(equipo.rama):
+        raise ErrorNegocio(f"«{sede}» no es una sede de la rama {equipo.rama} en este torneo.")
+    antes = equipo.sede
+    equipo.sede = sede
+    db.flush()
+    _auditar(db, "torneo.asignar_sede", "equipo_torneo", equipo.id, actor.id, ip,
+             antes={"sede": antes}, despues={"sede": sede})
     return equipo
 
 

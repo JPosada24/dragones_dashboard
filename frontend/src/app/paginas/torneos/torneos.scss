@@ -137,6 +137,63 @@ h2 {
   color: var(--texto-2);
 }
 
+// Jornadas del torneo en la tarjeta: «sáb 6 dic · femenina · Coliseo Mayor, Coliseo Sur».
+.jornadas {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--texto-2);
+}
+
+// Formulario: una fila por jornada.
+.jornadas-form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 10px;
+
+  legend {
+    margin-bottom: 6px;
+  }
+
+  > .boton {
+    justify-self: start;
+  }
+}
+
+.jornada-fila {
+  display: grid;
+  grid-template-columns: 140px 150px 1fr auto;
+  gap: 10px;
+  align-items: end;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr 1fr;
+
+    .sedes {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+// Rama y sede de cada equipo en la lista de clubes.
+.equipo-sede {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+
+  select {
+    max-width: 220px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
 .chip-cancelado {
   background: var(--rojo-tenue);
   color: var(--rojo);

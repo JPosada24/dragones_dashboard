@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.comunes import EstadoEquipo, PlataformaVideo, Rama, normalizar_email, normalizar_telefono
-from app.schemas.torneos import EquipoCrear
+from app.schemas.torneos import EquipoCrear, JornadaOut
 
 _USUARIO_RED = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
 
@@ -279,7 +279,8 @@ class HorarioPublicoOut(BaseModel):
 class TorneoPublicoOut(BaseModel):
     id: uuid.UUID
     nombre: str
-    rama: Rama
+    rama: Rama | None  # vacía si el torneo tiene las dos ramas
+    jornadas: list[JornadaOut]  # rama, día y sedes
     fecha_inicio: date
     fecha_fin: date
     fecha_limite_inscripcion: date

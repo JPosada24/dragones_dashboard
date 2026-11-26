@@ -41,6 +41,8 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
   corrección de asistencia y rechazo de justificación.
 - Torneos: los organiza el club y se inscriben **clubes externos** (no jugadores); cada equipo paga inscripción
   (valor fijado en cada torneo). Cupo por torneo (sugerido 18, `cupo_equipos_sugerido`). No hay otros eventos.
+  Un torneo tiene jornadas (rama, día y sedes; p. ej. sábado femenina y domingo masculina): un cupo y un valor para
+  todo el torneo, cada club se inscribe **por rama** y el organizador le asigna la sede (0034).
 - Notificaciones: **sin costo**. Correo automático (Gmail con contraseña de aplicación) + bandeja en la plataforma;
   WhatsApp **manual** con enlaces wa.me que el staff envía desde el número del club (no se paga la API de Meta;
   NUNCA usar bots no oficiales de WhatsApp Web: arriesgan el bloqueo del número). Interfaz lista para otro proveedor.
@@ -67,7 +69,7 @@ saber para seguir trabajando.
   de IA (apagado sin `ANTHROPIC_API_KEY`), habeas data (autorización por alumno y registro de solicitudes con plazos
   en días hábiles, `services/habeas.py`), reportes de ingresos y CSV (`services/reportes.py`), nivel del alumno
   (Iniciación/Avanzado), panel instalable (PWA: el service worker no guarda datos de la API) y preparación para
-  producción. Migraciones hasta la **0033**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
+  producción. Migraciones hasta la **0034**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
 - **Panel (frontend):** secciones en `core/secciones.ts`, pantallas en `paginas/<seccion>/` registradas en `PANTALLAS`
   de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`, tutorial guiado en
   `core/tutorial.service.ts` (pasos) + `layout/tutorial/` (resalta `data-tutorial="…"`) con el dragón

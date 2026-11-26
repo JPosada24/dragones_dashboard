@@ -16,7 +16,7 @@ import { ZonaArchivos } from '../../compartido/zona-archivos';
 import { numeroWhatsApp } from '../../compartido/whatsapp';
 import { AuthService } from '../../core/auth/auth.service';
 import { API } from '../../core/modelos';
-import { Equipo, EstadoEquipo, PagoEquipo, Retiro, Torneo } from './torneos.modelos';
+import { Equipo, EstadoEquipo, Jornada, PagoEquipo, RamaTorneo, Retiro, Torneo } from './torneos.modelos';
 
 type Filtro = 'proximos' | 'pasados' | 'cancelados';
 
@@ -75,15 +75,15 @@ export class TorneosPage implements OnInit {
 
   protected readonly formTorneo = this.fb.group({
     nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-    rama: this.fb.control<'' | 'femenina' | 'masculina'>('', Validators.required),
-    fecha_inicio: ['', Validators.required],
-    fecha_fin: ['', Validators.required],
     fecha_limite_inscripcion: ['', Validators.required],
     lugar: ['', Validators.maxLength(120)],
     cupo_equipos: this.fb.control<number | null>(null, [Validators.min(2), Validators.max(200)]),
     valor_inscripcion: this.fb.control<number | null>(null, [Validators.required, Validators.min(0), Validators.max(100_000_000)]),
+    /** Cada jornada: rama, día y sedes (p. ej. sábado femenina en dos coliseos). Las fechas del torneo salen de aquí. */
+    jornadas: this.fb.array([this.nuevaJornada()]),
   });
   protected readonly formEquipo = this.fb.group({
+    rama: this.fb.control<RamaTorneo | ''>(''),
     nombre_club: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     ciudad: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
     delegado_nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
@@ -169,9 +169,73 @@ export class TorneosPage implements OnInit {
     return e.pagos.some((x) => x.anula_id === pago.id);
   }
 
+  // ---------- Jornadas, ramas y sedes ----------
+  private nuevaJornada(j?: Jornada) {
+    return this.fb.group({
+      rama: this.fb.control<RamaTorneo | ''>(j?.rama ?? '', Validators.required),
+      fecha: this.fb.control(j?.fecha ?? '', Validators.required),
+      sedes: this.fb.control(j?.sedes.join(', ') ?? '', Validators.maxLength(700)),
+    });
+  }
+
+  protected get jornadas() {
+    return this.formTorneo.controls.jornadas;
+  }
+
+  protected agregarJornada(): void {
+    if (this.jornadas.length < 4) this.jornadas.push(this.nuevaJornada());
+  }
+
+  protected quitarJornada(i: number): void {
+    if (this.jornadas.length > 1) this.jornadas.removeAt(i);
+  }
+
+  private ponerJornadas(lista: (Jornada | undefined)[]): void {
+    this.jornadas.clear();
+    for (const j of lista) this.jornadas.push(this.nuevaJornada(j));
+  }
+
+  /** El primer día del torneo según las jornadas del formulario (tope de la fecha límite de inscripción). */
+  protected primerDia(): string {
+    return this.jornadas.getRawValue().map((j) => j.fecha).filter(Boolean).sort()[0] ?? '';
+  }
+
+  protected ramasDe(t: Torneo): RamaTorneo[] {
+    return [...new Set(t.jornadas.map((j) => j.rama))];
+  }
+
+  protected etiquetaRama(t: Torneo): string {
+    const r = this.ramasDe(t);
+    return r.length > 1 ? 'Femenina y masculina' : (r[0] ?? '');
+  }
+
+  /** Sedes donde puede jugar un equipo de esa rama (las de sus jornadas). */
+  protected sedesDe(t: Torneo, rama: string): string[] {
+    return [...new Set(t.jornadas.filter((j) => j.rama === rama).flatMap((j) => j.sedes))];
+  }
+
+  protected conDetalleDeJornadas(t: Torneo): boolean {
+    return t.jornadas.length > 1 || t.jornadas.some((j) => j.sedes.length > 0);
+  }
+
+  protected alElegirSede(e: Equipo, ev: Event): void {
+    this.asignarSede(e, (ev.target as HTMLSelectElement).value);
+  }
+
+  protected asignarSede(e: Equipo, sede: string): void {
+    const t = this.abierto();
+    if (!t) return;
+    const url = `${torneoUrl(t.id)}/equipos/${encodeURIComponent(e.id)}/sede`;
+    this.op.ejecutar(this.http.put<Equipo>(url, { sede: sede || null }), (nuevo) => {
+      this.equipos.update((l) => l?.map((x) => (x.id === nuevo.id ? nuevo : x)) ?? l);
+      this.op.exito(sede ? `${nuevo.nombre_club} juega en ${sede}.` : `${nuevo.nombre_club} quedó sin sede asignada.`);
+    });
+  }
+
   // ---------- Torneo: crear / editar ----------
   protected abrirNuevo(): void {
     this.formTorneo.reset();
+    this.ponerJornadas([undefined]);
     this.prepararAnuncio(null);
     this.op.abrir(() => this.editando.set('nuevo'));
   }
@@ -213,10 +277,10 @@ export class TorneosPage implements OnInit {
 
   protected abrirEditar(t: Torneo): void {
     this.formTorneo.reset({
-      nombre: t.nombre, rama: t.rama, fecha_inicio: t.fecha_inicio, fecha_fin: t.fecha_fin,
-      fecha_limite_inscripcion: t.fecha_limite_inscripcion, lugar: t.lugar ?? '', cupo_equipos: t.cupo_equipos,
-      valor_inscripcion: t.valor_inscripcion,
+      nombre: t.nombre, fecha_limite_inscripcion: t.fecha_limite_inscripcion, lugar: t.lugar ?? '',
+      cupo_equipos: t.cupo_equipos, valor_inscripcion: t.valor_inscripcion,
     });
+    this.ponerJornadas(t.jornadas);
     this.op.abrir(() => this.editando.set(t));
     this.prepararAnuncio(t);
   }
@@ -224,9 +288,19 @@ export class TorneosPage implements OnInit {
   protected guardarTorneo(): void {
     const modo = this.editando();
     if (!modo) return;
-    if (this.formTorneo.invalid) return this.errorDialogo.set('Completa nombre, rama, fechas y valor de la inscripción.');
+    if (this.formTorneo.invalid) {
+      return this.errorDialogo.set('Completa el nombre, la rama y el día de cada jornada, la fecha límite y el valor.');
+    }
     const f = this.formTorneo.getRawValue();
-    const cuerpo = { ...f, lugar: f.lugar.trim() || null, cupo_equipos: f.cupo_equipos ?? undefined };
+    const jornadas = f.jornadas.map((j) => ({
+      rama: j.rama, fecha: j.fecha, sedes: j.sedes.split(',').map((s) => s.trim()).filter(Boolean),
+    }));
+    const dias = jornadas.map((j) => j.fecha).sort();
+    const cuerpo = {
+      nombre: f.nombre, lugar: f.lugar.trim() || null, fecha_limite_inscripcion: f.fecha_limite_inscripcion,
+      cupo_equipos: f.cupo_equipos ?? undefined, valor_inscripcion: f.valor_inscripcion, jornadas,
+      fecha_inicio: dias[0], fecha_fin: dias.at(-1),
+    };
     const peticion = modo === 'nuevo'
       ? this.http.post<Torneo>(`${API}/torneos`, cuerpo)
       : this.http.patch<Torneo>(torneoUrl(modo.id), cuerpo);
@@ -314,6 +388,9 @@ export class TorneosPage implements OnInit {
 
   protected abrirInscribir(): void {
     this.formEquipo.reset();
+    const t = this.abierto();
+    const ramas = t ? this.ramasDe(t) : [];
+    if (ramas.length === 1) this.formEquipo.controls.rama.setValue(ramas[0] ?? '');
     this.errorDialogo.set(null);
     this.inscribiendo.set(true);
   }
@@ -323,6 +400,7 @@ export class TorneosPage implements OnInit {
     if (!t) return;
     if (this.formEquipo.invalid) return this.errorDialogo.set('Completa el club, la ciudad y el delegado con su teléfono.');
     const f = this.formEquipo.getRawValue();
+    if (!f.rama) return this.errorDialogo.set('Elige la rama del equipo.');
     const cuerpo = { ...f, delegado_email: f.delegado_email.trim() || null };
     this.op.ejecutar(this.http.post<Equipo>(`${torneoUrl(t.id)}/equipos`, cuerpo), (e) => {
       this.inscribiendo.set(false);

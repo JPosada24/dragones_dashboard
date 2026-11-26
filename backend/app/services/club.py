@@ -301,9 +301,10 @@ def inscribir_desde_sitio(
     equipo.autoriza_datos_en = fechas.ahora()
     estado = {"en_espera": "en lista de espera", "confirmado": "confirmado"}.get(equipo.estado, "pendiente de pago")
     notificaciones.avisar(
-        db, notificaciones.staff_de_rama(db, torneo.rama), tipo="torneo_inscripcion_sitio",
+        db, notificaciones.staff_de_rama(db, equipo.rama), tipo="torneo_inscripcion_sitio",
         clave=f"torneo-sitio-{equipo.id}", titulo=f"Nuevo club inscrito: {equipo.nombre_club}",
-        mensaje=(f"{equipo.nombre_club} ({equipo.ciudad}) se inscribió desde el sitio a «{torneo.nombre}». "
+        mensaje=(f"{equipo.nombre_club} ({equipo.ciudad}) se inscribió desde el sitio a «{torneo.nombre}» "
+                 f"(rama {equipo.rama}). "
                  f"Quedó {estado}. Delegado: {equipo.delegado_nombre}."),
     )
     return equipo

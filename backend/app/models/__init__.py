@@ -14,7 +14,7 @@ from app.models.habeas import SolicitudDatos  # noqa: F401
 from app.models.notificaciones import Notificacion
 from app.models.rifas import ActaSorteo, PagoTalonario, Rifa, Talonario
 from app.models.sistema import Auditoria, Configuracion, UsoAgente
-from app.models.torneos import EquipoTorneo, PagoEquipo, Torneo
+from app.models.torneos import EquipoTorneo, JornadaTorneo, PagoEquipo, Torneo
 
 __all__ = [
     "ActaSorteo",
@@ -32,6 +32,7 @@ __all__ = [
     "HorarioEntrenamiento",
     "Inscripcion",
     "IntegranteEquipo",
+    "JornadaTorneo",
     "Justificacion",
     "Multa",
     "Notificacion",

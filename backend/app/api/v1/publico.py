@@ -21,6 +21,7 @@ from app.schemas.club import (
     TorneoRealizadoOut,
     VideoOut,
 )
+from app.schemas.torneos import JornadaOut
 from app.services import club as servicio
 from app.services.errores import ErrorNegocio
 
@@ -45,7 +46,9 @@ def sitio(db: Session = Depends(get_db)) -> SitioOut:
         equipo=[IntegranteOut.model_validate(i) for i in d["equipo"]],
         torneos=[
             TorneoPublicoOut(
-                id=t.id, nombre=t.nombre, rama=t.rama, fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
+                id=t.id, nombre=t.nombre, rama=t.rama,
+                jornadas=[JornadaOut.model_validate(j) for j in t.jornadas],
+                fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
                 fecha_limite_inscripcion=t.fecha_limite_inscripcion, lugar=t.lugar,
                 valor_inscripcion=t.valor_inscripcion, cupos_libres=libres,
                 anuncio=t.anuncio_clave[:8] if t.anuncio_clave else None,

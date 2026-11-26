@@ -52,7 +52,7 @@
         <div class="cuerpo">
           <div class="cabecera">
             <h2>{{ t.nombre }}</h2>
-            <span class="chip-rama capital">{{ t.rama }}</span>
+            <span class="chip-rama capital">{{ etiquetaRama(t) }}</span>
             @if (t.estado === 'cancelado') { <span class="chip-cancelado">Cancelado</span> }
             @if (t.anuncio) {
               <span class="chip-anuncio" title="Tiene anuncio (flyer) para el sitio"><span class="icono" aria-hidden="true">image</span> Con anuncio</span>
@@ -66,6 +66,13 @@
             @if (t.lugar) { · {{ t.lugar }} }
             @if (t.estado === 'programado') { · <span [class.oro]="inscripcionAbierta(t)">{{ cierre(t) }}</span> }
           </p>
+          @if (conDetalleDeJornadas(t)) {
+            <ul class="jornadas">
+              @for (j of t.jornadas; track j.rama + j.fecha) {
+                <li><span class="capital">{{ j.fecha | date: 'EEE d MMM' }} · {{ j.rama }}</span>@if (j.sedes.length) { · {{ j.sedes.join(', ') }} }</li>
+              }
+            </ul>
+          }
           @if (t.estado === 'cancelado' && t.motivo_cancelacion) { <p class="nota-chica">{{ t.motivo_cancelacion }}</p> }
           <div class="avance">
             <div class="fila-base">
@@ -116,31 +123,48 @@
 <!-- ---------- Torneo: nuevo / editar ---------- -->
 @if (editando(); as modo) {
   <app-dialogo [titulo]="modo === 'nuevo' ? 'Nuevo torneo' : 'Editar torneo'" ancho="ancho"
-               descripcion="Lo organiza el club y se inscriben clubes externos. Los días del torneo no hay entrenamiento."
+               descripcion="Un cupo y un valor de inscripción para todo el torneo. Los días del torneo no hay entrenamiento."
                (cerrar)="editando.set(null)">
     <form class="formulario" [formGroup]="formTorneo" (ngSubmit)="guardarTorneo()">
       <div class="rejilla">
         <label class="campo"><span class="etiqueta">Nombre</span>
           <input class="control" formControlName="nombre" placeholder="Ej.: Copa Dragones 2026" autocomplete="off" /></label>
-        <label class="campo"><span class="etiqueta">Rama</span>
-          <select class="control" formControlName="rama">
-            <option value="" disabled>Selecciona…</option>
-            <option value="femenina">Femenina</option>
-            <option value="masculina">Masculina</option>
-          </select></label>
-        <label class="campo"><span class="etiqueta">Lugar <span class="nota-campo">opcional</span></span>
-          <input class="control" formControlName="lugar" placeholder="Ej.: Coliseo Mayor" autocomplete="off" /></label>
-        <label class="campo"><span class="etiqueta">Empieza</span>
-          <input class="control" type="date" formControlName="fecha_inicio" [min]="modo === 'nuevo' ? hoy : ''" /></label>
-        <label class="campo"><span class="etiqueta">Termina</span>
-          <input class="control" type="date" formControlName="fecha_fin" [min]="formTorneo.controls.fecha_inicio.value" /></label>
+        <label class="campo"><span class="etiqueta">Lugar general <span class="nota-campo">opcional</span></span>
+          <input class="control" formControlName="lugar" placeholder="Ej.: Medellín" autocomplete="off" /></label>
         <label class="campo"><span class="etiqueta">Inscripciones hasta</span>
-          <input class="control" type="date" formControlName="fecha_limite_inscripcion" [max]="formTorneo.controls.fecha_inicio.value" /></label>
+          <input class="control" type="date" formControlName="fecha_limite_inscripcion" [max]="primerDia()" /></label>
         <label class="campo"><span class="etiqueta">Cupo de equipos <span class="nota-campo">vacío = sugerido</span></span>
           <input class="control mono" type="number" min="2" max="200" step="1" formControlName="cupo_equipos" placeholder="Ej.: 18" /></label>
         <label class="campo"><span class="etiqueta">Valor por equipo (pesos)</span>
           <input class="control mono" type="number" min="0" step="1" inputmode="numeric" formControlName="valor_inscripcion" placeholder="Ej.: 150000 (0 = gratis)" /></label>
       </div>
+      <fieldset class="jornadas-form" formArrayName="jornadas">
+        <legend class="etiqueta">Jornadas <span class="nota-campo">cada día con su rama y sus sedes</span></legend>
+        @for (j of jornadas.controls; track j; let i = $index) {
+          <div class="jornada-fila" [formGroupName]="i">
+            <label class="campo"><span class="etiqueta">Rama</span>
+              <select class="control" formControlName="rama">
+                <option value="" disabled>Selecciona…</option>
+                <option value="femenina">Femenina</option>
+                <option value="masculina">Masculina</option>
+              </select></label>
+            <label class="campo"><span class="etiqueta">Día</span>
+              <input class="control" type="date" formControlName="fecha" [min]="modo === 'nuevo' ? hoy : ''" /></label>
+            <label class="campo sedes"><span class="etiqueta">Sedes <span class="nota-campo">separadas por coma</span></span>
+              <input class="control" formControlName="sedes" placeholder="Ej.: Coliseo Mayor, Coliseo Sur" autocomplete="off" /></label>
+            @if (jornadas.length > 1) {
+              <button type="button" class="boton-icono peligro" (click)="quitarJornada(i)" [attr.aria-label]="'Quitar jornada ' + (i + 1)">
+                <span class="icono" aria-hidden="true">close</span>
+              </button>
+            }
+          </div>
+        }
+        @if (jornadas.length < 4) {
+          <button type="button" class="boton secundario chico" (click)="agregarJornada()">
+            <span class="icono" aria-hidden="true">add</span> Agregar jornada
+          </button>
+        }
+      </fieldset>
       <div class="campo">
         <span class="etiqueta">Anuncio para el sitio <span class="nota-campo">opcional</span></span>
         <div class="anuncio-fila">
@@ -221,6 +245,20 @@
                     {{ e.delegado_nombre }} · <span class="mono">{{ e.delegado_telefono }}</span>
                     @if (whatsapp(e); as url) { · <a class="enlace" [href]="url" target="_blank" rel="noopener noreferrer">WhatsApp</a> }
                   </span>
+                  @if (ramasDe(t).length > 1 || sedesDe(t, e.rama).length) {
+                    <span class="equipo-sede">
+                      @if (ramasDe(t).length > 1) { <span class="chip-rama capital">{{ e.rama }}</span> }
+                      @if (sedesDe(t, e.rama).length && t.estado === 'programado' && e.estado !== 'retirado') {
+                        <select class="control chico" (change)="alElegirSede(e, $event)"
+                                [attr.aria-label]="'Sede de ' + e.nombre_club" [disabled]="ocupado()">
+                          <option value="" [selected]="!e.sede">Sede sin asignar</option>
+                          @for (s of sedesDe(t, e.rama); track s) { <option [value]="s" [selected]="s === e.sede">{{ s }}</option> }
+                        </select>
+                      } @else if (e.sede) {
+                        <span class="nota-chica">Sede: {{ e.sede }}</span>
+                      }
+                    </span>
+                  }
                 </div>
                 <span class="chip-estado">{{ estadoEquipo[e.estado] }}</span>
               </div>
@@ -275,6 +313,15 @@
   <app-dialogo titulo="Inscribir club" [descripcion]="abierto()?.nombre ?? ''" (cerrar)="inscribiendo.set(false)">
     <form class="formulario" [formGroup]="formEquipo" (ngSubmit)="guardarEquipo()">
       <div class="rejilla">
+        @if (abierto(); as t) {
+          @if (ramasDe(t).length > 1) {
+            <label class="campo"><span class="etiqueta">Rama</span>
+              <select class="control" formControlName="rama">
+                <option value="" disabled>Selecciona…</option>
+                @for (r of ramasDe(t); track r) { <option [value]="r">{{ r === 'femenina' ? 'Femenina' : 'Masculina' }}</option> }
+              </select></label>
+          }
+        }
         <label class="campo"><span class="etiqueta">Club</span><input class="control" formControlName="nombre_club" placeholder="Ej.: Club Halcones" autocomplete="off" /></label>
         <label class="campo"><span class="etiqueta">Ciudad</span><input class="control" formControlName="ciudad" placeholder="Ej.: Medellín" autocomplete="off" /></label>
         <label class="campo"><span class="etiqueta">Delegado</span><input class="control" formControlName="delegado_nombre" placeholder="Nombre y apellido" autocomplete="off" /></label>

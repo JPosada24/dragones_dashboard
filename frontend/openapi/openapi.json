@@ -1911,6 +1911,21 @@
             "minLength": 2,
             "title": "Nombre Club",
             "type": "string"
+          },
+          "rama": {
+            "anyOf": [
+              {
+                "enum": [
+                  "masculina",
+                  "femenina"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rama"
           }
         },
         "required": [
@@ -1996,9 +2011,28 @@
             "title": "Pagos",
             "type": "array"
           },
+          "rama": {
+            "enum": [
+              "masculina",
+              "femenina"
+            ],
+            "title": "Rama",
+            "type": "string"
+          },
           "saldo": {
             "title": "Saldo",
             "type": "integer"
+          },
+          "sede": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sede"
           },
           "valor": {
             "title": "Valor",
@@ -2008,6 +2042,8 @@
         "required": [
           "id",
           "nombre_club",
+          "rama",
+          "sede",
           "ciudad",
           "delegado_nombre",
           "delegado_telefono",
@@ -2820,6 +2856,21 @@
             "title": "Nombre Club",
             "type": "string"
           },
+          "rama": {
+            "anyOf": [
+              {
+                "enum": [
+                  "masculina",
+                  "femenina"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rama"
+          },
           "sitio_web": {
             "anyOf": [
               {
@@ -3055,6 +3106,72 @@
           "publicado"
         ],
         "title": "IntegranteOut",
+        "type": "object"
+      },
+      "JornadaIn": {
+        "additionalProperties": false,
+        "description": "Un día del torneo para una rama, con sus sedes (p. ej. sábado, femenina, Coliseo A y Coliseo B).",
+        "properties": {
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "rama": {
+            "enum": [
+              "masculina",
+              "femenina"
+            ],
+            "title": "Rama",
+            "type": "string"
+          },
+          "sedes": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 2,
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Sedes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rama",
+          "fecha"
+        ],
+        "title": "JornadaIn",
+        "type": "object"
+      },
+      "JornadaOut": {
+        "properties": {
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "rama": {
+            "enum": [
+              "masculina",
+              "femenina"
+            ],
+            "title": "Rama",
+            "type": "string"
+          },
+          "sedes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sedes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rama",
+          "fecha",
+          "sedes"
+        ],
+        "title": "JornadaOut",
         "type": "object"
       },
       "JustificacionOut": {
@@ -4802,6 +4919,27 @@
         "title": "RolesOut",
         "type": "object"
       },
+      "SedeEquipoIn": {
+        "additionalProperties": false,
+        "description": "La sede que el organizador le asigna al equipo (una de las de su rama). Vacía = sin asignar.",
+        "properties": {
+          "sede": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sede"
+          }
+        },
+        "title": "SedeEquipoIn",
+        "type": "object"
+      },
       "SesionCrear": {
         "additionalProperties": false,
         "description": "Sesión extra, fuera del horario semanal.",
@@ -5413,6 +5551,22 @@
             ],
             "title": "Fecha Limite Inscripcion"
           },
+          "jornadas": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/JornadaIn"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jornadas"
+          },
           "lugar": {
             "anyOf": [
               {
@@ -5472,6 +5626,7 @@
       },
       "TorneoCrear": {
         "additionalProperties": false,
+        "description": "Con `jornadas` (una o varias: rama, día y sedes) o, en corto, con una sola `rama` (una jornada el día de\ninicio, sin sedes).",
         "properties": {
           "cupo_equipos": {
             "anyOf": [
@@ -5501,6 +5656,22 @@
             "title": "Fecha Limite Inscripcion",
             "type": "string"
           },
+          "jornadas": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/JornadaIn"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jornadas"
+          },
           "lugar": {
             "anyOf": [
               {
@@ -5520,12 +5691,19 @@
             "type": "string"
           },
           "rama": {
-            "enum": [
-              "masculina",
-              "femenina"
+            "anyOf": [
+              {
+                "enum": [
+                  "masculina",
+                  "femenina"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Rama",
-            "type": "string"
+            "title": "Rama"
           },
           "valor_inscripcion": {
             "maximum": 100000000.0,
@@ -5536,7 +5714,6 @@
         },
         "required": [
           "nombre",
-          "rama",
           "fecha_inicio",
           "fecha_fin",
           "fecha_limite_inscripcion",
@@ -5621,6 +5798,13 @@
             "title": "Id",
             "type": "string"
           },
+          "jornadas": {
+            "items": {
+              "$ref": "#/components/schemas/JornadaOut"
+            },
+            "title": "Jornadas",
+            "type": "array"
+          },
           "lugar": {
             "anyOf": [
               {
@@ -5652,12 +5836,19 @@
             "type": "integer"
           },
           "rama": {
-            "enum": [
-              "masculina",
-              "femenina"
+            "anyOf": [
+              {
+                "enum": [
+                  "masculina",
+                  "femenina"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Rama",
-            "type": "string"
+            "title": "Rama"
           },
           "realizado_id": {
             "anyOf": [
@@ -5684,6 +5875,7 @@
           "id",
           "nombre",
           "rama",
+          "jornadas",
           "fecha_inicio",
           "fecha_fin",
           "fecha_limite_inscripcion",
@@ -5740,12 +5932,19 @@
             "type": "integer"
           },
           "rama": {
-            "enum": [
-              "masculina",
-              "femenina"
+            "anyOf": [
+              {
+                "enum": [
+                  "masculina",
+                  "femenina"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Rama",
-            "type": "string"
+            "title": "Rama"
           }
         },
         "required": [
@@ -5820,6 +6019,13 @@
             "title": "Id",
             "type": "string"
           },
+          "jornadas": {
+            "items": {
+              "$ref": "#/components/schemas/JornadaOut"
+            },
+            "title": "Jornadas",
+            "type": "array"
+          },
           "lugar": {
             "anyOf": [
               {
@@ -5836,12 +6042,19 @@
             "type": "string"
           },
           "rama": {
-            "enum": [
-              "masculina",
-              "femenina"
+            "anyOf": [
+              {
+                "enum": [
+                  "masculina",
+                  "femenina"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Rama",
-            "type": "string"
+            "title": "Rama"
           },
           "valor_inscripcion": {
             "title": "Valor Inscripcion",
@@ -5852,6 +6065,7 @@
           "id",
           "nombre",
           "rama",
+          "jornadas",
           "fecha_inicio",
           "fecha_fin",
           "fecha_limite_inscripcion",
@@ -13812,6 +14026,75 @@
           }
         ],
         "summary": "Retirar",
+        "tags": [
+          "torneos"
+        ]
+      }
+    },
+    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/sede": {
+      "put": {
+        "description": "El organizador asigna la sede donde juega el equipo (una de las de la jornada de su rama).",
+        "operationId": "asignar_sede_api_v1_torneos__torneo_id__equipos__equipo_id__sede_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "torneo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Torneo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "equipo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SedeEquipoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Asignar Sede",
         "tags": [
           "torneos"
         ]

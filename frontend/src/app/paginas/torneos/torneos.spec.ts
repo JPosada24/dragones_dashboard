@@ -20,12 +20,13 @@ const SUPERADMIN = [...ADMIN, 'pagos.anular'];
 
 const torneo = (id: string, extra: Partial<Torneo> = {}): Torneo => ({
   id, nombre: `Copa ${id}`, rama: 'femenina', fecha_inicio: isoLocal(sumarDias(HOY, 20)), fecha_fin: isoLocal(sumarDias(HOY, 21)),
+  jornadas: [{ rama: 'femenina', fecha: isoLocal(sumarDias(HOY, 20)), sedes: [] }],
   fecha_limite_inscripcion: isoLocal(sumarDias(HOY, 10)), lugar: 'Coliseo', cupo_equipos: 2, valor_inscripcion: 150000,
   estado: 'programado', motivo_cancelacion: null, ocupados: 2, confirmados: 1, en_espera: 1, recaudado: 200000, ...extra,
 });
 
 const equipo = (id: string, extra: Partial<Equipo> = {}): Equipo => ({
-  id, nombre_club: `Club ${id}`, ciudad: 'Medellín', delegado_nombre: 'Ana Ruiz', delegado_telefono: '3101234567',
+  id, nombre_club: `Club ${id}`, rama: 'femenina', sede: null, ciudad: 'Medellín', delegado_nombre: 'Ana Ruiz', delegado_telefono: '3101234567',
   delegado_email: null, estado: 'pendiente_pago', valor: 150000, monto_pagado: 50000, saldo: 100000, motivo_retiro: null, origen: 'staff',
   pagos: [{ id: `p-${id}`, fecha: isoLocal(HOY), monto: 50000, anula_id: null, motivo: null, creado_en: '' }], ...extra,
 });
@@ -85,14 +86,17 @@ describe('TorneosPage', () => {
     expect(ultimo().querySelector<HTMLInputElement>('[formcontrolname="nombre"]')!.value).toBe('');
     escribir('[formcontrolname="nombre"]', 'Copa Dragones');
     escribir('[formcontrolname="rama"]', 'femenina');
-    escribir('[formcontrolname="fecha_inicio"]', isoLocal(sumarDias(HOY, 30)));
-    escribir('[formcontrolname="fecha_fin"]', isoLocal(sumarDias(HOY, 31)));
+    escribir('[formcontrolname="fecha"]', isoLocal(sumarDias(HOY, 30)));
     escribir('[formcontrolname="fecha_limite_inscripcion"]', isoLocal(sumarDias(HOY, 20)));
     escribir('[formcontrolname="valor_inscripcion"]', '150000');
     await estable();
     boton('Crear torneo', ultimo())!.click();
     const r = backend.expectOne((x) => x.method === 'POST' && x.url === `${API}/torneos`);
-    expect(r.request.body).toMatchObject({ nombre: 'Copa Dragones', rama: 'femenina', lugar: null, valor_inscripcion: 150000 });
+    const dia = isoLocal(sumarDias(HOY, 30));
+    expect(r.request.body).toMatchObject({
+      nombre: 'Copa Dragones', lugar: null, valor_inscripcion: 150000, fecha_inicio: dia, fecha_fin: dia,
+      jornadas: [{ rama: 'femenina', fecha: dia, sedes: [] }],
+    });
     expect(r.request.body.cupo_equipos).toBeUndefined();
     r.flush(torneo('9', { nombre: 'Copa Dragones' }));
     backend.expectOne(`${API}/torneos`).flush([torneo('9')]);
@@ -160,8 +164,7 @@ describe('TorneosPage', () => {
     await estable();
     escribir('[formcontrolname="nombre"]', 'Copa Flyer');
     escribir('[formcontrolname="rama"]', 'femenina');
-    escribir('[formcontrolname="fecha_inicio"]', isoLocal(sumarDias(HOY, 20)));
-    escribir('[formcontrolname="fecha_fin"]', isoLocal(sumarDias(HOY, 21)));
+    escribir('[formcontrolname="fecha"]', isoLocal(sumarDias(HOY, 20)));
     escribir('[formcontrolname="fecha_limite_inscripcion"]', isoLocal(sumarDias(HOY, 10)));
     escribir('[formcontrolname="valor_inscripcion"]', '150000');
     const input = ultimo().querySelector<HTMLInputElement>('input[type="file"]')!;
@@ -200,5 +203,33 @@ describe('TorneosPage', () => {
   it('sin permiso del sitio no ofrece pasarlo a realizados', async () => {
     await cargar(ADMIN, [torneo('6', { fecha_inicio: isoLocal(HOY) })]);
     expect(boton('history Pasar a realizados')).toBeUndefined();
+  });
+
+  it('un torneo de fin de semana: dos jornadas con sus sedes, rama al inscribir y sede para cada equipo', async () => {
+    const SAB = isoLocal(sumarDias(HOY, 20));
+    const DOM = isoLocal(sumarDias(HOY, 21));
+    const doble = torneo('7', {
+      rama: null, jornadas: [
+        { rama: 'femenina', fecha: SAB, sedes: ['Coliseo Mayor', 'Coliseo Sur'] },
+        { rama: 'masculina', fecha: DOM, sedes: ['Coliseo Mayor', 'Coliseo Sur'] },
+      ],
+    });
+    await cargar(ADMIN, [doble]);
+    expect(texto()).toContain('Femenina y masculina');
+    expect(texto()).toContain('Coliseo Mayor, Coliseo Sur');
+
+    boton('groups Clubes')!.click();
+    backend.expectOne(`${API}/torneos/7/equipos`).flush([equipo('a', { rama: 'masculina' })]);
+    await estable();
+    const select = ultimo().querySelector<HTMLSelectElement>('select[aria-label="Sede de Club a"]')!;
+    expect([...select.options].map((o) => o.value)).toEqual(['', 'Coliseo Mayor', 'Coliseo Sur']);
+    select.value = 'Coliseo Sur';
+    select.dispatchEvent(new Event('change'));
+    const r = backend.expectOne(`${API}/torneos/7/equipos/a/sede`);
+    expect(r.request.method).toBe('PUT');
+    expect(r.request.body).toEqual({ sede: 'Coliseo Sur' });
+    r.flush(equipo('a', { rama: 'masculina', sede: 'Coliseo Sur' }));
+    await estable();
+    expect(texto()).toContain('juega en Coliseo Sur');
   });
 });

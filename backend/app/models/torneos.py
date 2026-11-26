@@ -1,7 +1,20 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Uuid, func, text
+from sqlalchemy import (
+    ARRAY,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    Uuid,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -27,7 +40,8 @@ class Torneo(UUIDMixin, TiempoMixin, Base):
     )
 
     nombre: Mapped[str] = mapped_column(String(120))
-    rama: Mapped[str] = mapped_column(String(10))
+    # La rama si todas sus jornadas son de una sola; vacía si el torneo tiene las dos (p. ej. sábado y domingo).
+    rama: Mapped[str | None] = mapped_column(String(10))
     fecha_inicio: Mapped[date] = mapped_column(Date, index=True)
     fecha_fin: Mapped[date] = mapped_column(Date)
     fecha_limite_inscripcion: Mapped[date] = mapped_column(Date)
@@ -43,6 +57,33 @@ class Torneo(UUIDMixin, TiempoMixin, Base):
     anuncio_ancho: Mapped[int | None] = mapped_column(Integer)
     anuncio_alto: Mapped[int | None] = mapped_column(Integer)
 
+    jornadas: Mapped[list["JornadaTorneo"]] = relationship(
+        lazy="selectin", order_by="(JornadaTorneo.fecha, JornadaTorneo.rama)", cascade="all, delete-orphan",
+    )
+
+    @property
+    def ramas(self) -> list[str]:
+        return sorted({j.rama for j in self.jornadas})
+
+    def sedes_de(self, rama: str) -> list[str]:
+        """Sedes de las jornadas de esa rama (donde puede jugar un equipo de esa rama)."""
+        return list(dict.fromkeys(s for j in self.jornadas if j.rama == rama for s in j.sedes))
+
+
+class JornadaTorneo(UUIDMixin, Base):
+    """Un día del torneo para una rama, con sus sedes (p. ej. sábado femenina en dos coliseos)."""
+
+    __tablename__ = "jornadas_torneo"
+    __table_args__ = (
+        CheckConstraint(en("rama", RAMAS), name="ck_jornadas_torneo_rama"),
+        UniqueConstraint("torneo_id", "rama", "fecha", name="uq_jornadas_torneo_dia"),
+    )
+
+    torneo_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("torneos.id", ondelete="CASCADE"), index=True)
+    rama: Mapped[str] = mapped_column(String(10))
+    fecha: Mapped[date] = mapped_column(Date)
+    sedes: Mapped[list[str]] = mapped_column(ARRAY(String(120)), default=list, server_default=text("'{}'"))
+
 
 class EquipoTorneo(UUIDMixin, TiempoMixin, Base):
     __tablename__ = "equipos_torneo"
@@ -50,15 +91,18 @@ class EquipoTorneo(UUIDMixin, TiempoMixin, Base):
         CheckConstraint(en("estado", ESTADOS_EQUIPO), name="ck_equipos_torneo_estado"),
         CheckConstraint("monto_pagado >= 0", name="ck_equipos_torneo_monto"),
         CheckConstraint("origen IN ('staff', 'sitio')", name="ck_equipos_torneo_origen"),
-        # Un club no se inscribe dos veces al mismo torneo (sin importar mayúsculas), salvo que se haya retirado.
+        CheckConstraint(en("rama", RAMAS), name="ck_equipos_torneo_rama"),
+        # Un club inscribe un equipo por rama (sin importar mayúsculas), salvo que se haya retirado.
         Index(
-            "ux_equipos_torneo_club", "torneo_id", text("lower(nombre_club)"), unique=True,
+            "ux_equipos_torneo_club", "torneo_id", "rama", text("lower(nombre_club)"), unique=True,
             postgresql_where=text("estado <> 'retirado'"),
         ),
     )
 
     torneo_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("torneos.id"), index=True)
     nombre_club: Mapped[str] = mapped_column(String(120))
+    rama: Mapped[str] = mapped_column(String(10))
+    sede: Mapped[str | None] = mapped_column(String(120))  # la asigna el organizador (una de su jornada)
     ciudad: Mapped[str] = mapped_column(String(80))
     delegado_nombre: Mapped[str] = mapped_column(String(120))
     delegado_telefono: Mapped[str] = mapped_column(String(20))

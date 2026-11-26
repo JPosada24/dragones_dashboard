@@ -50,7 +50,7 @@ def test_un_club_no_se_inscribe_dos_veces(client, h_admin):
     torneo = crear_torneo(client, h_admin).json()
     assert inscribir_equipo(client, h_admin, torneo["id"], club="Club Halcones").status_code == 201
     r = inscribir_equipo(client, h_admin, torneo["id"], club="club HALCONES")
-    assert r.status_code == 409 and "ya está inscrito" in r.json()["detail"]
+    assert r.status_code == 409 and "ya tiene equipo" in r.json()["detail"]
 
 
 def test_despues_de_la_fecha_limite_no_entran_equipos(client, h_admin, reloj):
@@ -186,3 +186,119 @@ def test_eliminar_torneo_lo_quita_y_con_pagos_exige_poder_anularlos(client, h_ad
     assert client.get(T, headers=h_admin).json() == []
     assert client.get(f"{T}/{vacio['id']}", headers=h_admin).status_code == 404
     assert db.scalar(text("SELECT count(*) FROM pagos_equipo")) == 1  # el dinero queda como evidencia
+
+
+# ---------- Jornadas, rama del equipo y sedes ----------
+SABADO, DOMINGO = INICIO, INICIO + timedelta(days=1)
+SEDES = ["Coliseo Mayor", "Coliseo Barrio Sur"]
+
+
+def torneo_fin_de_semana(client, h, **extra):
+    """Sábado femenina y domingo masculina, cada día en dos coliseos; un solo cupo y valor para todo el torneo."""
+    return crear_torneo(client, h, rama=None, cupo_equipos=3, jornadas=[
+        {"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": SEDES},
+        {"rama": "masculina", "fecha": DOMINGO.isoformat(), "sedes": SEDES},
+    ], **extra)
+
+
+def test_torneo_con_dos_jornadas_y_sus_sedes(client, h_admin):
+    r = torneo_fin_de_semana(client, h_admin)
+    assert r.status_code == 201, r.text
+    t = r.json()
+    assert t["rama"] is None  # tiene las dos
+    assert [(j["rama"], j["fecha"], j["sedes"]) for j in t["jornadas"]] == [
+        ("femenina", SABADO.isoformat(), SEDES), ("masculina", DOMINGO.isoformat(), SEDES),
+    ]
+    # Una sola rama (en corto): una jornada el día de inicio, sin sedes.
+    corto = crear_torneo(client, h_admin, nombre="Copa corta").json()
+    assert corto["rama"] == "femenina" and corto["jornadas"] == [
+        {"rama": "femenina", "fecha": INICIO.isoformat(), "sedes": []},
+    ]
+
+
+@pytest.mark.parametrize("cambio", [
+    {"rama": "femenina", "jornadas": [{"rama": "femenina", "fecha": SABADO.isoformat()}]},  # las dos a la vez
+    {"jornadas": []},
+    {"jornadas": [{"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": ["Coliseo", "coliseo"]}]},
+    {"jornadas": [{"rama": "femenina", "fecha": SABADO.isoformat()}] * 2},
+    {"jornadas": [{"rama": "mixta", "fecha": SABADO.isoformat()}]},
+    {"jornadas": [{"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": ["x" * 121]}]},
+])
+def test_jornadas_invalidas(client, h_admin, cambio):
+    cuerpo = {"rama": None, **cambio}
+    assert crear_torneo(client, h_admin, **cuerpo).status_code == 422
+
+
+def test_las_jornadas_quedan_dentro_de_las_fechas_del_torneo(client, h_admin):
+    r = crear_torneo(client, h_admin, rama=None, jornadas=[
+        {"rama": "femenina", "fecha": (INICIO + timedelta(days=5)).isoformat()},
+    ])
+    assert r.status_code == 422 and "entre la fecha de inicio" in r.json()["detail"]
+
+
+def test_cada_club_se_inscribe_por_rama_con_un_solo_cupo(client, h_admin):
+    t = torneo_fin_de_semana(client, h_admin).json()
+    r = inscribir_equipo(client, h_admin, t["id"])  # sin rama, y el torneo tiene las dos
+    assert r.status_code == 422 and "Elige la rama" in r.json()["detail"]
+    assert inscribir_equipo(client, h_admin, t["id"], rama="femenina").json()["rama"] == "femenina"
+    # El mismo club puede llevar su equipo masculino, pero no dos femeninos.
+    assert inscribir_equipo(client, h_admin, t["id"], rama="masculina").status_code == 201
+    assert inscribir_equipo(client, h_admin, t["id"], club="club halcones", rama="femenina").status_code == 409
+    # El cupo es uno para todo el torneo: el tercero entra y el cuarto espera.
+    tercero = inscribir_equipo(client, h_admin, t["id"], club="Club Águilas", rama="masculina").json()
+    cuarto = inscribir_equipo(client, h_admin, t["id"], club="Club Tigres", rama="femenina").json()
+    assert (tercero["estado"], cuarto["estado"]) == ("pendiente_pago", "en_espera")
+    # En un torneo de una sola rama no hace falta elegirla, y no se acepta la otra.
+    corto = crear_torneo(client, h_admin, nombre="Copa corta").json()
+    assert inscribir_equipo(client, h_admin, corto["id"]).json()["rama"] == "femenina"
+    r = inscribir_equipo(client, h_admin, corto["id"], club="Otro", rama="masculina")
+    assert r.status_code == 422 and "no tiene rama masculina" in r.json()["detail"]
+
+
+def test_el_organizador_asigna_la_sede_de_cada_equipo(client, h_admin, h_entrenador):
+    t = torneo_fin_de_semana(client, h_admin).json()
+    e = inscribir_equipo(client, h_admin, t["id"], rama="femenina").json()
+    assert e["sede"] is None
+    url = f"{T}/{t['id']}/equipos/{e['id']}/sede"
+    r = client.put(url, json={"sede": "Coliseo Barrio Sur"}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["sede"] == "Coliseo Barrio Sur"
+    r = client.put(url, json={"sede": "Coliseo de otro lado"}, headers=h_admin)
+    assert r.status_code == 422 and "no es una sede" in r.json()["detail"]
+    assert client.put(url, json={"sede": "Coliseo Mayor", "otro": 1}, headers=h_admin).status_code == 422
+    assert client.put(url, json={"sede": "Coliseo Mayor"}, headers=h_entrenador).status_code == 403
+    assert client.put(url, json={"sede": None}, headers=h_admin).json()["sede"] is None
+    # Un equipo retirado ya no recibe sede, ni un equipo de otro torneo (404).
+    client.post(f"{T}/{t['id']}/equipos/{e['id']}/retirar", json={}, headers=h_admin)
+    assert client.put(url, json={"sede": "Coliseo Mayor"}, headers=h_admin).status_code == 409
+    otro = torneo_fin_de_semana(client, h_admin, nombre="Otra copa").json()
+    ajeno = f"{T}/{otro['id']}/equipos/{e['id']}/sede"
+    assert client.put(ajeno, json={"sede": None}, headers=h_admin).status_code == 404
+
+
+def test_editar_jornadas_cuida_a_los_equipos(client, h_admin):
+    t = torneo_fin_de_semana(client, h_admin).json()
+    e = inscribir_equipo(client, h_admin, t["id"], rama="masculina").json()
+    client.put(f"{T}/{t['id']}/equipos/{e['id']}/sede", json={"sede": "Coliseo Mayor"}, headers=h_admin)
+    # Sin la jornada masculina no se puede: hay un equipo inscrito en esa rama.
+    solo_sabado = [{"rama": "femenina", "fecha": SABADO.isoformat(), "sedes": SEDES}]
+    r = client.patch(f"{T}/{t['id']}", json={"jornadas": solo_sabado}, headers=h_admin)
+    assert r.status_code == 422 and "rama masculina" in r.json()["detail"]
+    # Si su sede deja de estar en la jornada, el equipo queda sin sede asignada.
+    r = client.patch(f"{T}/{t['id']}", json={"jornadas": [
+        solo_sabado[0], {"rama": "masculina", "fecha": DOMINGO.isoformat(), "sedes": ["Coliseo Barrio Sur"]},
+    ]}, headers=h_admin)
+    assert r.status_code == 200, r.text
+    [equipo] = client.get(f"{T}/{t['id']}/equipos", headers=h_admin).json()
+    assert equipo["sede"] is None
+    # Mover el inicio de un torneo de una sola jornada mueve también su jornada.
+    corto = crear_torneo(client, h_admin, nombre="Copa corta").json()
+    nuevo_inicio = INICIO + timedelta(days=1)
+    r = client.patch(f"{T}/{corto['id']}", json={"fecha_inicio": nuevo_inicio.isoformat(),
+                                                 "fecha_fin": nuevo_inicio.isoformat()}, headers=h_admin)
+    assert r.status_code == 200 and r.json()["jornadas"][0]["fecha"] == nuevo_inicio.isoformat()
+    # Cambiar la rama (en corto) la cambia en su jornada.
+    r = client.patch(f"{T}/{corto['id']}", json={"rama": "masculina"}, headers=h_admin)
+    assert r.json()["rama"] == "masculina" and r.json()["jornadas"][0]["rama"] == "masculina"
+    assert client.patch(f"{T}/{corto['id']}", json={"rama": "femenina", "jornadas": solo_sabado},
+                        headers=h_admin).status_code == 422
+

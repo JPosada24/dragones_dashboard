@@ -1890,6 +1890,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/torneos/{torneo_id}/equipos/{equipo_id}/sede": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Asignar Sede
+         * @description El organizador asigna la sede donde juega el equipo (una de las de la jornada de su rama).
+         */
+        put: operations["asignar_sede_api_v1_torneos__torneo_id__equipos__equipo_id__sede_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/torneos/{torneo_id}/realizado": {
         parameters: {
             query?: never;
@@ -2644,6 +2664,8 @@ export interface components {
             delegado_telefono: string;
             /** Nombre Club */
             nombre_club: string;
+            /** Rama */
+            rama?: ("masculina" | "femenina") | null;
         };
         /** EquipoOut */
         EquipoOut: {
@@ -2678,8 +2700,15 @@ export interface components {
             origen: "staff" | "sitio";
             /** Pagos */
             pagos: components["schemas"]["PagoEquipoOut"][];
+            /**
+             * Rama
+             * @enum {string}
+             */
+            rama: "masculina" | "femenina";
             /** Saldo */
             saldo: number;
+            /** Sede */
+            sede: string | null;
             /** Valor */
             valor: number;
         };
@@ -2973,6 +3002,8 @@ export interface components {
             delegado_telefono: string;
             /** Nombre Club */
             nombre_club: string;
+            /** Rama */
+            rama?: ("masculina" | "femenina") | null;
             /** Sitio Web */
             sitio_web?: string | null;
         };
@@ -3041,6 +3072,39 @@ export interface components {
             orden: number;
             /** Publicado */
             publicado: boolean;
+        };
+        /**
+         * JornadaIn
+         * @description Un día del torneo para una rama, con sus sedes (p. ej. sábado, femenina, Coliseo A y Coliseo B).
+         */
+        JornadaIn: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /**
+             * Rama
+             * @enum {string}
+             */
+            rama: "masculina" | "femenina";
+            /** Sedes */
+            sedes?: string[];
+        };
+        /** JornadaOut */
+        JornadaOut: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /**
+             * Rama
+             * @enum {string}
+             */
+            rama: "masculina" | "femenina";
+            /** Sedes */
+            sedes: string[];
         };
         /** JustificacionOut */
         JustificacionOut: {
@@ -3666,6 +3730,14 @@ export interface components {
             roles: components["schemas"]["RolOut"][];
         };
         /**
+         * SedeEquipoIn
+         * @description La sede que el organizador le asigna al equipo (una de las de su rama). Vacía = sin asignar.
+         */
+        SedeEquipoIn: {
+            /** Sede */
+            sede?: string | null;
+        };
+        /**
          * SesionCrear
          * @description Sesión extra, fuera del horario semanal.
          */
@@ -3907,6 +3979,8 @@ export interface components {
             fecha_inicio?: string | null;
             /** Fecha Limite Inscripcion */
             fecha_limite_inscripcion?: string | null;
+            /** Jornadas */
+            jornadas?: components["schemas"]["JornadaIn"][] | null;
             /** Lugar */
             lugar?: string | null;
             /** Nombre */
@@ -3916,7 +3990,11 @@ export interface components {
             /** Valor Inscripcion */
             valor_inscripcion?: number | null;
         };
-        /** TorneoCrear */
+        /**
+         * TorneoCrear
+         * @description Con `jornadas` (una o varias: rama, día y sedes) o, en corto, con una sola `rama` (una jornada el día de
+         *     inicio, sin sedes).
+         */
         TorneoCrear: {
             /** Cupo Equipos */
             cupo_equipos?: number | null;
@@ -3935,15 +4013,14 @@ export interface components {
              * Format: date
              */
             fecha_limite_inscripcion: string;
+            /** Jornadas */
+            jornadas?: components["schemas"]["JornadaIn"][] | null;
             /** Lugar */
             lugar?: string | null;
             /** Nombre */
             nombre: string;
-            /**
-             * Rama
-             * @enum {string}
-             */
-            rama: "masculina" | "femenina";
+            /** Rama */
+            rama?: ("masculina" | "femenina") | null;
             /** Valor Inscripcion */
             valor_inscripcion: number;
         };
@@ -3986,6 +4063,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Jornadas */
+            jornadas: components["schemas"]["JornadaOut"][];
             /** Lugar */
             lugar: string | null;
             /** Motivo Cancelacion */
@@ -3994,11 +4073,8 @@ export interface components {
             nombre: string;
             /** Ocupados */
             ocupados: number;
-            /**
-             * Rama
-             * @enum {string}
-             */
-            rama: "masculina" | "femenina";
+            /** Rama */
+            rama: ("masculina" | "femenina") | null;
             /** Realizado Id */
             realizado_id?: string | null;
             /** Recaudado */
@@ -4028,11 +4104,8 @@ export interface components {
             nombre: string;
             /** Ocupados */
             ocupados: number;
-            /**
-             * Rama
-             * @enum {string}
-             */
-            rama: "masculina" | "femenina";
+            /** Rama */
+            rama: ("masculina" | "femenina") | null;
         };
         /** TorneoPublicoOut */
         TorneoPublicoOut: {
@@ -4064,15 +4137,14 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Jornadas */
+            jornadas: components["schemas"]["JornadaOut"][];
             /** Lugar */
             lugar: string | null;
             /** Nombre */
             nombre: string;
-            /**
-             * Rama
-             * @enum {string}
-             */
-            rama: "masculina" | "femenina";
+            /** Rama */
+            rama: ("masculina" | "femenina") | null;
             /** Valor Inscripcion */
             valor_inscripcion: number;
         };
@@ -8648,6 +8720,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetiroOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    asignar_sede_api_v1_torneos__torneo_id__equipos__equipo_id__sede_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torneo_id: string;
+                equipo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SedeEquipoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipoOut"];
                 };
             };
             /** @description Validation Error */

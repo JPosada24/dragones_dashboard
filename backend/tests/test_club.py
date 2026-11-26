@@ -1,5 +1,6 @@
 """Sitio público del club: panel de edición (club.editar) y vista/inscripción sin sesión."""
 import io
+from datetime import date, timedelta
 
 import pytest
 from PIL import Image
@@ -210,6 +211,21 @@ def test_un_club_se_inscribe_desde_el_sitio_y_se_avisa_al_staff(client, h_admin,
     [visto] = client.get(f"{T}/{torneo['id']}/equipos", headers=h_admin).json()
     assert visto["origen"] == "sitio"
     assert client.post(url, json=DATOS_CLUB).status_code == 409  # mismo club dos veces
+
+
+def test_en_el_sitio_se_ven_las_jornadas_y_el_club_elige_la_rama(client, h_admin, reloj):
+    inicio = date.fromisoformat(crear_torneo(client, h_admin).json()["fecha_inicio"])
+    torneo = crear_torneo(client, h_admin, nombre="Copa doble", rama=None, jornadas=[
+        {"rama": "femenina", "fecha": inicio.isoformat(), "sedes": ["Coliseo Mayor"]},
+        {"rama": "masculina", "fecha": (inicio + timedelta(days=1)).isoformat(), "sedes": ["Coliseo Mayor"]},
+    ]).json()
+    publicar(client, h_admin)
+    doble = next(x for x in client.get(f"{P}/club").json()["torneos"] if x["id"] == torneo["id"])
+    assert doble["rama"] is None and [j["rama"] for j in doble["jornadas"]] == ["femenina", "masculina"]
+    url = f"{P}/torneos/{torneo['id']}/inscripcion"
+    r = client.post(url, json=DATOS_CLUB)
+    assert r.status_code == 422 and "Elige la rama" in r.json()["detail"]
+    assert client.post(url, json={**DATOS_CLUB, "rama": "masculina"}).status_code == 201
 
 
 def test_trampa_de_bots_y_limite_por_ip(client, h_admin, reloj, db):

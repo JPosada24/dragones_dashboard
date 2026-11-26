@@ -57,7 +57,7 @@ class CarteraOut(BaseModel):
 class TorneoProximoOut(BaseModel):
     id: str
     nombre: str
-    rama: Rama
+    rama: Rama | None  # vacía si el torneo tiene las dos ramas
     fecha_inicio: date
     fecha_fin: date
     lugar: str | None

@@ -15,9 +15,11 @@ from app.schemas.torneos import (
     AnularPagoEquipoIn,
     EquipoCrear,
     EquipoOut,
+    JornadaOut,
     MotivoIn,
     PagoEquipoIn,
     RetiroOut,
+    SedeEquipoIn,
     TorneoActualizar,
     TorneoCrear,
     TorneoOut,
@@ -33,7 +35,8 @@ GESTIONAR = requiere("eventos.gestionar")
 
 def torneo_a_out(db: Session, t: Torneo) -> TorneoOut:
     return TorneoOut(
-        id=t.id, nombre=t.nombre, rama=t.rama, fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
+        id=t.id, nombre=t.nombre, rama=t.rama, jornadas=[JornadaOut.model_validate(j) for j in t.jornadas],
+        fecha_inicio=t.fecha_inicio, fecha_fin=t.fecha_fin,
         fecha_limite_inscripcion=t.fecha_limite_inscripcion, lugar=t.lugar, cupo_equipos=t.cupo_equipos,
         valor_inscripcion=t.valor_inscripcion, estado=t.estado, motivo_cancelacion=t.motivo_cancelacion,
         anuncio=t.anuncio_clave[:8] if t.anuncio_clave else None, anuncio_ancho=t.anuncio_ancho,
@@ -135,6 +138,19 @@ def retirar(
         retirado=EquipoOut.model_validate(equipo),
         promovido=EquipoOut.model_validate(promovido) if promovido else None,
     )
+
+
+@router.put("/{torneo_id}/equipos/{equipo_id}/sede", response_model=EquipoOut)
+def asignar_sede(
+    torneo_id: uuid.UUID, equipo_id: uuid.UUID, datos: SedeEquipoIn, request: Request,
+    actor: Usuario = Depends(GESTIONAR), db: Session = Depends(get_db),
+) -> EquipoOut:
+    """El organizador asigna la sede donde juega el equipo (una de las de la jornada de su rama)."""
+    torneo = servicio.obtener(db, torneo_id)
+    equipo = servicio.obtener_equipo(db, torneo, equipo_id)
+    servicio.asignar_sede(db, torneo, equipo, sede=datos.sede, actor=actor, ip=ip_cliente(request))
+    db.commit()
+    return EquipoOut.model_validate(equipo)
 
 
 @router.post("/{torneo_id}/equipos/{equipo_id}/pagos", response_model=EquipoOut)

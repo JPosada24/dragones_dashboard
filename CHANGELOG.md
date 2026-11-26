@@ -5,6 +5,11 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Torneos por jornadas y sedes** (migración 0034): un torneo tiene una o varias jornadas, cada una con su rama, su
+  día y sus sedes (p. ej. sábado femenina y domingo masculina, cada día en dos coliseos). Un solo cupo y un valor
+  para todo el torneo; cada club inscribe su equipo **por rama** y el organizador le **asigna la sede**
+  (`PUT /torneos/{id}/equipos/{id}/sede`). El sitio muestra las jornadas y pide la rama al inscribirse. Los torneos
+  que ya existían quedan con una jornada (su rama, el día de inicio).
 - **Videos de TikTok e Instagram** en la galería, además de YouTube (migración 0033: `videos.plataforma` y
   `videos.ruta`). Se acepta el enlace completo o el corto que da «Compartir» en TikTok; el sitio muestra el logo de
   la red y abre el video allí.
