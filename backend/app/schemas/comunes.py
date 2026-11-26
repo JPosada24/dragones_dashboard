@@ -20,6 +20,7 @@ EstadoRifa = Literal["abierta", "sorteada", "cancelada", "eliminada"]
 EstadoTorneo = Literal["programado", "cancelado", "eliminado"]
 EstadoEquipo = Literal["pendiente_pago", "confirmado", "en_espera", "retirado"]
 OrigenEquipo = Literal["staff", "sitio"]
+PlataformaVideo = Literal["youtube", "tiktok", "instagram"]
 EstadoCorreo = Literal["no_aplica", "pendiente", "enviado", "fallido"]
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")

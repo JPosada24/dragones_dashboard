@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.dominio import en
 from app.models.mixins import TiempoMixin, UUIDMixin
 
 
@@ -75,12 +76,24 @@ class Foto(UUIDMixin, TiempoMixin, Base):
     autorizada_por: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("usuarios.id"))
 
 
+PLATAFORMAS_VIDEO = ("youtube", "tiktok", "instagram")
+
+
 class Video(UUIDMixin, TiempoMixin, Base):
     __tablename__ = "videos"
+    __table_args__ = (CheckConstraint(en("plataforma", PLATAFORMAS_VIDEO), name="ck_videos_plataforma"),)
 
     titulo: Mapped[str] = mapped_column(String(120))
-    youtube_id: Mapped[str] = mapped_column(String(11))  # solo el id: el enlace se arma en el sitio
+    plataforma: Mapped[str] = mapped_column(String(10), default="youtube", server_default=text("'youtube'"))
+    # Solo lo que identifica al video, validado; el enlace lo arma quien lo muestra con el dominio fijo de la red:
+    # YouTube «dQw4w9WgXcQ», TikTok «@usuario/video/123…», Instagram «reel/Cx1…» o «p/Cx1…».
+    ruta: Mapped[str] = mapped_column(String(80))
     publicado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+
+    @property
+    def youtube_id(self) -> str | None:
+        """Compatibilidad con el sitio anterior (solo YouTube)."""
+        return self.ruta if self.plataforma == "youtube" else None
 
 
 class IntegranteEquipo(UUIDMixin, TiempoMixin, Base):

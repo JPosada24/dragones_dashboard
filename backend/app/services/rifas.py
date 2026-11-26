@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import fechas
+from app.core.config import get_settings
 from app.core.fechas import formato_pesos
 from app.models.acceso import Usuario
 from app.models.alumnos import Alumno, Inscripcion
@@ -207,7 +208,8 @@ def sortear(db: Session, rifa: Rifa, *, actor: Usuario, ip: str | None) -> ActaS
     db.refresh(rifa, with_for_update=True)
     if rifa.estado not in ("abierta", "sorteada"):
         raise Conflicto("Esta rifa fue cancelada.")
-    if fechas.hoy() < rifa.fecha_sorteo:
+    # En el demo se juega cuando sea: los visitantes deben poder ver cómo funciona.
+    if fechas.hoy() < rifa.fecha_sorteo and not get_settings().demo:
         raise ErrorNegocio(f"El sorteo es el {fechas.formato_fecha(rifa.fecha_sorteo)}; aún no se puede jugar.")
     anteriores = list(db.scalars(select(ActaSorteo).where(ActaSorteo.rifa_id == rifa.id)))
     ganadas = {boleta(a.codigo, a.boleta) for a in anteriores}

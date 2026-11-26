@@ -11,15 +11,29 @@ export type IntegranteClub = Esquema<'IntegranteOut'>;
 /** Torneo ya jugado del sitio. `anuncio`: versión del afiche; null = sin anuncio. */
 export type TorneoRealizadoClub = Esquema<'TorneoRealizadoOut'>;
 
-/** El id de YouTube lo valida el servidor; aquí se vuelve a comprobar antes de armar cualquier enlace. */
-const ID_YOUTUBE = /^[A-Za-z0-9_-]{11}$/;
+/**
+ * Lo que identifica a cada video lo valida el servidor; aquí se vuelve a comprobar antes de armar un enlace, que
+ * siempre usa el dominio fijo de su red.
+ */
+const RUTAS_VIDEO: Record<VideoClub['plataforma'], { forma: RegExp; base: string; nombre: string }> = {
+  youtube: { forma: /^[A-Za-z0-9_-]{11}$/, base: 'https://www.youtube.com/watch?v=', nombre: 'YouTube' },
+  tiktok: { forma: /^@[A-Za-z0-9._]{2,24}\/video\/\d{8,25}$/, base: 'https://www.tiktok.com/', nombre: 'TikTok' },
+  instagram: { forma: /^(p|reel|tv)\/[A-Za-z0-9_-]{5,40}$/, base: 'https://www.instagram.com/', nombre: 'Instagram' },
+};
 
-export function miniaturaYoutube(id: string): string | null {
-  return ID_YOUTUBE.test(id) ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
+export function enlaceVideo(v: Pick<VideoClub, 'plataforma' | 'ruta'>): string | null {
+  const p = RUTAS_VIDEO[v.plataforma];
+  return p?.forma.test(v.ruta) ? p.base + v.ruta : null;
 }
 
-export function enlaceYoutube(id: string): string | null {
-  return ID_YOUTUBE.test(id) ? `https://www.youtube.com/watch?v=${id}` : null;
+/** Portada del video: solo YouTube la da sin pedir permiso; los demás se muestran con el nombre de su red. */
+export function miniaturaVideo(v: Pick<VideoClub, 'plataforma' | 'ruta'>): string | null {
+  return v.plataforma === 'youtube' && RUTAS_VIDEO.youtube.forma.test(v.ruta)
+    ? `https://i.ytimg.com/vi/${v.ruta}/mqdefault.jpg` : null;
+}
+
+export function nombrePlataforma(v: Pick<VideoClub, 'plataforma'>): string {
+  return RUTAS_VIDEO[v.plataforma]?.nombre ?? 'Video';
 }
 
 /** Iniciales para el avatar: "Ana María Ruiz" → "AR". */

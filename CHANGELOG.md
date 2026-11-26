@@ -5,6 +5,15 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones:
 ## [Sin publicar]
 
 ### Añadido
+- **Videos de TikTok e Instagram** en la galería, además de YouTube (migración 0033: `videos.plataforma` y
+  `videos.ruta`). Se acepta el enlace completo o el corto que da «Compartir» en TikTok; el sitio muestra el logo de
+  la red y abre el video allí.
+- **Demo:** el sorteo se puede jugar en cualquier momento, para que se vea cómo funciona.
+
+### Cambiado
+- La plataforma es solo del staff: ya no se crean cuentas de Miembro (acudientes o deportistas).
+- El Asistente queda como «Pronto» en el menú (sin pantalla ni recorrido de Kiira).
+- Explicaciones de cada pantalla más cortas, sin detalles técnicos ni pasos de familias.
 - **Kiira explica cada pestaña** la primera vez que se entra a ella (con el contenido de su ayuda, y señalando las
   pestañas de la sección si tiene varias); el botón «?» repite ese recorrido. El servidor guarda cuáles vio cada
   cuenta (`usuarios.tutoriales_vistos`, migración 0032; `POST /auth/tutorial` con `{"recorrido": "<ruta>"}`).

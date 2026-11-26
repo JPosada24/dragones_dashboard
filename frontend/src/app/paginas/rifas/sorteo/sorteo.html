@@ -58,7 +58,7 @@
           </div>
           @if (puedeSortear()) {
             <button type="button" class="boton" [disabled]="!sorteable() || girando()" (click)="confirmando.set(true)"
-                    [title]="r.fecha_sorteo > hoy ? 'El sorteo es el ' + (r.fecha_sorteo | date: 'd MMM y') : ''">
+                    [title]="aunNo(r) ? 'El sorteo es el ' + (r.fecha_sorteo | date: 'd MMM y') : ''">
               <span class="icono" aria-hidden="true">casino</span>
               {{ girando() ? 'Sorteando…' : actas().length ? 'Jugar otra vez' : 'Jugar la rifa' }}
             </button>
@@ -113,7 +113,7 @@
         </div>
       } @else if (!girando()) {
         <p class="nota-chica centro">
-          @if (r.fecha_sorteo > hoy) {
+          @if (aunNo(r)) {
             El sorteo es el {{ r.fecha_sorteo | date: 'EEEE d MMMM' }}. Ese día se habilita «Jugar la rifa».
           } @else {
             El sistema elige al azar una boleta de la urna y muestra el código del talonario y el número de boleta (1 a {{ r.puestos_por_talonario }}).

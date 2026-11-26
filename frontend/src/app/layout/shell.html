@@ -14,6 +14,13 @@
         <div class="grupo">
           <div class="grupo-titulo">{{ g.titulo }}</div>
           @for (s of g.secciones; track s.ruta) {
+            @if (s.proximamente) {
+              <span class="item proximo" aria-disabled="true">
+                <span class="icono" aria-hidden="true">{{ s.icono }}</span>
+                <span>{{ s.etiqueta }}</span>
+                <span class="pronto">Pronto</span>
+              </span>
+            } @else {
             <a
               class="item"
               [routerLink]="enlace(s)"
@@ -25,6 +32,7 @@
               <span class="icono" aria-hidden="true">{{ s.icono }}</span>
               <span>{{ s.etiqueta }}</span>
             </a>
+            }
           }
         </div>
       }
@@ -107,10 +115,18 @@
       @for (g of grupos(); track g.titulo) {
         <div class="grupo-titulo">{{ g.titulo }}</div>
         @for (s of g.secciones; track s.ruta) {
-          <a class="item" [routerLink]="enlace(s)" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: s.ruta === '' }">
-            <span class="icono" aria-hidden="true">{{ s.icono }}</span>
-            <span>{{ s.etiqueta }}</span>
-          </a>
+          @if (s.proximamente) {
+            <span class="item proximo" aria-disabled="true">
+              <span class="icono" aria-hidden="true">{{ s.icono }}</span>
+              <span>{{ s.etiqueta }}</span>
+              <span class="pronto">Pronto</span>
+            </span>
+          } @else {
+            <a class="item" [routerLink]="enlace(s)" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: s.ruta === '' }">
+              <span class="icono" aria-hidden="true">{{ s.icono }}</span>
+              <span>{{ s.etiqueta }}</span>
+            </a>
+          }
         }
       }
       <div class="hoja-pie">

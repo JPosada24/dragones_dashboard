@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import CheckConstraint
 
 from app.models import dominio
+from app.models.club import Video
 from app.models.notificaciones import Notificacion
 from app.models.rifas import Rifa
 from app.models.torneos import ESTADOS_EQUIPO, Torneo
@@ -39,6 +40,7 @@ def test_literal_igual_al_dominio(literal, valores):
     (comunes.EstadoRifa, Rifa, "ck_rifas_estado"),
     (comunes.EstadoTorneo, Torneo, "ck_torneos_estado"),
     (comunes.EstadoCorreo, Notificacion, "ck_notif_email"),
+    (comunes.PlataformaVideo, Video, "ck_videos_plataforma"),
 ])
 def test_literal_igual_al_check_de_la_tabla(literal, modelo, restriccion):
     assert set(get_args(literal)) == set(_check(modelo, restriccion))

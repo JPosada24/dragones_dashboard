@@ -8,7 +8,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { Operacion } from '../../compartido/operacion';
 import { Aviso } from '../../compartido/aviso';
-import { AlbumClub, FotoClub, VideoClub, miniaturaYoutube } from '../../compartido/club';
+import { AlbumClub, FotoClub, VideoClub, enlaceVideo, miniaturaVideo, nombrePlataforma } from '../../compartido/club';
 import { Dialogo } from '../../compartido/dialogo';
 import { mensajeError } from '../../compartido/errores';
 import { PESTANAS_CLUB, Pestanas } from '../../compartido/pestanas';
@@ -20,7 +20,7 @@ const URL_CLUB = `${API}/club`;
 /** Fotos que viajan a la vez: aprovecha la conexión sin saturar la subida de un internet de hogar ni la API. */
 const SUBIDAS_SIMULTANEAS = 3;
 
-/** Galería del sitio: álbumes (cada uno con sus fotos) y videos de YouTube. */
+/** Galería del sitio: álbumes (cada uno con sus fotos) y videos de TikTok, Instagram o YouTube. */
 @Component({
   selector: 'app-galeria',
   imports: [ReactiveFormsModule, DatePipe, RouterLink, Aviso, Dialogo, Pestanas, ZonaArchivos],
@@ -37,7 +37,9 @@ export class GaleriaPage implements OnInit {
   readonly album = input<string>();
 
   protected readonly pestanas = PESTANAS_CLUB;
-  protected readonly miniaturaYoutube = miniaturaYoutube;
+  protected readonly miniaturaVideo = miniaturaVideo;
+  protected readonly enlaceVideo = enlaceVideo;
+  protected readonly nombrePlataforma = nombrePlataforma;
 
   protected readonly albumes = signal<AlbumClub[] | null>(null);
   protected readonly videos = signal<VideoClub[]>([]);
@@ -353,7 +355,7 @@ export class GaleriaPage implements OnInit {
   }
 
   protected crearVideo(): void {
-    if (this.formVideo.invalid) return this.errorDialogo.set('Escribe el título y pega el enlace de YouTube.');
+    if (this.formVideo.invalid) return this.errorDialogo.set('Escribe el título y pega el enlace del video.');
     this.op.ejecutar(this.http.post<VideoClub>(`${URL_CLUB}/videos`, this.formVideo.getRawValue()), (v) => {
       this.videos.update((l) => [v, ...l]);
       this.creandoVideo.set(false);
@@ -370,7 +372,7 @@ export class GaleriaPage implements OnInit {
   }
 
   protected eliminarVideo(v: VideoClub): void {
-    this.confirmar('Eliminar video', `Se quita «${v.titulo}» del sitio (en YouTube sigue igual).`, 'Eliminar', () =>
+    this.confirmar('Eliminar video', `Se quita «${v.titulo}» del sitio (en ${nombrePlataforma(v)} sigue igual).`, 'Eliminar', () =>
       this.op.ejecutar(this.http.delete(`${URL_CLUB}/videos/${encodeURIComponent(v.id)}`), () => {
         this.videos.update((l) => l.filter((x) => x.id !== v.id));
         this.confirmando.set(null);

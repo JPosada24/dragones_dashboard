@@ -28,11 +28,6 @@ const ROLES = {
   ],
   personalizables: ['alumnos.ver_todos', 'config.editar', 'pagos.registrar', 'reportes.ver'],
 };
-const ALUMNA = {
-  id: 'a1', codigo: 'F001', nombres: 'Laura', apellidos: 'Pérez', edad: 12, es_menor: true,
-  autorizacion: { nombre: 'Marta Gómez', imagen: true, registrada_en: '2026-01-10T15:00:00Z' },
-  acudientes: [{ acudiente_id: 'ac1', nombres: 'Marta', apellidos: 'Gómez', telefono: '3001234567', parentesco: 'madre', principal: true }],
-};
 
 describe('UsuariosPage', () => {
   let backend: HttpTestingController;
@@ -73,46 +68,16 @@ describe('UsuariosPage', () => {
     expect(el().querySelectorAll('.cuenta').length).toBe(1);
   });
 
-  it('crea la cuenta de un acudiente buscando a su alumno, y muestra la contraseña una vez', async () => {
+  it('la plataforma es solo del staff: no ofrece crear cuentas de Miembro', async () => {
     boton('person_add Nueva cuenta')!.click();
     await estable();
-    escribir('[formcontrolname="nombre"]', 'Marta Gómez');
-    escribir('[formcontrolname="email"]', 'marta2@club.com');
-    boton('Generar', dialogo())!.click();
-    escribir('[formcontrolname="rol"]', 'MIEMBRO');
-    await estable();
-    const clave = dialogo().querySelector<HTMLInputElement>('[formcontrolname="password"]')!.value;
-    expect(clave).toMatch(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{16}$/);
-
-    escribir('input[type="search"]', 'Laura');
-    await new Promise((r) => setTimeout(r, 350));
-    backend.expectOne((r) => r.url === `${API}/alumnos`).flush([ALUMNA]);
-    await estable();
-    dialogo().querySelector<HTMLButtonElement>('.candidato')!.click();
-    await estable();
-    boton('Crear cuenta', dialogo())!.click();
-    const r = backend.expectOne((x) => x.method === 'POST' && x.url === `${API}/usuarios`);
-    expect(r.request.body).toEqual({
-      nombre: 'Marta Gómez', email: 'marta2@club.com', password: clave, rol: 'MIEMBRO', vincular_acudiente_id: 'ac1',
-    });
-    r.flush({ ...CUENTAS[2]!, email: 'marta2@club.com' });
-    backend.expectOne(`${API}/usuarios`).flush(CUENTAS);
-    await estable();
-    expect(dialogo().textContent).toContain(clave);
+    const opciones = [...dialogo().querySelectorAll<HTMLOptionElement>('[formcontrolname="rol"] option')].map((o) => o.value);
+    expect(opciones).toEqual(['', 'SUPERADMIN', 'ADMIN', 'ENTRENADOR']); // '' = «Selecciona…»
   });
 
-  it('un alumno menor no puede tener cuenta propia; el entrenador no lleva rama', async () => {
+  it('el entrenador no lleva rama', async () => {
     boton('person_add Nueva cuenta')!.click();
     await estable();
-    escribir('[formcontrolname="rol"]', 'MIEMBRO');
-    await estable();
-    (dialogo().querySelector<HTMLInputElement>('input[value="alumno"]')!).click();
-    escribir('input[type="search"]', 'Laura');
-    await new Promise((r) => setTimeout(r, 350));
-    backend.expectOne((r) => r.url === `${API}/alumnos`).flush([ALUMNA]);
-    await estable();
-    expect(dialogo().querySelector<HTMLButtonElement>('.candidato')!.disabled).toBe(true);
-
     escribir('[formcontrolname="nombre"]', 'Ana');
     escribir('[formcontrolname="email"]', 'ana@club.com');
     escribir('[formcontrolname="password"]', 'ClaveSegura123');

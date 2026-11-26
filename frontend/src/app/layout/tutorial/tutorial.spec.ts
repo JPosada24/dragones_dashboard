@@ -135,7 +135,7 @@ describe('Tutorial', () => {
     expect(paso?.objetivo).toBe('seccion:torneos');
     expect(paso?.texto).toBe(QUE_HACE['torneos']);
     // Ninguna sección del menú queda sin su explicación.
-    for (const s of SECCIONES.filter((x) => x.enMenu !== false)) expect(QUE_HACE[s.ruta]).toBeTruthy();
+    for (const s of SECCIONES.filter((x) => x.enMenu !== false && !x.proximamente)) expect(QUE_HACE[s.ruta]).toBeTruthy();
   });
 
   it('en el celular solo explica lo que se ve: las pestañas de abajo y «Más»', () => {

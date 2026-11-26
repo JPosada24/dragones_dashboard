@@ -44,7 +44,9 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/shell').then((m) => m.Shell),
     children: [
       // Cada sección del menú es una ruta; se reemplaza la pantalla provisional a medida que se construye.
-      ...SECCIONES.map((s) => ({
+      // Lo que aún no está disponible lleva al inicio (el menú lo muestra como «Pronto»).
+      ...SECCIONES.filter((s) => s.proximamente).map((s) => ({ path: s.ruta, pathMatch: 'full' as const, redirectTo: '' })),
+      ...SECCIONES.filter((s) => !s.proximamente).map((s) => ({
         path: s.ruta,
         pathMatch: 'full' as const,
         title: `${s.etiqueta} · Dragones`,

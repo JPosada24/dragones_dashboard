@@ -84,7 +84,8 @@ export class UsuariosPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
-  protected readonly roles = ROLES;
+  /** La plataforma es solo del staff: no se crean cuentas de acudientes ni deportistas (Miembro). */
+  protected readonly roles = ROLES.filter((r) => r.valor !== 'MIEMBRO');
   protected readonly nombreRol = NOMBRE_ROL;
   protected readonly yo = computed(() => this.auth.usuario()?.id ?? null);
   protected readonly puedeEliminar = computed(() => this.auth.tiene('usuarios.eliminar'));

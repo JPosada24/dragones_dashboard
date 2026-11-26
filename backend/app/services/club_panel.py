@@ -21,7 +21,7 @@ from app.services.club import (
     procesar_foto,
     procesar_portada,
     procesar_retrato,
-    youtube_id,
+    video_de,
 )
 from app.services.errores import ErrorNegocio, NoEncontrado
 
@@ -118,7 +118,8 @@ def obtener_video(db: Session, video_id: uuid.UUID) -> Video:
 
 
 def crear_video(db: Session, titulo: str, enlace: str, publicado: bool, *, actor: Usuario, ip: str | None) -> Video:
-    v = Video(titulo=titulo, youtube_id=youtube_id(enlace), publicado=publicado)
+    plataforma, ruta = video_de(enlace)
+    v = Video(titulo=titulo, plataforma=plataforma, ruta=ruta, publicado=publicado)
     db.add(v)
     db.flush()
     auditar(db, "club.video_crear", "video", v.id, actor, ip, despues={"titulo": v.titulo})

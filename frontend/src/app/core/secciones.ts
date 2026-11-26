@@ -13,6 +13,8 @@ export interface Seccion {
   descripcion: string; // qué tendrá la pantalla (se muestra mientras se construye)
   /** false = tiene ruta pero no entrada propia en el menú (es una pestaña de otra sección). */
   enMenu?: false;
+  /** true = se ve en el menú como «Pronto», sin enlace ni pantalla (y Kiira no la presenta). */
+  proximamente?: true;
 }
 
 export const SECCIONES: Seccion[] = [
@@ -40,6 +42,7 @@ export const SECCIONES: Seccion[] = [
   },
   {
     ruta: 'asistente', etiqueta: 'Asistente', icono: 'smart_toy', grupo: 'Día a día', permisos: ['agente.usar'],
+    proximamente: true, // por ahora apagado
     titulo: 'Asistente', subtitulo: 'Pregunta en tus palabras: consulta los datos por ti',
     descripcion: 'Asistente de IA que responde preguntas sobre alumnos, deudas, asistencia, rifas y torneos.',
   },

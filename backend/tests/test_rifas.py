@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from app.core.config import get_settings
 from app.services.rifas import huella
 from tests.fabrica import (
     LUNES,
@@ -123,6 +124,17 @@ def test_los_pagos_de_rifa_no_se_editan_ni_se_borran(client, h_admin, db):
 
 
 # ---------- Sorteo ----------
+def test_en_el_demo_el_sorteo_se_juega_antes_de_la_fecha(client, h_admin, monkeypatch):
+    """Los visitantes del demo deben poder ver cómo funciona el sorteo sin esperar a su fecha."""
+    a = alumno_inscrito(client, h_admin)
+    rifa = crear_rifa(client, h_admin).json()
+    t = next(x for x in _talonarios(client, h_admin, rifa["id"]) if x["alumno_id"] == a["id"])
+    _pagar_talonario(client, h_admin, rifa["id"], t["id"], 40000)
+    monkeypatch.setattr(get_settings(), "demo", True)
+    r = client.post(f"{R}/{rifa['id']}/sorteo", headers=h_admin)
+    assert r.status_code == 201, r.text
+
+
 def test_sorteo_solo_entre_talonarios_pagados_varias_jugadas_y_actas_inmutables(client, h_admin, reloj, db):
     pagada = alumno_inscrito(client, h_admin)
     alumno_inscrito(client, h_admin, documento="2000000003")

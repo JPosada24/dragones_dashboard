@@ -1,6 +1,8 @@
 """Sitio público del club: perfil, galería, videos, equipo, torneos realizados e inscripción pública a torneos."""
 import io
 import re
+import urllib.error
+import urllib.request
 import uuid
 import warnings
 from typing import Any
@@ -28,6 +30,12 @@ MINIATURA_ANUNCIO = 720  # un afiche lleva texto: la tarjeta del sitio necesita 
 FORMATOS = {"JPEG", "PNG", "WEBP"}
 _YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _HOSTS_YOUTUBE = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtube-nocookie.com"}
+_HOSTS_TIKTOK = {"tiktok.com", "www.tiktok.com", "m.tiktok.com"}
+_HOSTS_TIKTOK_CORTO = {"vm.tiktok.com", "vt.tiktok.com"}  # el enlace que da «Compartir» en la app
+_HOSTS_INSTAGRAM = {"instagram.com", "www.instagram.com"}
+_RUTA_TIKTOK = re.compile(r"^/@([A-Za-z0-9._]{2,24})/video/(\d{8,25})/?$")
+_CORTO_TIKTOK = re.compile(r"^/(?:t/)?([A-Za-z0-9]{5,20})/?$")
+_RUTA_INSTAGRAM = re.compile(r"^/(?:[A-Za-z0-9._]{1,30}/)?(p|reel|reels|tv)/([A-Za-z0-9_-]{5,40})/?$")
 
 
 def auditar(db: Session, accion: str, entidad: str, entidad_id: Any, actor: Usuario | None, ip: str | None,
@@ -167,6 +175,57 @@ def youtube_id(enlace: str) -> str:
     if not _YOUTUBE_ID.match(candidato):
         raise ErrorNegocio("No se encontró el video en ese enlace de YouTube.")
     return candidato
+
+
+class _SinRedireccion(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None  # no seguirla: solo se lee a dónde apunta
+
+
+def _destino_tiktok_corto(url: str) -> str:
+    """A dónde lleva un enlace corto de TikTok (siempre un dominio fijo de TikTok: no hay SSRF posible)."""
+    abridor = urllib.request.build_opener(_SinRedireccion)
+    pedido = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})  # noqa: S310  (host fijo)
+    try:
+        with abridor.open(pedido, timeout=5):
+            return ""
+    except urllib.error.HTTPError as e:
+        return e.headers.get("Location", "") if 300 <= e.code < 400 else ""
+    except (urllib.error.URLError, OSError):
+        return ""
+
+
+def video_de(enlace: str) -> tuple[str, str]:
+    """(plataforma, ruta) de un enlace de YouTube, TikTok o Instagram. Cualquier otro sitio se rechaza."""
+    try:
+        u = urlparse(enlace.strip())
+    except ValueError as e:
+        raise ErrorNegocio("El enlace no es válido.") from e
+    host = (u.hostname or "").lower()
+    if u.scheme not in ("http", "https"):
+        raise ErrorNegocio("El enlace no es válido.")
+    if host in _HOSTS_YOUTUBE:
+        return "youtube", youtube_id(enlace)
+    corto = _CORTO_TIKTOK.match(u.path)
+    if host in _HOSTS_TIKTOK_CORTO or (host in _HOSTS_TIKTOK and u.path.startswith("/t/")):
+        if not corto:
+            raise ErrorNegocio("No se encontró el video en ese enlace de TikTok.")
+        destino = _destino_tiktok_corto(f"https://{host}/{u.path.lstrip('/')}")
+        u = urlparse(destino)
+        host = (u.hostname or "").lower()
+        if host not in _HOSTS_TIKTOK:
+            raise ErrorNegocio("No se pudo abrir ese enlace de TikTok. Copia el enlace del video desde el navegador.")
+    if host in _HOSTS_TIKTOK:
+        m = _RUTA_TIKTOK.match(u.path)
+        if not m:
+            raise ErrorNegocio("No se encontró el video en ese enlace de TikTok.")
+        return "tiktok", f"@{m[1]}/video/{m[2]}"
+    if host in _HOSTS_INSTAGRAM:
+        m = _RUTA_INSTAGRAM.match(u.path)
+        if not m:
+            raise ErrorNegocio("No se encontró la publicación en ese enlace de Instagram.")
+        return "instagram", f"{'reel' if m[1] in ('reel', 'reels') else m[1]}/{m[2]}"
+    raise ErrorNegocio("Solo se aceptan enlaces de YouTube, TikTok o Instagram.")
 
 
 # ---------- Vista pública ----------

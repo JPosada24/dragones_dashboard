@@ -7,7 +7,8 @@ from sqlalchemy import select
 
 from app.models.notificaciones import Notificacion
 from app.models.torneos import EquipoTorneo
-from app.services.club import youtube_id
+from app.services import club as servicio_club
+from app.services.club import video_de, youtube_id
 from app.services.errores import ErrorNegocio
 from tests.fabrica import T, alumno_inscrito, crear_torneo
 
@@ -116,6 +117,58 @@ def test_enlaces_de_youtube(enlace):
 def test_enlaces_que_no_son_de_youtube(enlace):
     with pytest.raises(ErrorNegocio):
         youtube_id(enlace)
+
+
+@pytest.mark.parametrize(("enlace", "esperado"), [
+    ("https://youtu.be/dQw4w9WgXcQ", ("youtube", "dQw4w9WgXcQ")),
+    ("https://www.tiktok.com/@dragones.vc/video/7301234567890123456?is_from_webapp=1",
+     ("tiktok", "@dragones.vc/video/7301234567890123456")),
+    ("https://www.instagram.com/reel/C1aBcD_eF-g/?igsh=abc", ("instagram", "reel/C1aBcD_eF-g")),
+    ("https://instagram.com/reels/C1aBcD_eF-g/", ("instagram", "reel/C1aBcD_eF-g")),
+    ("https://www.instagram.com/dragones.vb/p/C1aBcD_eF-g/", ("instagram", "p/C1aBcD_eF-g")),
+])
+def test_videos_de_youtube_tiktok_e_instagram(enlace, esperado):
+    assert video_de(enlace) == esperado
+
+
+def test_enlace_corto_de_tiktok_se_resuelve_solo_hacia_tiktok(monkeypatch):
+    pedidos = []
+
+    def destino(url):
+        pedidos.append(url)
+        return "https://www.tiktok.com/@dragones.vc/video/7301234567890123456?_r=1"
+
+    monkeypatch.setattr(servicio_club, "_destino_tiktok_corto", destino)
+    assert video_de("https://vm.tiktok.com/ZMabc123/") == ("tiktok", "@dragones.vc/video/7301234567890123456")
+    assert pedidos == ["https://vm.tiktok.com/ZMabc123/"]
+    # Si el corto lleva a otro sitio (o a la portada de TikTok), se rechaza.
+    monkeypatch.setattr(servicio_club, "_destino_tiktok_corto", lambda _: "https://evil.example/x")
+    with pytest.raises(ErrorNegocio, match="No se pudo abrir"):
+        video_de("https://vm.tiktok.com/ZMabc123/")
+    monkeypatch.setattr(servicio_club, "_destino_tiktok_corto", lambda _: "https://www.tiktok.com/?_r=1")
+    with pytest.raises(ErrorNegocio, match="No se encontró"):
+        video_de("https://vt.tiktok.com/ZMabc123/")
+
+
+@pytest.mark.parametrize("enlace", [
+    "https://vimeo.com/123", "https://www.tiktok.com/@club", "https://tiktok.com.evil.com/@a/video/12345678901",
+    "https://www.instagram.com/dragones.vb/", "ftp://www.instagram.com/p/C1aBcD_eF-g/",
+    "https://vm.tiktok.com/../../x", "https://www.tiktok.com/@a/video/123<script>",
+])
+def test_enlaces_de_video_rechazados(enlace, monkeypatch):
+    monkeypatch.setattr(servicio_club, "_destino_tiktok_corto", lambda _: "")
+    with pytest.raises(ErrorNegocio):
+        video_de(enlace)
+
+
+def test_videos_de_tiktok_en_el_sitio(client, h_admin):
+    publicar(client, h_admin)
+    r = client.post(f"{C}/videos", json={"titulo": "Final", "enlace": "https://www.tiktok.com/@dragones.vc/video/7301234567890123456"},
+                    headers=h_admin)
+    assert r.status_code == 201, r.text
+    v = r.json()
+    assert (v["plataforma"], v["ruta"], v["youtube_id"]) == ("tiktok", "@dragones.vc/video/7301234567890123456", None)
+    assert client.get(f"{P}/club").json()["videos"][0]["plataforma"] == "tiktok"
 
 
 def test_redes_sociales_solo_el_usuario(client, h_admin):

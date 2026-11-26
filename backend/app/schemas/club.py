@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.comunes import EstadoEquipo, Rama, normalizar_email, normalizar_telefono
+from app.schemas.comunes import EstadoEquipo, PlataformaVideo, Rama, normalizar_email, normalizar_telefono
 from app.schemas.torneos import EquipoCrear
 
 _USUARIO_RED = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
@@ -159,7 +159,9 @@ class VideoOut(BaseModel):
 
     id: uuid.UUID
     titulo: str
-    youtube_id: str
+    plataforma: PlataformaVideo
+    ruta: str  # lo que identifica al video en su red; el enlace se arma con el dominio fijo de la plataforma
+    youtube_id: str | None  # solo YouTube (compatibilidad con el sitio anterior)
     publicado: bool
 
 

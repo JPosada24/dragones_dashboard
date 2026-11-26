@@ -6488,22 +6488,44 @@
             "title": "Id",
             "type": "string"
           },
+          "plataforma": {
+            "enum": [
+              "youtube",
+              "tiktok",
+              "instagram"
+            ],
+            "title": "Plataforma",
+            "type": "string"
+          },
           "publicado": {
             "title": "Publicado",
             "type": "boolean"
+          },
+          "ruta": {
+            "title": "Ruta",
+            "type": "string"
           },
           "titulo": {
             "title": "Titulo",
             "type": "string"
           },
           "youtube_id": {
-            "title": "Youtube Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Youtube Id"
           }
         },
         "required": [
           "id",
           "titulo",
+          "plataforma",
+          "ruta",
           "youtube_id",
           "publicado"
         ],

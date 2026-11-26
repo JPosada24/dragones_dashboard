@@ -129,16 +129,22 @@
     <header class="cabecera fila">
       <div>
         <h2 id="titulo-videos">Videos</h2>
-        <p class="sub">Enlaces de YouTube: el sitio muestra la portada y abre el video en YouTube.</p>
+        <p class="sub">Videos de TikTok, Instagram o YouTube: el sitio los muestra y los abre en su red.</p>
       </div>
       <button type="button" class="boton secundario chico" (click)="abrirVideo()">Agregar video</button>
     </header>
     @for (v of videos(); track v.id) {
       <div class="video">
-        @if (miniaturaYoutube(v.youtube_id); as src) {
+        @if (miniaturaVideo(v); as src) {
           <img class="video-mini" [src]="src" alt="" loading="lazy" referrerpolicy="no-referrer" />
+        } @else {
+          <span class="video-mini plataforma" aria-hidden="true">{{ nombrePlataforma(v) }}</span>
         }
-        <span class="titulo-fila">{{ v.titulo }}</span>
+        @if (enlaceVideo(v); as href) {
+          <a class="titulo-fila" [href]="href" target="_blank" rel="noopener noreferrer">{{ v.titulo }}</a>
+        } @else {
+          <span class="titulo-fila">{{ v.titulo }}</span>
+        }
         <button type="button" role="switch" class="interruptor-fila" [attr.aria-checked]="v.publicado"
                 [attr.aria-label]="'Publicar ' + v.titulo" [disabled]="ocupado()" (click)="cambiarVideo(v)">
           <span class="interruptor" aria-hidden="true"><span class="perilla"></span></span>
@@ -148,7 +154,7 @@
         </button>
       </div>
     } @empty {
-      <p class="vacio">Pega el enlace de un video de YouTube del club (resúmenes de torneos, presentación…).</p>
+      <p class="vacio">Pega el enlace de un video del club en TikTok, Instagram o YouTube.</p>
     }
   </section>
 }
@@ -213,12 +219,12 @@
 }
 
 @if (creandoVideo()) {
-  <app-dialogo titulo="Agregar video" descripcion="Solo enlaces de YouTube." (cerrar)="creandoVideo.set(false)">
+  <app-dialogo titulo="Agregar video" descripcion="Enlaces de TikTok, Instagram o YouTube." (cerrar)="creandoVideo.set(false)">
     <form class="formulario" [formGroup]="formVideo" (ngSubmit)="crearVideo()">
       <label class="campo"><span class="etiqueta">Título</span>
         <input class="control" formControlName="titulo" maxlength="120" placeholder="Ej.: Resumen Copa Caldas" /></label>
-      <label class="campo"><span class="etiqueta">Enlace de YouTube</span>
-        <input class="control" formControlName="enlace" placeholder="https://youtu.be/…" /></label>
+      <label class="campo"><span class="etiqueta">Enlace del video</span>
+        <input class="control" formControlName="enlace" placeholder="https://www.tiktok.com/@…/video/…" /></label>
       @if (errorDialogo()) { <p class="mensaje error" role="alert">{{ errorDialogo() }}</p> }
       <div class="acciones">
         <button type="button" class="boton secundario" (click)="creandoVideo.set(false)">Cancelar</button>

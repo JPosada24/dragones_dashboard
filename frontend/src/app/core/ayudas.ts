@@ -1,189 +1,153 @@
 import { Ayuda } from '../compartido/ayuda';
 
-/** Quien gestiona (todo el club o su rama); la familia no ve estos pasos. */
-const STAFF = ['alumnos.ver_todos'];
-const FAMILIA = ['alumnos.ver_propios'];
-
-/** Explicación de cada vista (botón "?" junto al título). La clave es la ruta de `secciones.ts`. */
+/**
+ * Explicación de cada vista: la cuenta Kiira la primera vez que se entra y la repite el botón «?». La clave es la ruta
+ * de `secciones.ts`. Corta a propósito: lo que hace falta para usar la pantalla, sin detalles técnicos.
+ */
 export const AYUDAS: Record<string, Ayuda> = {
   '': {
     titulo: 'Cómo leer el resumen',
     pasos: [
-      { titulo: 'Indicadores', texto: 'Alumnos con inscripción vigente, inscripciones por cobrar, multas sin pagar y alertas abiertas.', permisos: STAFF },
-      { titulo: 'Alertas', texto: 'Lo que necesita una decisión, de lo más grave a lo menos: expulsiones por confirmar, justificaciones, plazos por vencer, rachas de inasistencia y mora. "Revisar" te lleva a la pantalla donde se resuelve.', permisos: STAFF },
-      { titulo: 'Entrenamiento de hoy', texto: 'Cuántos marcaron, justificaron o faltan. A las 11:59 pm el sistema cierra el día.', permisos: STAFF },
-      { titulo: 'Cartera', texto: 'Lo que le deben al club: inscripciones, multas y talonarios de rifa.', permisos: STAFF },
-      { titulo: 'Tus alumnos', texto: 'El estado de cuenta de cada uno. "A paz y salvo" significa que no debe nada.', permisos: FAMILIA },
-      { titulo: 'Mora', texto: 'Si una deuda (multa o talonario) pasa de 3 meses sin pagar, la inscripción queda en revisión. Te avisamos antes de que ocurra.', permisos: FAMILIA },
+      { titulo: 'Indicadores', texto: 'Alumnos con inscripción vigente, inscripciones por cobrar, multas sin pagar y alertas abiertas.' },
+      { titulo: 'Alertas', texto: 'Lo que necesita una decisión, de lo más urgente a lo menos. «Revisar» te lleva a donde se resuelve.' },
+      { titulo: 'Entrenamiento de hoy', texto: 'Cuántos marcaron o faltan. A las 11:59 pm el sistema cierra el día.' },
+      { titulo: 'Cartera', texto: 'Lo que le deben al club: inscripciones, multas y talonarios de rifa.' },
     ],
   },
   asistencia: {
     titulo: 'Cómo funciona la asistencia',
     pasos: [
-      { titulo: 'Programación automática', texto: 'Los entrenamientos salen solos del horario semanal (ambas ramas juntas). Los festivos de Colombia y los torneos del club los cancelan; para reponer se crea una sesión extra.' },
-      { titulo: 'Marcar', texto: 'El entrenador marca presente o ausente en la planilla. La familia puede marcar "presente" el mismo día, dentro del horario.' },
-      { titulo: 'Avisar que no asiste', texto: 'La familia avisa que el alumno no irá, sin tener que explicar el motivo. Si avisa antes de que empiece el entrenamiento queda justificado de una vez (sin multa); si avisa ya empezado o después, el staff aprueba o rechaza el aviso.' },
-      { titulo: 'Cierre del día', texto: 'A las 11:59 pm, quien no marcó ni avisó queda ausente y con multa (por defecto $2.000). Si hay un aviso tardío por revisar, decide la revisión.' },
-      { titulo: 'Cancelar y deshacer', texto: 'Una sesión se cancela (el motivo es opcional) y anula sus multas pendientes. Se puede deshacer hasta el cierre de ese día.', permisos: ['sesiones.gestionar'] },
-      { titulo: 'Eliminar', texto: 'Las sesiones extra (creadas a mano) se pueden eliminar con la papelera; las del horario solo se cancelan. Si ya se cobraron multas de esa sesión, no se elimina.', permisos: ['sesiones.gestionar'] },
-      { titulo: 'Rachas', texto: 'Tras varias ausencias seguidas aparece una alerta; una ausencia justificada corta la racha.', permisos: STAFF },
+      { titulo: 'Programación automática', texto: 'Los entrenamientos salen solos del horario semanal. Los festivos y los torneos del club los cancelan; para reponer se crea una sesión extra.' },
+      { titulo: 'Marcar', texto: 'El entrenador marca presente o ausente en la planilla.' },
+      { titulo: 'Cierre del día', texto: 'A las 11:59 pm, quien no quedó marcado como presente ni justificado queda ausente y con multa (por defecto $2.000).' },
+      { titulo: 'Cancelar', texto: 'Cancelar una sesión anula sus multas pendientes. Se puede deshacer hasta el cierre de ese día; las sesiones extra también se pueden eliminar.', permisos: ['sesiones.gestionar'] },
     ],
   },
   alumnos: {
     titulo: 'Cómo funcionan las fichas',
     intro: 'Cada alumno tiene una ficha que dura años; la inscripción se renueva cada año.',
     pasos: [
-      { titulo: 'Inscribir alumno nuevo', texto: 'En un solo paso se registran sus datos, el acudiente, la inscripción del año y el primer pago. Si algo falla, no queda nada a medias.', permisos: ['inscripciones.crear'] },
-      { titulo: 'Acudientes', texto: 'Los menores de edad necesitan al menos uno. Se busca por documento: si ya está registrado (por ejemplo, de un hermano), se reutiliza.' },
-      { titulo: 'Inscripción del año', texto: 'La tarjeta de la ficha muestra lo pagado, el saldo y el límite. Quien viene del año pasado se renueva con "Renovar inscripción".' },
-      { titulo: 'Documentos', texto: 'Solo PDF, JPG o PNG; se guardan cifrados. El número de documento completo solo lo ven Admin y SuperAdmin, y cada consulta queda registrada.' },
-      { titulo: 'Autorización de datos', texto: 'Por la Ley 1581, cada alumno necesita la autorización de su acudiente (o la suya si es mayor de edad). Se registra al inscribirlo: quién autorizó y si permite publicar fotos donde aparezca. A los que no la tienen, la ficha los marca en rojo con «Registrar», y el Resumen avisa cuántos faltan. Guarda el formato firmado como documento «Consentimiento informado».', permisos: ['alumnos.editar'] },
-      { titulo: 'Inactivo', texto: 'Si deja el club, se desactiva desde "Editar": su historial se conserva.', permisos: ['alumnos.editar'] },
-      { titulo: 'Eliminar', texto: 'La papelera de la ficha borra al alumno con toda su información (pagos, asistencia, rifas, documentos). No se puede deshacer: pide escribir su código para confirmar.', permisos: ['alumnos.eliminar'] },
+      { titulo: 'Inscribir alumno nuevo', texto: 'En un solo paso: sus datos, el acudiente, la inscripción del año y el primer pago.', permisos: ['inscripciones.crear'] },
+      { titulo: 'Acudientes', texto: 'Los menores de edad necesitan al menos uno. Si ya está registrado (por ejemplo, de un hermano), se reutiliza.' },
+      { titulo: 'Inscripción del año', texto: 'La ficha muestra lo pagado, el saldo y el límite. Quien viene del año pasado se renueva con «Renovar inscripción».' },
+      { titulo: 'Autorización de datos', texto: 'Cada alumno necesita la autorización de su acudiente (o la suya si es mayor de edad). Si falta, la ficha lo marca en rojo con «Registrar».', permisos: ['alumnos.editar'] },
+      { titulo: 'Inactivo o eliminar', texto: 'Si deja el club, se desactiva desde «Editar» y su historial se conserva. Eliminarlo borra toda su información y no se puede deshacer.', permisos: ['alumnos.editar'] },
     ],
   },
   'alumnos/inscripciones': {
     titulo: 'Cómo funcionan las inscripciones',
-    intro: 'El valor, el plazo y los avisos se ajustan en Configuración.',
     pasos: [
-      { titulo: 'Inscripción', texto: 'La hace el entrenador al registrar al alumno (o al renovarlo cada año). El valor y el plazo (por defecto $90.000 y 30 días) salen de la configuración del club.' },
-      { titulo: 'Abonos', texto: 'Se aceptan pagos parciales dentro del plazo. Al completar el valor, la inscripción queda activa.' },
-      { titulo: 'Prórroga', texto: 'Solo Admin o SuperAdmin, con motivo. Reactiva una inscripción rechazada por vencimiento.' },
-      { titulo: 'Vencimiento', texto: 'Si el plazo termina sin completar el pago, el sistema la rechaza y avisa a la familia.' },
+      { titulo: 'Valor y plazo', texto: 'Por defecto $90.000 y 30 días para pagar; se cambian en Configuración.' },
+      { titulo: 'Abonos', texto: 'Se aceptan pagos parciales. Al completar el valor, la inscripción queda activa.' },
+      { titulo: 'Vencimiento y prórroga', texto: 'Si el plazo termina sin completar el pago, la inscripción se rechaza. Admin o SuperAdmin pueden dar una prórroga.' },
     ],
-    nota: 'Un abono errado no se borra: el SuperAdmin o el Admin lo anula (el motivo es opcional) y queda en el historial.',
+    nota: 'Un abono errado no se borra: se anula y queda en el historial.',
   },
   rifas: {
     titulo: 'Cómo funcionan las rifas',
     pasos: [
-      { titulo: 'Cuatro al año', texto: 'Cada rifa asigna un talonario a cada alumno inscrito: por defecto 20 puestos de $2.000, es decir $40.000 por talonario.' },
-      { titulo: 'Talonario', texto: 'Es del alumno: sus boletas se leen con su código (F012-01 a F012-20). No hace falta anotar quién compró cada boleta.' },
-      { titulo: 'Pagos', texto: 'El talonario se paga completo o por abonos. Un pago errado no se borra: el SuperAdmin o el Admin lo anula (el motivo es opcional).' },
-      { titulo: 'Paz y salvo', texto: 'El talonario está a paz y salvo cuando está pagado al 100 %. Si queda con saldo después de la fecha del sorteo, cuenta como deuda (y puede llevar a mora).' },
-      { titulo: 'Sorteo', texto: 'Desde la fecha del sorteo, en la pestaña Sorteo. Solo participan los talonarios pagados al 100 %; se puede jugar varias veces.' },
-      { titulo: 'Cancelar o eliminar', texto: 'Cancelar la deja visible como cancelada; eliminar la quita de todas las pantallas y de las deudas. Si ya tiene pagos, solo quien puede anular pagos (SuperAdmin o Admin) la elimina.', permisos: ['rifas.gestionar'] },
+      { titulo: 'Talonario', texto: 'Cada rifa le da a cada alumno inscrito un talonario de 20 boletas de $2.000 ($40.000). Las boletas se leen con su código: F012-01 a F012-20.' },
+      { titulo: 'Pagos', texto: 'El talonario se paga completo o por abonos. Pagado al 100 % queda a paz y salvo; si queda saldo después del sorteo, cuenta como deuda.' },
+      { titulo: 'Sorteo', texto: 'En la pestaña Sorteo, desde su fecha. Solo participan los talonarios pagados al 100 %.' },
     ],
   },
   'rifas/sorteo': {
     titulo: 'Cómo funciona el sorteo',
     pasos: [
-      { titulo: 'La urna', texto: 'Solo entran las boletas de los talonarios pagados al 100 %. Cada talonario aporta todas sus boletas (por defecto 20).' },
-      { titulo: 'La boleta', texto: 'Se lee como código del alumno y número de boleta: F012-07 es la boleta 7 del talonario de F012. El código lo asigna el sistema al registrar al alumno (F femenina, M masculina).' },
-      { titulo: 'Jugar', texto: 'Desde la fecha del sorteo, el SuperAdmin o el Admin presiona «Jugar la rifa»; se puede jugar otra vez (por ejemplo, para varios premios). Una boleta que ya ganó no vuelve a la urna. El servidor elige al azar; la pantalla solo muestra el giro.', permisos: ['sorteo.jugar'] },
-      { titulo: 'Acta', texto: 'Cada jugada deja su acta con la boleta ganadora, el alumno dueño del talonario, cuántas boletas había y una huella que prueba que la lista no cambió. No se puede modificar.' },
-      { titulo: 'Aviso', texto: '«Avisar por WhatsApp» abre el mensaje listo para el acudiente principal (o el alumno, si es mayor), para enviarlo desde el número del club.' },
+      { titulo: 'La urna', texto: 'Solo entran las boletas de los talonarios pagados al 100 %.' },
+      { titulo: 'Jugar', texto: '«Jugar la rifa» elige una boleta al azar, por ejemplo F012-07 (la boleta 7 del talonario de F012). Se puede jugar varias veces para varios premios; una boleta que ya ganó no vuelve a la urna.', permisos: ['sorteo.jugar'] },
+      { titulo: 'Acta', texto: 'Cada jugada deja un acta con la boleta ganadora y su dueño. No se puede modificar.' },
+      { titulo: 'Aviso', texto: '«Avisar por WhatsApp» abre el mensaje listo para enviarlo desde el número del club.' },
     ],
   },
   habeas: {
     titulo: 'Solicitudes de datos personales',
-    intro: 'Cuando una familia pide conocer, corregir o borrar sus datos, se registra aquí: la ley fija el plazo para responder.',
+    intro: 'Si alguien pide conocer, corregir o borrar sus datos, regístralo aquí: la ley fija el plazo para responder.',
     pasos: [
-      { titulo: 'Consulta', texto: 'Conocer qué datos tiene el club. Plazo: 10 días hábiles desde que se recibe.' },
-      { titulo: 'Reclamo', texto: 'Corregir, actualizar, borrar o revocar la autorización. Plazo: 15 días hábiles.' },
-      { titulo: 'Ampliar', texto: 'Una sola vez (5 o 8 días hábiles más), informando el motivo antes del vencimiento.' },
-      { titulo: 'Avisos', texto: 'El Resumen avisa cuando a una solicitud le quedan 3 días hábiles o menos, o ya venció.' },
+      { titulo: 'Consulta', texto: 'Conocer qué datos tiene el club. Plazo: 10 días hábiles.' },
+      { titulo: 'Reclamo', texto: 'Corregir, borrar o retirar la autorización. Plazo: 15 días hábiles.' },
+      { titulo: 'Avisos', texto: 'El Resumen avisa cuando a una solicitud le quedan 3 días hábiles o menos.' },
     ],
   },
   reportes: {
     titulo: 'Cómo leer los reportes',
-    intro: 'Suma todo el dinero que entró al club: inscripciones, multas pagadas, rifas y torneos.',
+    intro: 'Todo el dinero que entró al club: inscripciones, multas, rifas y torneos.',
     pasos: [
-      { titulo: 'Neto por mes', texto: 'Cada abono cuenta en su fecha. Una anulación resta en el mes en que se hizo, así el total de cada mes es lo que de verdad entró.' },
-      { titulo: 'Rifas y torneos eliminados', texto: 'Su dinero sigue contando: los pagos se conservan aunque la rifa o el torneo ya no se vean.' },
-      { titulo: 'Exportar', texto: 'Descarga cada movimiento del rango en un CSV que abre Excel. Queda registrado en la auditoría.', permisos: ['reportes.exportar'] },
+      { titulo: 'Por mes', texto: 'Cada pago cuenta en su fecha; una anulación resta en el mes en que se hizo.' },
+      { titulo: 'Exportar', texto: 'Descarga los movimientos del rango en un archivo que abre Excel.', permisos: ['reportes.exportar'] },
     ],
   },
   multas: {
     titulo: 'Cómo funcionan las multas y la mora',
     pasos: [
-      { titulo: 'Multa', texto: 'Se genera al cierre del día (11:59 pm) a quien no marcó ni avisó un entrenamiento. El valor es configurable (por defecto $2.000).' },
-      { titulo: 'Pago', texto: 'Lo registran Admin o SuperAdmin. Una multa pagada no se anula.' },
-      { titulo: 'Anular', texto: 'Una multa pendiente se puede anular (el motivo es opcional). Cancelar un entrenamiento anula sus multas pendientes.', permisos: ['multas.anular'] },
-      { titulo: 'Mora', texto: 'Cualquier deuda (multas o talonarios de rifa) con más de 3 meses sin pagar pone la inscripción "en revisión". La familia recibe aviso antes.' },
-      { titulo: 'Expulsión', texto: 'La confirma el SuperAdmin o el Admin. Si el alumno paga mientras está en revisión por mora, vuelve solo a activa.', permisos: STAFF },
+      { titulo: 'Multa', texto: 'Se genera al cierre del día a quien faltó sin justificar. Por defecto $2.000.' },
+      { titulo: 'Pagar o anular', texto: 'Una multa pendiente se paga o se anula; una pagada ya no se anula.' },
+      { titulo: 'Mora', texto: 'Cualquier deuda (multas o talonarios) con más de 3 meses sin pagar pone la inscripción en revisión. Si paga, vuelve a quedar activa.' },
     ],
   },
   torneos: {
     titulo: 'Cómo funcionan los torneos',
     pasos: [
-      { titulo: 'Torneos del club', texto: 'Los organiza el club y se inscriben clubes externos, no jugadores.' },
       { titulo: 'Cupo', texto: 'Cada torneo tiene un cupo de equipos. Si se llena, los nuevos quedan en lista de espera y entran solos cuando alguien se retira.' },
-      { titulo: 'Pagos', texto: 'Cada equipo paga la inscripción fijada en el torneo; se aceptan abonos y queda confirmado al completar.' },
-      { titulo: 'Entrenamientos', texto: 'Los días de torneo se cancelan los entrenamientos; si el torneo se cancela, vuelven.' },
-      { titulo: 'Anuncio', texto: 'Adjunta el flyer al crear o editar el torneo: el sitio lo muestra junto a la información mientras las inscripciones estén abiertas.' },
-      { titulo: 'Al terminar', texto: '«Pasar a realizados» copia nombre, fecha, lugar y flyer a Perfil del club → Torneos realizados, oculto hasta que le agregues los resultados.' },
+      { titulo: 'Pagos', texto: 'Cada equipo paga la inscripción del torneo; se aceptan abonos y queda confirmado al completar.' },
+      { titulo: 'Anuncio', texto: 'Adjunta el flyer: el sitio lo muestra mientras las inscripciones estén abiertas.' },
+      { titulo: 'Al terminar', texto: '«Pasar a realizados» lo lleva a Perfil del club → Torneos realizados para agregarle los resultados.' },
     ],
+    nota: 'Los días de torneo se cancelan los entrenamientos; si el torneo se cancela, vuelven.',
   },
   'perfil-club': {
     titulo: 'Cómo funciona el perfil del club',
     pasos: [
-      { titulo: 'Sitio público', texto: 'El sitio del club (proyecto aparte, «Ver sitio») toma de aquí el equipo, la galería, los videos, los torneos realizados, el contacto, la misión, visión e historia, y de Torneos los torneos abiertos. También muestra cifras totales del club. Nada privado de los alumnos sale allí.' },
-      { titulo: 'Publicar', texto: 'El interruptor general y el de cada álbum, video e integrante deciden qué se ve. Con el general apagado, el sitio muestra solo su contenido fijo.' },
-      { titulo: 'Fotos', texto: 'Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación del celular). Sube solo fotos con autorización de los acudientes de los menores que aparecen.' },
-      { titulo: 'Torneos', texto: 'Los torneos con inscripciones abiertas aparecen en el sitio y los clubes externos se inscriben solos; quedan en Torneos marcados «desde el sitio» y te llega un aviso.' },
+      { titulo: 'Sitio público', texto: 'Lo que escribas aquí (misión, historia, contacto, redes) es lo que muestra el sitio del club. Nada privado de los alumnos sale allí.' },
+      { titulo: 'Publicar', texto: 'El interruptor general y el de cada álbum, video y entrenador deciden qué se ve.' },
+      { titulo: 'Inscripciones de clubes', texto: 'Los clubes se inscriben a los torneos abiertos desde el sitio; te llega un aviso y aparecen en Torneos.' },
     ],
   },
   'perfil-club/galeria': {
     titulo: 'Cómo funciona la galería',
     pasos: [
-      { titulo: 'Álbumes', texto: 'Cada álbum es una carpeta (un torneo, un entrenamiento…). Ábrelo para ver y subir sus fotos. En el sitio se ve como una tarjeta con su portada (la primera foto).' },
-      { titulo: 'Publicar', texto: 'Un álbum en borrador no se ve en el sitio. Puedes subirle fotos con calma y publicarlo cuando esté listo.' },
-      { titulo: 'Eliminar varias', texto: 'Dentro del álbum toca las fotos para marcarlas (o «Seleccionar todas») y elimínalas juntas.' },
-      { titulo: 'Fotos', texto: 'Se reducen a 1920 px y se les quitan los datos ocultos (como la ubicación). Sube solo fotos con autorización de los acudientes de los menores que aparecen.' },
+      { titulo: 'Álbumes', texto: 'Cada álbum es una carpeta (un torneo, un entrenamiento…) con sus fotos. Uno en borrador no se ve en el sitio.' },
+      { titulo: 'Videos', texto: 'Pega el enlace del video de TikTok, Instagram o YouTube.' },
     ],
+    nota: 'Sube solo fotos con autorización de los acudientes de los menores que aparecen.',
   },
   'perfil-club/equipo': {
     titulo: 'Cómo funciona el equipo técnico',
     pasos: [
-      { titulo: 'En el sitio', texto: 'Cada entrenador aparece en «Nuestro equipo técnico» con su foto, cargo y presentación. El orden más bajo va primero.' },
-      { titulo: 'Ocultar o quitar', texto: 'El interruptor lo oculta del sitio sin borrar nada; «Quitar» lo borra con su foto.' },
-      { titulo: 'Foto', texto: 'Se recorta cuadrada y se le quitan los datos ocultos del celular. Mejor una foto de frente y con buena luz.' },
-      { titulo: 'No es una cuenta', texto: 'Estos perfiles son solo para el sitio. Para que un entrenador entre a la plataforma, créale una cuenta en Usuarios.' },
+      { titulo: 'En el sitio', texto: 'Cada entrenador aparece con su foto, cargo y presentación. El orden más bajo va primero.' },
+      { titulo: 'No es una cuenta', texto: 'Estos perfiles son solo para el sitio. Para que alguien entre a la plataforma, créale una cuenta en Usuarios.' },
     ],
   },
   'perfil-club/torneos': {
     titulo: 'Cómo funcionan los torneos realizados',
     pasos: [
-      { titulo: 'En el sitio', texto: 'Cada torneo aparece en «Torneos realizados» con su anuncio, la fecha, el lugar y la reseña. Los más recientes van primero.' },
-      { titulo: 'Anuncio', texto: 'Es el afiche con que se promocionó. Se guarda entero, sin recortar, y se le quitan los datos ocultos del archivo. Al tocarlo en el sitio se ve en grande.' },
-      { titulo: 'Fotos', texto: 'Puedes enlazar un álbum de la Galería: el sitio muestra «Ver fotos» cuando ese álbum está publicado y tiene fotos.' },
-      { titulo: 'Aparte de Torneos', texto: 'Esta lista es solo para el sitio: sirve también para torneos de antes de la plataforma, y borrar uno de aquí no toca los equipos ni los pagos de la sección Torneos.' },
-    ],
-  },
-  asistente: {
-    titulo: 'Cómo funciona el asistente',
-    pasos: [
-      { titulo: 'Pregunta normal', texto: 'Escribe como le preguntarías a alguien del club: "¿quién debe multas?", "¿cuánto le falta a F012 para estar a paz y salvo?". El asistente consulta los datos y responde.' },
-      { titulo: 'Solo consulta', texto: 'No registra pagos ni cambia nada: te dice en qué pantalla hacerlo. Ve solo lo que tu cuenta puede ver.' },
-      { titulo: 'Verifica', texto: 'Las respuestas las genera una IA y pueden equivocarse: confirma en la pantalla correspondiente antes de cobrar o decidir.' },
-      { titulo: 'Privacidad', texto: 'La conversación no se guarda: se borra al recargar o al empezar una nueva. Nunca se envían documentos, teléfonos ni correos a la IA.' },
+      { titulo: 'En el sitio', texto: 'Cada torneo aparece con su afiche, fecha, lugar y reseña. Los más recientes van primero.' },
+      { titulo: 'Fotos', texto: 'Puedes enlazar un álbum de la Galería: el sitio muestra «Ver fotos».' },
     ],
   },
   avisos: {
     titulo: 'Cómo funcionan los avisos',
     pasos: [
-      { titulo: 'Sin costo', texto: 'Los correos salen solos. WhatsApp se envía a mano desde el número del club con un enlace listo (no se usan bots, para no arriesgar el bloqueo del número).' },
+      { titulo: 'WhatsApp', texto: 'Cada aviso trae el mensaje listo: tócalo y se abre WhatsApp para enviarlo desde el número del club.' },
       { titulo: 'Cuándo se avisa', texto: 'Recordatorios de pago, inscripción vencida, multas y riesgo de mora.' },
     ],
   },
   configuracion: {
     titulo: 'Configuración del club',
     pasos: [
-      { titulo: 'Parámetros', texto: 'Valor de la inscripción, plazo de pago, valor de la multa, meses para la mora, rifas por año y demás reglas.' },
-      { titulo: 'Quién cambia', texto: 'El SuperAdmin y el Admin (o quien tenga el permiso). Cada cambio queda en la auditoría y aplica a lo nuevo (lo ya creado conserva su valor).' },
+      { titulo: 'Parámetros', texto: 'Valor de la inscripción, plazo de pago, valor de la multa, meses para la mora y demás reglas.' },
+      { titulo: 'Cambios', texto: 'Aplican a lo nuevo; lo ya creado conserva su valor.' },
     ],
   },
   usuarios: {
     titulo: 'Cuentas y roles',
-    intro: 'Cada persona entra con su correo y su contraseña. Al crear una cuenta, la contraseña se muestra una sola vez para entregarla.',
+    intro: 'La plataforma es del staff del club. Al crear una cuenta, la contraseña se muestra una sola vez para entregarla.',
     pasos: [
-      { titulo: 'SuperAdmin', texto: 'El dueño y entrenador principal: acceso total.' },
-      { titulo: 'Admin', texto: 'Todo el club (alumnos, cobros, rifas, torneos, parámetros) menos las cuentas de usuario.' },
-      { titulo: 'Entrenador', texto: 'Asistente general (ambas ramas): alumnos, asistencia e inscripciones con abonos. No cobra multas ni rifas, no ve el documento completo ni cambia el horario.' },
-      { titulo: 'Miembro', texto: 'Acudiente o alumno mayor de edad: solo consulta lo suyo. Al crear la cuenta se elige a qué alumno pertenece.' },
-      { titulo: 'Roles y permisos', texto: 'La vista «Roles y permisos» muestra lo que trae cada rol. A un Admin o Entrenador puedes darle o quitarle permisos con el botón de ajustes de su cuenta: aplica de inmediato y queda en la auditoría. Si le cambias el rol, vuelve a los permisos del rol nuevo. Administrar cuentas es solo del SuperAdmin.' },
-      { titulo: 'Contraseña', texto: 'La llave cambia la contraseña y cierra sus sesiones abiertas. Desactivar una cuenta le impide entrar sin borrar nada.' },
-      { titulo: 'Eliminar', texto: 'La papelera (solo el SuperAdmin) elimina la cuenta: la persona pierde el acceso al instante y su correo queda libre. Lo que registró (pagos, asistencias, auditoría) se conserva con su nombre, y el alumno o acudiente vinculado sigue intacto. Nadie puede eliminar su propia cuenta.', permisos: ['usuarios.eliminar'] },
+      { titulo: 'SuperAdmin', texto: 'Acceso total.' },
+      { titulo: 'Admin', texto: 'Todo el club menos las cuentas de usuario.' },
+      { titulo: 'Entrenador', texto: 'Alumnos, asistencia e inscripciones. No cobra multas ni rifas.' },
+      { titulo: 'Permisos', texto: 'A un Admin o Entrenador puedes darle o quitarle permisos con el botón de ajustes de su cuenta.' },
+      { titulo: 'Desactivar o eliminar', texto: 'Desactivar impide entrar sin borrar nada. Eliminar quita el acceso y conserva lo que registró.' },
     ],
   },
 };

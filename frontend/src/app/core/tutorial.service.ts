@@ -32,7 +32,6 @@ export const QUE_HACE: Record<string, string> = {
   '': 'Lo importante de hoy: alertas que piden tu decisión, el entrenamiento del día y lo que falta por cobrar.',
   asistencia: 'Marca quién vino a entrenar. Quien no marca ni avisa recibe su multa al cierre del día.',
   alumnos: 'Fichas de los alumnos con acudientes, documentos e inscripción del año. Cada uno tiene su código, como F012.',
-  asistente: 'Pregúntale en tus palabras, por ejemplo «¿quién debe multas?», y consulta los datos por ti.',
   rifas: 'Las rifas del año: un talonario por alumno, sus pagos y el sorteo con su acta.',
   reportes: 'Cuánto entró al club cada mes y por qué concepto. Desde aquí descargas los movimientos para la contabilidad.',
   multas: 'Las deudas por cobrar: multas, sus pagos y quién está cerca de entrar en mora.',
@@ -100,7 +99,7 @@ export class TutorialService {
     const u = this.auth.usuario();
     if (!u) return;
     const nombre = u.nombre.trim().split(/\s+/)[0] ?? '';
-    const secciones = seccionesVisibles((p) => this.auth.tieneAlguno(p));
+    const secciones = seccionesVisibles((p) => this.auth.tieneAlguno(p)).filter((s) => !s.proximamente);
     const movil = typeof this.doc.defaultView?.matchMedia === 'function'
       && this.doc.defaultView.matchMedia(`(max-width: ${ANCHO_MOVIL}px)`).matches;
     const presentar = (s: (typeof secciones)[number]): PasoTutorial => ({

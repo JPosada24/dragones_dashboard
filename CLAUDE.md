@@ -53,6 +53,9 @@ Responde siempre en **español**. Nombres de tablas, rutas y variables de negoci
 - **Admin = todo menos administrar cuentas** (`usuarios.*`). El SuperAdmin da o quita permisos a cada Admin o
   Entrenador desde Usuarios (`usuarios_permisos`, 0027; efectivos = rol + dados − quitados en
   `Usuario.permisos_codigos`). Los de cuentas no se le dan a nadie. Cambiar el rol borra los ajustes. Decisión 0013.
+- **La plataforma es solo del staff** (decidido 2026-11-26): no se crean cuentas de Miembro (el panel ya no lo
+  ofrece; el rol y su código siguen en el backend, sin uso). Sigue la autorización de datos (Ley 1581): la exige
+  que el club guarde datos de menores, no que entren a la plataforma. El Asistente de IA está como «Pronto».
 - Los datos del prototipo HTML (138 alumnos, nombres, cifras) son solo ejemplo de diseño.
 - Todo valor "configurable" vive en la tabla `configuracion` (lo cambia solo el SuperAdmin).
 
@@ -64,7 +67,7 @@ saber para seguir trabajando.
   de IA (apagado sin `ANTHROPIC_API_KEY`), habeas data (autorización por alumno y registro de solicitudes con plazos
   en días hábiles, `services/habeas.py`), reportes de ingresos y CSV (`services/reportes.py`), nivel del alumno
   (Iniciación/Avanzado), panel instalable (PWA: el service worker no guarda datos de la API) y preparación para
-  producción. Migraciones hasta la **0032**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
+  producción. Migraciones hasta la **0033**. Cobertura del backend ≥ 90 % (líneas y ramas) y umbrales del frontend en `angular.json`; el CI los exige.
 - **Panel (frontend):** secciones en `core/secciones.ts`, pantallas en `paginas/<seccion>/` registradas en `PANTALLAS`
   de `app.routes.ts`, ayuda de cada vista en `core/ayudas.ts`, pestañas en `compartido/pestanas.ts`, tutorial guiado en
   `core/tutorial.service.ts` (pasos) + `layout/tutorial/` (resalta `data-tutorial="…"`) con el dragón

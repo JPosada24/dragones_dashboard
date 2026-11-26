@@ -4282,12 +4282,19 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Plataforma
+             * @enum {string}
+             */
+            plataforma: "youtube" | "tiktok" | "instagram";
             /** Publicado */
             publicado: boolean;
+            /** Ruta */
+            ruta: string;
             /** Titulo */
             titulo: string;
             /** Youtube Id */
-            youtube_id: string;
+            youtube_id: string | null;
         };
         /** VinculoIn */
         VinculoIn: {

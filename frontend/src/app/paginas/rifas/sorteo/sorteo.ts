@@ -12,6 +12,7 @@ import { PESTANAS_RIFAS, Pestanas } from '../../../compartido/pestanas';
 import { PesosPipe } from '../../../compartido/pesos.pipe';
 import { numeroWhatsApp } from '../../../compartido/whatsapp';
 import { AuthService } from '../../../core/auth/auth.service';
+import { DemoService } from '../../../core/demo.service';
 import { API } from '../../../core/modelos';
 import { Alumno } from '../../alumnos/alumnos.modelos';
 import { boleta } from '../boleta';
@@ -88,9 +89,16 @@ export class SorteoPage implements OnInit {
     return r ? Math.max(0, r.talonarios_pagados * r.puestos_por_talonario - this.actas().length) : 0;
   });
 
+  private readonly demo = inject(DemoService);
+
+  /** Antes de la fecha del sorteo no se juega; en el demo sí, para que se vea cómo funciona (el servidor decide). */
+  protected aunNo(r: Rifa): boolean {
+    return r.fecha_sorteo > this.hoy && this.demo.info() === null;
+  }
+
   protected readonly sorteable = computed(() => {
     const r = this.rifa();
-    return !!r && this.puedeSortear() && r.estado !== 'cancelada' && r.fecha_sorteo <= this.hoy && this.enUrna() > 0;
+    return !!r && this.puedeSortear() && r.estado !== 'cancelada' && !this.aunNo(r) && this.enUrna() > 0;
   });
 
   protected readonly listaTalonarios = computed(() => {
